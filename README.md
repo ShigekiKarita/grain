@@ -1,7 +1,43 @@
-# Demo: Writing CUDA Kernel in D
+# grain
 
-Thanks to DCompute and LDC1.8.0-, we can write CUDA kernel in D.
-This project aims to be minimal for writing CUDA kernels and calling CUDA Driver APIs.
+high-level CUDA wrapper for D
+
+```d
+import grain.cuda;
+import grain.kernel : saxpy; // auto generated header of kernel/kernel.d
+
+// Get a handle to the "myfunction" kernel function
+// See Makefile how to create kernel/kernel.ptx
+auto cuModule = loadModule("kernel/kernel.ptx");
+scope(exit) checkCudaErrors(cuModuleUnload(cuModule));
+auto ksaxpy = Kernel!saxpy(cuModule);
+
+// Populate input
+uint n = 16;
+auto hostA = new float[n];
+auto hostB = new float[n];
+auto hostC = new float[n];
+foreach (i; 0 .. n) {
+  hostA[i] = i;
+  hostB[i] = 2 * i;
+  hostC[i] = 0;
+}
+
+// Device data
+auto devA = CuPtr!float(hostA);
+auto devB = CuPtr!float(hostB);
+auto devC = CuPtr!float(n);
+
+// Kernel launch
+ksaxpy.launch(devC.ptr, devA.ptr, devB.ptr, n, [1,1,1], [n,1,1]);
+
+// Validation
+devC.toCPU(hostC);
+foreach (i; 0 .. n) {
+  writefln!"%f + %f = %f"(hostA[i], hostB[i], hostC[i]);
+  assert(hostA[i] + hostB[i] == hostC[i]);
+}
+```
 
 ## how to run
 
@@ -13,7 +49,7 @@ $ make test
 
 I have tested with
 
-- LDC1.8.0/1.9.0 (prebuilt binary)
+- LDC1.9.0 (prebuilt binary)
 - CUDA9.1
 - NVidia GTX760
 
