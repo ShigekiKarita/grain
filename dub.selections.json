@@ -1,0 +1,7 @@
+{
+	"fileVersion": 1,
+	"versions": {
+		"derelict-cuda": "3.1.1",
+		"derelict-util": "3.0.0-beta.2"
+	}
+}
