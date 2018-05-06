@@ -6,7 +6,7 @@ import std.string : toStringz, fromStringz;
 
 import derelict.cuda;
 
-// TODO: support multiple GPUs
+// TODO: support multiple GPU devices (context)
 CUcontext context;
 
 static this() {
@@ -26,13 +26,35 @@ static ~this() {
 }
 
 
-CUmodule loadModule(string path) {
-    import std.file : readText;
+struct CuModule {
     CUmodule cuModule;
-    auto ptxstr = readText(path);
-    // JIT compile a null-terminated PTX string
-    checkCudaErrors(cuModuleLoadData(&cuModule, cast(void*) ptxstr.toStringz));
-    return cuModule;
+
+    this(string path) {
+        import std.file : readText;
+        import std.string : replace;
+        import std.format : format;
+        auto ptxstr = readText(path);
+        CUdevice device;
+        checkCudaErrors(cuCtxGetDevice(&device));
+        int devMajor, devMinor;
+        checkCudaErrors(cuDeviceGetAttribute(
+                            &devMajor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, device));
+        checkCudaErrors(cuDeviceGetAttribute(
+                            &devMinor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, device));
+        ptxstr = ptxstr.replace(".target generic", format!".target sm_%d%d"(devMajor, devMinor))
+            .replace(".visible .func", ".visible .entry"); // maybe wrong??
+
+        // JIT compile a null-terminated PTX string
+        checkCudaErrors(cuModuleLoadData(&cuModule, cast(void*) ptxstr.toStringz));
+    }
+
+    ~this() {
+        checkCudaErrors(cuModuleUnload(cuModule));
+    }
+
+    auto kernel(alias F)() {
+        return Kernel!F(cuModule);
+    }
 }
 
 
@@ -115,11 +137,10 @@ unittest
 {
     import grain.kernel : saxpy;
 
-    // Get a handle to the "myfunction" kernel function
+    // Get a handle to the kernel function in kernel/kernel.d
     // See Makefile how to create kernel/kernel.ptx
-    auto cuModule = loadModule("kernel/kernel.ptx");
-    scope(exit) checkCudaErrors(cuModuleUnload(cuModule));
-    auto ksaxpy = Kernel!saxpy(cuModule);
+    auto cuModule = CuModule("kernel/kernel.ptx");
+    auto ksaxpy = cuModule.kernel!saxpy;
 
     // Populate input
     uint n = 16;
