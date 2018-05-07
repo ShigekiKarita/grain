@@ -137,11 +137,16 @@ struct CuPtr(T) {
         checkCudaErrors(cuMemAlloc(&ptr, T.sizeof * n));
     }
 
+    this(CUdeviceptr p, size_t l) {
+        this.ptr = p;
+        this.length = l;
+    }
+
     ~this() {
         checkCudaErrors(cuMemFree(ptr));
     }
 
-    auto toCPU(T[] host) {
+    ref toCPU(scope ref T[] host) {
         host.length = length;
         checkCudaErrors(cuMemcpyDtoH(&host[0], ptr, T.sizeof * length));
         return host;
@@ -151,6 +156,13 @@ struct CuPtr(T) {
         auto host = new T[length];
         checkCudaErrors(cuMemcpyDtoH(&host[0], ptr, T.sizeof * length));
         return host;
+    }
+
+    auto dup() {
+        CUdeviceptr ret;
+        checkCudaErrors(cuMemAlloc(&ret, T.sizeof * length));
+        checkCudaErrors(cuMemcpyDtoD(ret, ptr, T.sizeof * length));
+        return typeof(this)(ret, length);
     }
 }
 
@@ -188,7 +200,7 @@ unittest
     // Validation
     devC.toCPU(hostC);
     foreach (i; 0 .. n) {
-        writefln!"%f + %f = %f"(hostA[i], hostB[i], hostC[i]);
+        // writefln!"%f + %f = %f"(hostA[i], hostB[i], hostC[i]);
         assert(hostA[i] + hostB[i] == hostC[i]);
     }
 }
