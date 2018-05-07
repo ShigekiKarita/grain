@@ -41,9 +41,9 @@ struct ReLU(T, size_t dim) {
         if (x.data.isHost) {
             x.data.host.each!((ref a) { if (a < 0) a = 0; });
         } else {
-            auto k = GlobalModule.get().kernel!relu;
             auto n = cast(uint) x.data.device.length;
-            k.launch(x.data.device.ptr, n, [1,1,1], [n,1,1]);
+            globalModule.kernel!relu
+                .launch(x.data.device.ptr, n, [1,1,1], [n,1,1]);
         }
         return x;
     }

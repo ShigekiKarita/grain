@@ -29,9 +29,7 @@ static ~this() {
 struct CuModule {
     CUmodule cuModule;
 
-    this(string path) {
-        import std.file : readText;
-        auto ptxstr = readText(path);
+    this(string ptxstr) {
         // JIT compile a null-terminated PTX string
         checkCudaErrors(cuModuleLoadData(&cuModule, cast(void*) ptxstr.toStringz));
     }
@@ -43,10 +41,15 @@ struct CuModule {
     auto kernel(alias F)() {
         return Kernel!F(cuModule);
     }
+
+    static opDispatch(string name)() {
+        return GlobalModule!name();
+    }
 }
 
 
-class GlobalModule {
+class GlobalModule(string name) {
+    mixin("import K = grain." ~ name ~ ";");
     private this() {}
 
     // Cache instantiation flag in thread-local bool
@@ -62,15 +65,23 @@ class GlobalModule {
         {
             synchronized(GlobalModule.classinfo)
             {
-                instance_ = new CuModule("kernel/kernel.ptx");
+                instance_ = new CuModule(K.ptx);
                 instantiated_ = true;
             }
         }
 
         return instance_;
     }
+
+    static get(alias F)() {
+        return get().kernel!F;
+    }
+
 }
 
+auto globalModule(string name = "kernel")() {
+    return GlobalModule!name.get;
+}
 
 struct Kernel(alias F) if (is(ReturnType!F == void)) {
     enum name = __traits(identifier, F);
@@ -151,10 +162,6 @@ unittest
 {
     import grain.kernel : saxpy;
 
-    // Get a handle to the kernel function in kernel/kernel.d
-    // See Makefile how to create kernel/kernel.ptx
-    auto ksaxpy = GlobalModule.get().kernel!saxpy;
-
     // Populate input
     uint n = 16;
     auto hostA = new float[n];
@@ -172,7 +179,8 @@ unittest
     auto devC = CuPtr!float(n);
 
     // Kernel launch
-    ksaxpy.launch(devC.ptr, devA.ptr, devB.ptr, n, [1,1,1], [n,1,1]);
+    GlobalModule!"kernel".get!saxpy
+        .launch(devC.ptr, devA.ptr, devB.ptr, n, [1,1,1], [n,1,1]);
 
     // Validation
     devC.toCPU(hostC);
