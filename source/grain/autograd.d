@@ -23,7 +23,7 @@ struct Storage(T) {
     ref toHost() {
         if (!isHost) {
             isHost = true;
-            device.toCPU(host);
+            device.toHost(host);
         }
         return this;
     }
@@ -76,7 +76,6 @@ unittest {
     x.data.host[0] = 1.0;
     assert(y.data.host[0] == -1);
 }
-
 
 unittest {
     import std.stdio;

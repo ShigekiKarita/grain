@@ -146,13 +146,13 @@ struct CuPtr(T) {
         checkCudaErrors(cuMemFree(ptr));
     }
 
-    ref toCPU(scope ref T[] host) {
+    ref toHost(scope ref T[] host) {
         host.length = length;
         checkCudaErrors(cuMemcpyDtoH(&host[0], ptr, T.sizeof * length));
         return host;
     }
 
-    auto toCPU() {
+    auto toHost() {
         auto host = new T[length];
         checkCudaErrors(cuMemcpyDtoH(&host[0], ptr, T.sizeof * length));
         return host;
@@ -198,7 +198,7 @@ unittest
         .launch(devC.ptr, devA.ptr, devB.ptr, n, [1,1,1], [n,1,1]);
 
     // Validation
-    devC.toCPU(hostC);
+    devC.toHost(hostC);
     foreach (i; 0 .. n) {
         // writefln!"%f + %f = %f"(hostA[i], hostB[i], hostC[i]);
         assert(hostA[i] + hostB[i] == hostC[i]);
