@@ -9,6 +9,7 @@ struct Storage(T) {
     bool isHost = true;
     T[] host;
     CuPtr!T device;
+
     ref toDevice() {
         if (isHost) {
             isHost = false;
@@ -26,16 +27,16 @@ struct Storage(T) {
     }
 }
 
-struct Variable(T, size_t dim) {
+class Variable(T, size_t dim) {
     bool autograd = false;
     Storage!T data;
     size_t[dim] shapes;
     ptrdiff_t[dim] strides;
-    Variable* grad = null;
+    Variable grad = null;
 }
 
 struct ReLU(T, size_t dim) {
-    auto forward(ref Variable!(T, dim) x) {
+    auto forward(Variable!(T, dim) x) {
         if (x.data.isHost) {
             x.data.host.each!((ref a) { if (a < 0) a = 0; });
         } else {
@@ -53,7 +54,7 @@ unittest {
     import std.stdio;
     import grain.kernel : relu;
 
-    Variable!(float, 1) x;
+    auto x = new Variable!(float, 1);
     ReLU!(float, 1) func;
 
     // test CPU

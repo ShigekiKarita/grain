@@ -9,7 +9,7 @@ import derelict.cuda;
 // TODO: support multiple GPU devices (context)
 CUcontext context;
 
-static this() {
+shared static this() {
     DerelictCUDADriver.load();
     CUdevice device;
 
@@ -21,7 +21,9 @@ static this() {
     cuCtxCreate(&context, 0, device);
 }
 
-static ~this() {
+shared static ~this() {
+    import core.memory : GC;
+    GC.collect();
     checkCudaErrors(cuCtxDestroy(context));
 }
 
@@ -89,7 +91,6 @@ struct Kernel(alias F) if (is(ReturnType!F == void)) {
     void*[arity!F] params;
 
     this(CUmodule m) {
-        writeln("kernel: ", name);
         checkCudaErrors(cuModuleGetFunction(&cuFunction, m, name.toStringz));
     }
 
@@ -128,6 +129,8 @@ struct CuPtr(T) {
         checkCudaErrors(cuMemAlloc(&ptr, T.sizeof * length));
         checkCudaErrors(cuMemcpyHtoD(ptr, &host[0], T.sizeof * length));
     }
+
+    @disable this(this); // not copyable
 
     this(size_t n) {
         length = n;
@@ -174,7 +177,7 @@ unittest
     }
 
     // Device data
-    auto devA = CuPtr!float(hostA);
+    auto devA = new CuPtr!float(hostA);
     auto devB = CuPtr!float(hostB);
     auto devC = CuPtr!float(n);
 
