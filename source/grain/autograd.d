@@ -4,8 +4,6 @@ import std.algorithm;
 import std.array;
 
 import grain.cuda;
-import grain.kernel : relu;
-
 
 struct Storage(T) {
     bool isHost = true;
@@ -37,33 +35,39 @@ struct Variable(T, size_t dim) {
 }
 
 struct ReLU(T, size_t dim) {
-    Variable!(T, dim) forward(Variable!(T, dim) x) {
+    auto forward(ref Variable!(T, dim) x) {
         if (x.data.isHost) {
             x.data.host.each!((ref a) { if (a < 0) a = 0; });
         } else {
+            import grain.kernel : relu;
             auto n = cast(uint) x.data.device.length;
-            globalModule.kernel!relu
+            GlobalModule!"kernel".get!relu
                 .launch(x.data.device.ptr, n, [1,1,1], [n,1,1]);
         }
-        return x;
+        // return x;
     }
 }
 
 
 unittest {
     import std.stdio;
+    import grain.kernel : relu;
+
     Variable!(float, 1) x;
-    x.data.host = [-1.0f, 1.0f, 0.0f];
     ReLU!(float, 1) func;
-    x = func.forward(x);
+
+    // test CPU
+    x.data.host = [-1.0f, 1.0f, 0.0f];
+    func.forward(x);
     assert(x.data.host == [0.0f, 1.0f, 0.0f]);
     writeln(x.data.host);
 
+    // test CUDA
     x.data.host = [-1.0f, 1.0f, 0.0f];
     x.data.toDevice();
     assert(!x.data.isHost);
-    // x = func.forward(x);
-    // x.data.toHost();
-    // assert(x.data.host == [0.0f, 1.0f, 0.0f]);
-    // writeln(x.data.host);
+    func.forward(x);
+    x.data.toHost();
+    assert(x.data.host == [0.0f, 1.0f, 0.0f]);
+    writeln(x.data.host);
 }
