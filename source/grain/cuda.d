@@ -1,4 +1,4 @@
-module grain.memory;
+module grain.cuda;
 
 import std.traits : ReturnType, arity;
 import std.stdio : writeln, writefln;
@@ -31,19 +31,7 @@ struct CuModule {
 
     this(string path) {
         import std.file : readText;
-        import std.string : replace;
-        import std.format : format;
         auto ptxstr = readText(path);
-        CUdevice device;
-        checkCudaErrors(cuCtxGetDevice(&device));
-        int devMajor, devMinor;
-        checkCudaErrors(cuDeviceGetAttribute(
-                            &devMajor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, device));
-        checkCudaErrors(cuDeviceGetAttribute(
-                            &devMinor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, device));
-        ptxstr = ptxstr.replace(".target generic", format!".target sm_%d%d"(devMajor, devMinor))
-            .replace(".visible .func", ".visible .entry"); // maybe wrong??
-
         // JIT compile a null-terminated PTX string
         checkCudaErrors(cuModuleLoadData(&cuModule, cast(void*) ptxstr.toStringz));
     }
@@ -54,6 +42,32 @@ struct CuModule {
 
     auto kernel(alias F)() {
         return Kernel!F(cuModule);
+    }
+}
+
+
+class GlobalModule {
+    private this() {}
+
+    // Cache instantiation flag in thread-local bool
+    // Thread local
+    private static bool instantiated_;
+
+    // Thread global
+    private __gshared CuModule* instance_;
+
+    static get()
+    {
+        if (!instantiated_)
+        {
+            synchronized(GlobalModule.classinfo)
+            {
+                instance_ = new CuModule("kernel/kernel.ptx");
+                instantiated_ = true;
+            }
+        }
+
+        return instance_;
     }
 }
 
@@ -139,8 +153,7 @@ unittest
 
     // Get a handle to the kernel function in kernel/kernel.d
     // See Makefile how to create kernel/kernel.ptx
-    auto cuModule = CuModule("kernel/kernel.ptx");
-    auto ksaxpy = cuModule.kernel!saxpy;
+    auto ksaxpy = GlobalModule.get().kernel!saxpy;
 
     // Populate input
     uint n = 16;
