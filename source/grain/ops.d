@@ -14,32 +14,37 @@ struct ReLU(T, size_t dim) {
         return y;
     }
 
-    version(grain_cuda)
-    auto forward(Variable!(T, dim, DeviceStorage) x) {
-        import grain.kernel : relu;
-        auto y = this.inplace ? x : x.dup;
-        auto n = cast(uint) y.data.length;
-        GlobalModule!"kernel".get!relu
-            .launch(y.data.ptr, n, [1,1,1], [n,1,1]);
-        return y;
-    }
-
     auto backward(Variable!(T, dim, HostStorage) gy, Variable!(T, dim, HostStorage) x) {
         auto gx = gy.dup;
         foreach (i; 0..gx.data.length) {
-            if (x.data[i] == 0.0) gx.data[i] = 0.0;
+            if (x.data[i] < 0.0) gx.data[i] = 0.0;
         }
         return gx;
     }
 
-    // TODO backward kernel
+    version(grain_cuda) {
+        auto forward(Variable!(T, dim, DeviceStorage) x) {
+            import grain.kernel : relu;
+            auto y = this.inplace ? x : x.dup;
+            auto n = cast(uint) y.data.length;
+            GlobalModule!"kernel".get!relu
+                .launch(y.data.ptr, n, [1,1,1], [n,1,1]);
+            return y;
+        }
+
+        auto backward(Variable!(T, dim, DeviceStorage) gy, Variable!(T, dim, DeviceStorage) x) {
+            import grain.kernel : reluGrad;
+            auto gx = gy.dup; // TODO: create empty
+            auto n = cast(uint) gy.data.length;
+            GlobalModule!"kernel".get!reluGrad
+                .launch(gx.data.ptr, gy.data.ptr, x.data.ptr, n, [1,1,1], [n,1,1]);
+            return gx;
+        }
+    }
 }
 
 unittest {
-    import std.stdio;
     import mir.ndslice;
-    import A = std.algorithm;
-    import numir;
 
     foreach (inplace; [true, false]) {
         ReLU!(float, 1) func;
@@ -55,6 +60,13 @@ unittest {
             assert(y.data[2] == 0.0);
             // Why fail?
             // assert(y.data == [0.0f, 1.0f, 0.0f]);
+
+            x = [-1.0f, 1.0f, 0.0f].variable;
+            auto gy = [1.0f, 2.0f, 3.0f].variable;
+            auto gx = func.backward(gy, x);
+            assert(gx.data[0] == 0.0);
+            assert(gx.data[1] == 2.0);
+            assert(gx.data[2] == 3.0);
         }
 
         // test CUDA
@@ -62,10 +74,16 @@ unittest {
             auto x = [-1.0f, 1.0f, 0.0f].variable;
             auto xd = x.to!DeviceStorage;
             auto yd = func.forward(xd);
-            auto x2 = xd.to!HostStorage;
+            x = xd.to!HostStorage;
             auto y = yd.to!HostStorage;
-            assert(x2.data == (inplace ? y.data : [-1.0f, 1.0f, 0.0f]));
+            assert(x.data == (inplace ? y.data : [-1.0f, 1.0f, 0.0f]));
             assert(y.data == [0.0f, 1.0f, 0.0f]);
+
+            x = [-1.0f, 1.0f, 0.0f].variable;
+            auto gy = [1.0f, 2.0f, 3.0f].variable;
+            auto gxd = func.backward(gy.to!DeviceStorage, x.to!DeviceStorage);
+            auto gx = gxd.to!HostStorage;
+            assert(gx.data == [0.0, 2.0, 3.0]);
         }
     }
 }

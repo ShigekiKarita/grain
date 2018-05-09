@@ -109,7 +109,8 @@ struct Kernel(alias F) if (is(ReturnType!F == void)) {
         T args, uint[3] grid, uint[3] block,
         uint sharedMemBytes = 0,
         CUstream stream = null
-        ) if (args.length == arity!F) {
+        ) {
+        static assert(args.length == arity!F);
         // Kernel launch
         checkCudaErrors(cuLaunchKernel(
                             cuFunction,
