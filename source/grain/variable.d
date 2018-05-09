@@ -26,18 +26,18 @@ version(grain_cuda) {
 struct Variable(T, size_t dim, alias Storage = HostStorage) {
     bool autograd = false;
     RefCounted!(Storage!T) data;
-    size_t[dim] shapes;
+    size_t[dim] shape;
     ptrdiff_t[dim] strides;
     Variable* grad = null;
 
     auto dup() {
         RefCounted!(Storage!T) d = data.dup;
-        auto y = Variable(autograd, d, shapes, strides, grad);
+        auto y = Variable(autograd, d, shape, strides, grad);
         return y;
     }
 
-    auto slice() {
-        return Slice!(Universal, [dim], T*)(shapes, strides, data.ptr);
+    auto sliced() {
+        return Slice!(Universal, [dim], T*)(shape, strides, data.ptr);
     }
 }
 
@@ -56,12 +56,17 @@ auto variable(SliceKind kind, size_t[] packs, Iterator)(
         autograd, data, s._lengths, s._strides, null);
 }
 
+import std.traits : isArray;
 
+auto variable(A)(A a) if (isArray!A) {
+    import numir : nparray;
+    return a.nparray.variable;
+}
 
 Variable!(T, dim, Dst) to(alias Dst, T, size_t dim, alias Src)(Variable!(T, dim, Src) src) {
     RefCounted!(Dst!T) d = src.data.to!Dst;
     // FIXME: consider grad
-    return typeof(return)(src.autograd, d, src.shapes, src.strides, null);
+    return typeof(return)(src.autograd, d, src.shape, src.strides, null);
 }
 
 

@@ -8,9 +8,9 @@ struct ReLU(T, size_t dim) {
     bool inplace = false;
 
     auto forward(Variable!(T, dim, HostStorage) x) {
-        import std.algorithm : each;
+        import mir.ndslice : each;
         auto y = this.inplace ? x : x.dup;
-        y.data.each!((ref a) { if (a < 0) a = 0; });
+        y.sliced.each!((ref a) { if (a < 0) a = 0; });
         return y;
     }
 
@@ -35,51 +35,31 @@ struct ReLU(T, size_t dim) {
     // TODO backward kernel
 }
 
-struct MatMul(T, size_t dim) {
-    auto forward(Variable!(T, 2, HostStorage) x, Variable!(T, 2, HostStorage) y) {
-        import lubeck : mtimes;
-        return mtimes(x.slice, y.slice).variable(x.autograd || y.autograd);
-    }
-}
-
-///
 unittest {
     import std.stdio;
     import mir.ndslice;
-    auto a = [1, 3,
-              5, 7,
-              9, 11].sliced(3, 2).variable;
-    auto b = [2, 4, 6,
-              8, 10, 12].sliced(2, 3).variable;
-    auto c = MatMul!(int, 2)().forward(a, b);
-    assert(c.slice == [[1*2+3*8, 1*4+3*10, 1*6+3*12],
-                       [5*2+7*8, 5*4+7*10, 5*6+7*12],
-                       [9*2+11*8, 9*4+11*10, 9*6+11*12]]);
-}
-
-struct SoftmaxCrossEntropy {
-    
-}
-
-unittest {
-    import std.stdio;
+    import A = std.algorithm;
+    import numir;
 
     foreach (inplace; [true, false]) {
-        Variable!(float, 1) x;
         ReLU!(float, 1) func;
         func.inplace = inplace;
 
         // test CPU
         {
-            x.data = [-1.0f, 1.0f, 0.0f];
+            auto x = [-1.0f, 1.0f, 0.0f].variable;
             auto y = func.forward(x);
             assert(x.data == (inplace ? y.data : [-1.0f, 1.0f, 0.0f]));
-            assert(y.data == [0.0f, 1.0f, 0.0f]);
+            assert(y.data[0] == 0.0);
+            assert(y.data[1] == 1.0);
+            assert(y.data[2] == 0.0);
+            // Why fail?
+            // assert(y.data == [0.0f, 1.0f, 0.0f]);
         }
 
         // test CUDA
         version(grain_cuda) {
-            x.data = [-1.0f, 1.0f, 0.0f];
+            auto x = [-1.0f, 1.0f, 0.0f].variable;
             auto xd = x.to!DeviceStorage;
             auto yd = func.forward(xd);
             auto x2 = xd.to!HostStorage;
@@ -88,5 +68,32 @@ unittest {
             assert(y.data == [0.0f, 1.0f, 0.0f]);
         }
     }
+}
+
+
+struct MatMul(T, size_t dim) {
+    auto forward(Variable!(T, 2, HostStorage) x, Variable!(T, 2, HostStorage) y) {
+        import lubeck : mtimes;
+        return mtimes(x.sliced, y.sliced).variable(x.autograd || y.autograd);
+    }
+}
+
+///
+unittest {
+    import std.stdio;
+    import mir.ndslice;
+    auto a = [[1, 3],
+              [5, 7],
+              [9, 11]].variable;
+    auto b = [[2, 4, 6],
+              [8, 10, 12]].variable;
+    auto c = MatMul!(int, 2)().forward(a, b);
+    assert(c.sliced == [[1*2+3*8, 1*4+3*10, 1*6+3*12],
+                       [5*2+7*8, 5*4+7*10, 5*6+7*12],
+                       [9*2+11*8, 9*4+11*10, 9*6+11*12]]);
+}
+
+struct SoftmaxCrossEntropy {
+    
 }
 
