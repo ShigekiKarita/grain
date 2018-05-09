@@ -1,4 +1,5 @@
 module grain.cuda;
+version(grain_cuda):
 
 import std.traits : ReturnType, arity;
 import std.stdio : writeln, writefln;

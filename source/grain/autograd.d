@@ -10,6 +10,7 @@ import std.typecons : RefCounted, refCounted;
 struct Storage(T) {
     bool isHost = true;
     T[] host;
+    version(grain_cuda) {
     CuPtr!T device;
 
     ref toDevice() {
@@ -27,11 +28,16 @@ struct Storage(T) {
         }
         return this;
     }
+    }
 
     auto dup() {
-        return isHost
-            ? Storage!T(true, host.dup, CuPtr!T())
-            : Storage!T(false, [], device.dup);
+        version(with_cuda) {
+            return isHost
+                ? Storage!T(true, host.dup, CuPtr!T())
+                : Storage!T(false, [], device.dup);
+        } else {
+            return Storage!T(true, host.dup);
+        }
     }
 }
 
@@ -58,10 +64,12 @@ struct ReLU(T, size_t dim) {
             if (isHost) {
                 host.each!((ref a) { if (a < 0) a = 0; });
             } else {
-                import grain.kernel : relu;
-                auto n = cast(uint) device.length;
-                GlobalModule!"kernel".get!relu
-                    .launch(device.ptr, n, [1,1,1], [n,1,1]);
+                version (with_cuda) {
+                    import grain.kernel : relu;
+                    auto n = cast(uint) device.length;
+                    GlobalModule!"kernel".get!relu
+                        .launch(device.ptr, n, [1,1,1], [n,1,1]);
+                }
             }
         }
         return y;
@@ -77,6 +85,7 @@ unittest {
     assert(y.data.host[0] == -1);
 }
 
+version(with_cuda)
 unittest {
     import std.stdio;
     import grain.kernel : relu;

@@ -1,12 +1,36 @@
 {
-	"name": "grain",
-	"authors": [
-		"karita"
-	],
-	"dependencies": {
-		"derelict-cuda": "~>3.1.1"
-	},
-	"description": "CUDA library for D",
-	"copyright": "Copyright © 2018, karita",
-	"license": "BSL-1.0"
+    "name": "grain",
+    "authors": [
+        "karita"
+    ],
+    "dependencies": {
+        "derelict-cuda": "~>3.1.1"
+    },
+    "buildTypes": {
+        "cuda-unittest": {
+            "buildOptions": ["unittests", "debugMode", "debugInfo"],
+            "versions": ["grain_cuda"]
+        },
+        "cuda-unittest-cov": {
+            "buildOptions": ["unittests", "coverage", "debugMode", "debugInfo"],
+            "versions": ["grain_cuda"]
+        },
+        "cuda-unittest-release": {
+            "buildOptions": ["unittests", "releaseMode", "optimize", "inline", "noBoundsCheck"],
+            "versions": ["grain_cuda"]
+        },
+        "unittest": {
+            "buildOptions": ["unittests", "debugMode", "debugInfo"],
+        },
+        "unittest-cov": {
+            "buildOptions": ["unittests", "coverage", "debugMode", "debugInfo"],
+        },
+        "unittest-release": {
+            "buildOptions": ["unittests", "releaseMode", "optimize", "inline", "noBoundsCheck"],
+        }
+
+    },
+    "description": "CUDA library for D",
+    "copyright": "Copyright © 2018, karita",
+    "license": "BSL-1.0"
 }
