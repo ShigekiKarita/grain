@@ -22,6 +22,7 @@ version(grain_cuda) {
     }
 }
 
+// TODO add SliceKind
 struct Variable(T, size_t dim, alias Storage = HostStorage) {
     bool autograd = false;
     RefCounted!(Storage!T) data;
@@ -34,7 +35,28 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
         auto y = Variable(autograd, d, shapes, strides, grad);
         return y;
     }
+
+    auto slice() {
+        return Slice!(Universal, [dim], T*)(shapes, strides, data.ptr);
+    }
 }
+
+import mir.ndslice;
+
+auto variable(SliceKind kind, size_t[] packs, Iterator)(
+    Slice!(kind, packs, Iterator) sl, bool autograd = false) {
+    import mir.math.sum : sum;
+    import numir : Ndim;
+    auto s = sl.universal;
+    alias S = typeof(s);
+    alias E = DeepElementType!S;
+    auto size = s._lengths.sum;
+    RefCounted!(E[]) data = s._iterator[0..size];
+    return Variable!(E, Ndim!S, HostStorage)(
+        autograd, data, s._lengths, s._strides, null);
+}
+
+
 
 Variable!(T, dim, Dst) to(alias Dst, T, size_t dim, alias Src)(Variable!(T, dim, Src) src) {
     RefCounted!(Dst!T) d = src.data.to!Dst;

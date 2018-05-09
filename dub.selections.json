@@ -1,7 +1,16 @@
 {
 	"fileVersion": 1,
 	"versions": {
+		"cblas": "2.0.1",
 		"derelict-cuda": "3.1.1",
-		"derelict-util": "3.0.0-beta.2"
+		"derelict-util": "3.0.0-beta.2",
+		"lapack": "0.0.4",
+		"lubeck": "0.0.5",
+		"mir-algorithm": "0.9.5",
+		"mir-blas": "0.1.1",
+		"mir-lapack": "0.0.6",
+		"mir-linux-kernel": "1.0.0",
+		"mir-random": "0.4.5",
+		"numir": "0.1.2"
 	}
 }

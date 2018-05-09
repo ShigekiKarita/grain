@@ -4,8 +4,11 @@
         "karita"
     ],
     "dependencies": {
-        "derelict-cuda": "~>3.1.1"
+        "derelict-cuda": "~>3.1.1",
+        "numir": "~>0.1.2",
+        "lubeck": "~>0.0.5"
     },
+    "libs": ["mkl_rt"],
     "buildTypes": {
         "cuda-unittest": {
             "buildOptions": ["unittests", "debugMode", "debugInfo"],

@@ -31,10 +31,30 @@ struct ReLU(T, size_t dim) {
         }
         return gx;
     }
+
+    // TODO backward kernel
 }
 
 struct MatMul(T, size_t dim) {
-    
+    auto forward(Variable!(T, 2, HostStorage) x, Variable!(T, 2, HostStorage) y) {
+        import lubeck : mtimes;
+        return mtimes(x.slice, y.slice).variable(x.autograd || y.autograd);
+    }
+}
+
+///
+unittest {
+    import std.stdio;
+    import mir.ndslice;
+    auto a = [1, 3,
+              5, 7,
+              9, 11].sliced(3, 2).variable;
+    auto b = [2, 4, 6,
+              8, 10, 12].sliced(2, 3).variable;
+    auto c = MatMul!(int, 2)().forward(a, b);
+    assert(c.slice == [[1*2+3*8, 1*4+3*10, 1*6+3*12],
+                       [5*2+7*8, 5*4+7*10, 5*6+7*12],
+                       [9*2+11*8, 9*4+11*10, 9*6+11*12]]);
 }
 
 struct SoftmaxCrossEntropy {
