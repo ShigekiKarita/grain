@@ -1,8 +1,10 @@
 module grain.variable;
 
+import std.traits : isArray;
 import std.typecons : RefCounted;
-import grain.cuda;
+import mir.ndslice : isSlice;
 
+import grain.cuda;
 
 alias HostStorage(T) = T[];
 
@@ -36,15 +38,16 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
         return y;
     }
 
-    auto sliced() {
-        return Slice!(Universal, [dim], T*)(shape, strides, data.ptr);
+    static if (is(Storage!T == HostStorage!T)) {
+        auto sliced() {
+            import mir.ndslice.slice : Slice, Universal;
+            return Slice!(Universal, [dim], T*)(shape, strides, data.ptr);
+        }
     }
 }
 
-import mir.ndslice;
-
-auto variable(SliceKind kind, size_t[] packs, Iterator)(
-    Slice!(kind, packs, Iterator) sl, bool autograd = false) {
+auto variable(Sl)(Sl sl, bool autograd = false) if (isSlice!Sl) {
+    import mir.ndslice : universal, DeepElementType;
     import mir.math.sum : sum;
     import numir : Ndim;
     auto s = sl.universal;
@@ -56,10 +59,8 @@ auto variable(SliceKind kind, size_t[] packs, Iterator)(
         autograd, data, s._lengths, s._strides, null);
 }
 
-import std.traits : isArray;
-
 auto variable(A)(A a) if (isArray!A) {
-    import numir : nparray;
+    import numir.core : nparray;
     return a.nparray.variable;
 }
 
