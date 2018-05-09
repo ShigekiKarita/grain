@@ -9,6 +9,7 @@
 !dub.selections.json
 !dub.json
 !tmp/*.ptx
+!dcompute/*
 
 .dub
 docs.json

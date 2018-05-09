@@ -1,5 +1,6 @@
 @compute(CompileFor.deviceOnly) module kernel;
 import ldc.dcompute : GlobalPointer, kernel, compute, CompileFor;
+import dcompute.std.index;
 
 pure nothrow @nogc extern (C):
 
@@ -11,7 +12,7 @@ uint tid_x();
                    GlobalPointer!(float) y,
                    size_t N)
 {
-    auto i = tid_x(); // GlobalIndex.x;
+    auto i = GlobalIndex.x;
     if (i >= N) return;
     res[i] = x[i] + y[i];
 }
@@ -19,7 +20,7 @@ uint tid_x();
 @kernel void relu(GlobalPointer!(float) x,
                   size_t N)
 {
-    auto i = tid_x(); // GlobalIndex.x;
+    auto i = GlobalIndex.x;
     if (i >= N) return;
     if (x[i] < 0) x[i] = 0;
 }
