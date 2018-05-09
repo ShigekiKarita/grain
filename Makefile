@@ -8,7 +8,7 @@ DUB_BUILD := unittest
 ifeq ($(NO_CUDA),true)
 	DUB_OPTS = -b=$(DUB_BUILD)
 else
-	CUDA_DEPS = source/grain/kernel.di tool/compute_capability.out
+	CUDA_DEPS = tool/compute_capability.out source/grain/kernel.di
 	DUB_OPTS = -b=cuda-$(DUB_BUILD)
 endif
 
