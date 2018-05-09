@@ -27,7 +27,7 @@ struct ReLU(T, size_t dim) {
             import grain.kernel : relu;
             auto y = this.inplace ? x : x.dup;
             auto n = cast(uint) y.data.length;
-            GlobalModule!"kernel".get!relu
+            Global.kernel!relu
                 .launch(y.data.ptr, n, [1,1,1], [n,1,1]);
             return y;
         }
@@ -36,16 +36,15 @@ struct ReLU(T, size_t dim) {
             import grain.kernel : reluGrad;
             auto gx = gy.dup; // TODO: create empty
             auto n = cast(uint) gy.data.length;
-            GlobalModule!"kernel".get!reluGrad
+            Global.kernel!reluGrad
                 .launch(gx.data.ptr, gy.data.ptr, x.data.ptr, n, [1,1,1], [n,1,1]);
             return gx;
         }
     }
 }
 
+///
 unittest {
-    import mir.ndslice;
-
     foreach (inplace; [true, false]) {
         ReLU!(float, 1) func;
         func.inplace = inplace;
@@ -90,9 +89,42 @@ unittest {
 
 
 struct MatMul(T, size_t dim) {
+    T alpha = 1;
+    T beta = 0;
+
     auto forward(Variable!(T, 2, HostStorage) x, Variable!(T, 2, HostStorage) y) {
         import lubeck : mtimes;
         return mtimes(x.sliced, y.sliced).variable(x.autograd || y.autograd);
+    }
+
+    version(grain_cuda) {
+        auto forward(Variable!(T, 2, DeviceStorage) x, Variable!(T, 2, DeviceStorage) y) {
+            import std.typecons : RefCounted;
+            import grain.cublas; // : CUBLAS_STATUS_SUCCESS, cublasSgemm_v2;
+            assert(x.shape[1] == y.shape[0]);
+            auto dshape = [x.shape[0], y.shape[1]];
+            auto d = RefCounted!(CuPtr!T)(x.shape[0] * y.shape[1]);
+            static if (is(T == float)) {
+                alias gemm = cublasSgemm_v2;
+            } else {
+                // TODO support double
+                static assert(false, "unsupported type");
+            }
+            // TODO support transposed (CUBLAS_OP_T)
+            // see https://github.com/libmir/mir-blas/blob/master/source/mir/blas.d#L299
+            auto status = gemm(Global.cublas, CUBLAS_OP_N, CUBLAS_OP_N,
+                               cast(int) dshape[0], cast(int) dshape[1], cast(int) x.shape[1],
+                               &alpha,
+                               cast(T*) x.data.ptr, cast(int) x.shape[0],
+                               cast(T*) y.data.ptr, cast(int) y.shape[0],
+                               &beta,
+                               cast(T*) d.ptr, cast(int) dshape[0]);
+            assert(status == CUBLAS_STATUS_SUCCESS);
+            return Variable!(T, 2, DeviceStorage)(
+                x.autograd || y.autograd, d,
+                [x.shape[0], y.shape[1]],
+                [x.shape[0], 1], null);
+        }
     }
 }
 
@@ -100,15 +132,31 @@ struct MatMul(T, size_t dim) {
 unittest {
     import std.stdio;
     import mir.ndslice;
-    auto a = [[1, 3],
-              [5, 7],
-              [9, 11]].variable;
-    auto b = [[2, 4, 6],
-              [8, 10, 12]].variable;
-    auto c = MatMul!(int, 2)().forward(a, b);
-    assert(c.sliced == [[1*2+3*8, 1*4+3*10, 1*6+3*12],
-                        [5*2+7*8, 5*4+7*10, 5*6+7*12],
-                        [9*2+11*8, 9*4+11*10, 9*6+11*12]]);
+    auto a = [[1f, 3f],
+              [5f, 7f],
+              [9f, 11f]].variable;
+    auto b = [[2f, 4f, 6f],
+              [8f, 10f, 12f]].variable;
+
+    // test CPU
+    {
+        auto c = MatMul!(float, 2)().forward(a, b);
+        assert(c.sliced == [[1*2+3*8, 1*4+3*10, 1*6+3*12],
+                            [5*2+7*8, 5*4+7*10, 5*6+7*12],
+                            [9*2+11*8, 9*4+11*10, 9*6+11*12]]);
+        writeln(c.sliced);
+    }
+
+    /* FIXME
+    version(grain_cuda) {
+        auto c = MatMul!(float, 2)().forward(a.to!DeviceStorage,
+                                             b.to!DeviceStorage).to!HostStorage;
+        writeln(c.sliced);
+        assert(c.sliced == [[1*2+3*8, 1*4+3*10, 1*6+3*12],
+                            [5*2+7*8, 5*4+7*10, 5*6+7*12],
+                            [9*2+11*8, 9*4+11*10, 9*6+11*12]]);
+    }
+    */
 }
 
 struct SoftmaxCrossEntropy {

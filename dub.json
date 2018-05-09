@@ -13,15 +13,18 @@
     "buildTypes": {
         "cuda-unittest": {
             "buildOptions": ["unittests", "debugMode", "debugInfo"],
-            "versions": ["grain_cuda"]
+            "versions": ["grain_cuda"],
+            "libs": ["cublas"]
         },
         "cuda-unittest-cov": {
             "buildOptions": ["unittests", "coverage", "debugMode", "debugInfo"],
-            "versions": ["grain_cuda"]
+            "versions": ["grain_cuda"],
+            "libs": ["cublas"]
         },
         "cuda-unittest-release": {
             "buildOptions": ["unittests", "releaseMode", "optimize", "inline", "noBoundsCheck"],
-            "versions": ["grain_cuda"]
+            "versions": ["grain_cuda"],
+            "libs": ["cublas"]
         },
         "unittest": {
             "buildOptions": ["unittests", "debugMode", "debugInfo"],

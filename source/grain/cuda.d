@@ -51,8 +51,9 @@ struct CuModule {
 }
 
 
-class GlobalModule(string name) {
-    mixin("import K = grain." ~ name ~ ";");
+class Global {
+    import grain.cublas;
+    import K = grain.kernel;
     private this() {}
 
     // Cache instantiation flag in thread-local bool
@@ -60,30 +61,41 @@ class GlobalModule(string name) {
     private static bool instantiated_;
 
     // Thread global
-    private __gshared CuModule* instance_;
+    private __gshared CuModule* module_;
+    private __gshared cublasHandle_t cublasHandle_;
+
+    shared static ~this() {
+        cublasDestroy_v2(cublasHandle_);
+    }
 
     static get()
     {
         if (!instantiated_)
         {
-            synchronized(GlobalModule.classinfo)
+            synchronized(Global.classinfo)
             {
-                instance_ = new CuModule(K.ptx);
+                module_ = new CuModule(K.ptx);
+                cublasCreate_v2(&cublasHandle_);
                 instantiated_ = true;
             }
         }
 
-        return instance_;
+        return module_;
     }
 
-    static get(alias F)() {
+    static cublas() {
+        get();
+        return cublasHandle_;
+    }
+
+    static kernel(alias F)() {
         return get().kernel!F;
     }
 
 }
 
-auto globalModule(string name = "kernel")() {
-    return GlobalModule!name.get;
+auto global() {
+    return Global.get();
 }
 
 struct Kernel(alias F) if (is(ReturnType!F == void)) {
@@ -196,7 +208,7 @@ unittest
     auto devC = CuPtr!float(n);
 
     // Kernel launch
-    GlobalModule!"kernel".get!saxpy
+    Global.kernel!saxpy
         .launch(devC.ptr, devA.ptr, devB.ptr, n, [1,1,1], [n,1,1]);
 
     // Validation
