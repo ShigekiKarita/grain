@@ -1,47 +1,34 @@
 module grain.autograd;
 
-import std.algorithm;
-import std.array;
-
+import std.typecons : RefCounted;
 import grain.cuda;
 
-import std.typecons : RefCounted, refCounted;
 
-struct Storage(T) {
-    bool isHost = true;
-    T[] host;
-    version(grain_cuda) {
-    CuPtr!T device;
-
-    ref toDevice() {
-        if (isHost) {
-            isHost = false;
-            device = CuPtr!T(host);
-        }
-        return this;
-    }
-
-    ref toHost() {
-        if (!isHost) {
-            isHost = true;
-            device.toHost(host);
-        }
-        return this;
-    }
-    }
-
-    auto dup() {
-        version(with_cuda) {
-            return isHost
-                ? Storage!T(true, host.dup, CuPtr!T())
-                : Storage!T(false, [], device.dup);
-        } else {
-            return Storage!T(true, host.dup);
-        }
+class DeviceNotFoundException : Exception {
+    this(string file = __FILE__, size_t line = __LINE__) {
+        super("device not found! (please report bug)", file, line);
     }
 }
 
-struct Variable(T, size_t dim) {
+alias HostStorage(T) = T[];
+
+version(grain_cuda) {
+    alias DeviceStorage(T) = CuPtr!T;
+
+    enum bool isDevice(T) = is(typeof({T.init.toHost();}));
+
+    enum bool isHost(T) = !isDevice!T;
+
+    auto to(alias S : DeviceStorage, T)(T[] src) {
+        return DeviceStorage!T(src);
+    }
+    
+    auto to(alias S : HostStorage, Src)(Src src) if (isDevice!Src) {
+        return src.toHost();
+    }
+}
+
+struct Variable(T, size_t dim, alias Storage = HostStorage) {
     bool autograd = false;
     RefCounted!(Storage!T) data;
     size_t[dim] shapes;
@@ -55,23 +42,30 @@ struct Variable(T, size_t dim) {
     }
 }
 
+Variable!(T, dim, Dst) to(alias Dst, T, size_t dim, alias Src)(Variable!(T, dim, Src) src) {
+    RefCounted!(Dst!T) d = src.data.to!Dst;
+    // FIXME: consider grad
+    return typeof(return)(src.autograd, d, src.shapes, src.strides, null);
+}
+
+
 struct ReLU(T, size_t dim) {
     bool inplace = false;
 
-    auto forward(Variable!(T, dim) x) {
+    auto forward(Variable!(T, dim, HostStorage) x) {
+        import std.algorithm : each;
         auto y = this.inplace ? x : x.dup;
-        with (y.data) {
-            if (isHost) {
-                host.each!((ref a) { if (a < 0) a = 0; });
-            } else {
-                version (with_cuda) {
-                    import grain.kernel : relu;
-                    auto n = cast(uint) device.length;
-                    GlobalModule!"kernel".get!relu
-                        .launch(device.ptr, n, [1,1,1], [n,1,1]);
-                }
-            }
-        }
+        y.data.each!((ref a) { if (a < 0) a = 0; });
+        return y;
+    }
+
+    version(grain_cuda)
+    auto forward(Variable!(T, dim, DeviceStorage) x) {
+        import grain.kernel : relu;
+        auto y = this.inplace ? x : x.dup;
+        auto n = cast(uint) y.data.length;
+        GlobalModule!"kernel".get!relu
+            .launch(y.data.ptr, n, [1,1,1], [n,1,1]);
         return y;
     }
 }
@@ -79,16 +73,14 @@ struct ReLU(T, size_t dim) {
 unittest {
     import std.stdio;
     Variable!(float, 1) x;
-    x.data.host = [-1, -2, -3];
+    x.data = [-1, -2, -3];
     auto y = x.dup;
-    x.data.host[0] = 1.0;
-    assert(y.data.host[0] == -1);
+    x.data[0] = 1.0;
+    assert(y.data[0] == -1);
 }
 
-version(with_cuda)
 unittest {
     import std.stdio;
-    import grain.kernel : relu;
 
     foreach (inplace; [true, false]) {
         Variable!(float, 1) x;
@@ -97,22 +89,22 @@ unittest {
 
         // test CPU
         {
-            x.data.host = [-1.0f, 1.0f, 0.0f];
+            x.data = [-1.0f, 1.0f, 0.0f];
             auto y = func.forward(x);
-            assert(x.data.host == (inplace ? y.data.host : [-1.0f, 1.0f, 0.0f]));
-            assert(y.data.host == [0.0f, 1.0f, 0.0f]);
+            assert(x.data == (inplace ? y.data : [-1.0f, 1.0f, 0.0f]));
+            assert(y.data == [0.0f, 1.0f, 0.0f]);
         }
 
         // test CUDA
-        {
-            x.data.host = [-1.0f, 1.0f, 0.0f];
-            x.data.toDevice();
-            assert(!x.data.isHost);
-            auto y = func.forward(x);
-            x.data.toHost();
-            y.data.toHost();
-            assert(x.data.host == (inplace ? y.data.host : [-1.0f, 1.0f, 0.0f]));
-            assert(y.data.host == [0.0f, 1.0f, 0.0f]);
+        version(grain_cuda) {
+            x.data = [-1.0f, 1.0f, 0.0f];
+            auto xd = x.to!DeviceStorage;
+            auto yd = func.forward(xd);
+            auto x2 = xd.to!HostStorage;
+            auto y = yd.to!HostStorage;
+            assert(x2.data == (inplace ? y.data : [-1.0f, 1.0f, 0.0f]));
+            assert(y.data == [0.0f, 1.0f, 0.0f]);
         }
     }
 }
+
