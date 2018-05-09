@@ -1,52 +1,7 @@
-module grain.autograd;
+module grain.ops;
 
-import std.typecons : RefCounted;
+import grain.variable;
 import grain.cuda;
-
-
-class DeviceNotFoundException : Exception {
-    this(string file = __FILE__, size_t line = __LINE__) {
-        super("device not found! (please report bug)", file, line);
-    }
-}
-
-alias HostStorage(T) = T[];
-
-version(grain_cuda) {
-    alias DeviceStorage(T) = CuPtr!T;
-
-    enum bool isDevice(T) = is(typeof({T.init.toHost();}));
-
-    enum bool isHost(T) = !isDevice!T;
-
-    auto to(alias S : DeviceStorage, T)(T[] src) {
-        return DeviceStorage!T(src);
-    }
-    
-    auto to(alias S : HostStorage, Src)(Src src) if (isDevice!Src) {
-        return src.toHost();
-    }
-}
-
-struct Variable(T, size_t dim, alias Storage = HostStorage) {
-    bool autograd = false;
-    RefCounted!(Storage!T) data;
-    size_t[dim] shapes;
-    ptrdiff_t[dim] strides;
-    Variable* grad = null;
-
-    auto dup() {
-        RefCounted!(Storage!T) d = data.dup;
-        auto y = Variable(autograd, d, shapes, strides, grad);
-        return y;
-    }
-}
-
-Variable!(T, dim, Dst) to(alias Dst, T, size_t dim, alias Src)(Variable!(T, dim, Src) src) {
-    RefCounted!(Dst!T) d = src.data.to!Dst;
-    // FIXME: consider grad
-    return typeof(return)(src.autograd, d, src.shapes, src.strides, null);
-}
 
 
 struct ReLU(T, size_t dim) {
@@ -68,15 +23,22 @@ struct ReLU(T, size_t dim) {
             .launch(y.data.ptr, n, [1,1,1], [n,1,1]);
         return y;
     }
+
+    auto backward(Variable!(T, dim, HostStorage) gy, Variable!(T, dim, HostStorage) x) {
+        auto gx = gy.dup;
+        foreach (i; 0..gx.data.length) {
+            if (x.data[i] == 0.0) gx.data[i] = 0.0;
+        }
+        return gx;
+    }
 }
 
-unittest {
-    import std.stdio;
-    Variable!(float, 1) x;
-    x.data = [-1, -2, -3];
-    auto y = x.dup;
-    x.data[0] = 1.0;
-    assert(y.data[0] == -1);
+struct MatMul(T, size_t dim) {
+    
+}
+
+struct SoftmaxCrossEntropy {
+    
 }
 
 unittest {
