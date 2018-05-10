@@ -27,20 +27,23 @@ version(grain_cuda) {
 /// type-erased variable
 struct UntypedVariable {
     import std.variant;
-    Variant data;
     size_t dim;
     size_t[] shape;
     ptrdiff_t[] strides;
     bool isHost;
     TypeInfo elem;
-    UntypedVariable* grad;
+    Variant data; // , gradData;
     this(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) v) {
-        this.data = v.data;
-        this.shape = v.shape;
-        this.strides = v.strides;
+        this.shape = v.shape.dup;
+        this.strides = v.strides.dup;
         this.dim = dim;
         this.isHost = is(Storage!T == HostStorage!T);
-        // this.grad = new UntypedVariable(*v.grad);
+        this.data = v.data;
+        // this.gradData = v.gradData;
+    }
+
+    auto get(T)() {
+        return this.data.get!(RefCounted!T);
     }
 }
 
@@ -52,20 +55,19 @@ unittest {
         auto v = [[0f, 1f], [2f, 3f]].variable;
         u = UntypedVariable(v);
     }
-    assert(u.data.get!(RefCounted!(float[])) == [0, 1, 2, 3]);
+    assert(u.get!(HostStorage!float) == [0, 1, 2, 3]);
 }
 
 // TODO add SliceKind
 struct Variable(T, size_t dim, alias Storage = HostStorage) {
     bool autograd = false;
-    RefCounted!(Storage!T) data;
     size_t[dim] shape;
     ptrdiff_t[dim] strides;
-    Variable* grad = null;
+    RefCounted!(Storage!T) data; // , gradData;
 
     auto dup() {
         RefCounted!(Storage!T) d = data.dup;
-        auto y = Variable(this.autograd, d, this.shape, this.strides, this.grad);
+        auto y = Variable(this.autograd, this.shape, this.strides, d);
         return y;
     }
 
@@ -75,6 +77,8 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
             return Slice!(Universal, [dim], T*)(shape, strides, data.ptr);
         }
     }
+
+    enum isVariable = true;
 }
 
 auto variable(Sl)(Sl sl, bool autograd = false) if (isSlice!Sl) {
@@ -87,7 +91,7 @@ auto variable(Sl)(Sl sl, bool autograd = false) if (isSlice!Sl) {
     auto size = s._lengths.sum;
     RefCounted!(E[]) data = s._iterator[0..size];
     return Variable!(E, Ndim!S, HostStorage)(
-        autograd, data, s._lengths, s._strides, null);
+        autograd, s._lengths, s._strides, data);
 }
 
 auto variable(A)(A a) if (isArray!A) {
@@ -98,7 +102,7 @@ auto variable(A)(A a) if (isArray!A) {
 Variable!(T, dim, Dst) to(alias Dst, T, size_t dim, alias Src)(Variable!(T, dim, Src) src) {
     RefCounted!(Dst!T) d = src.data.to!Dst;
     // FIXME: consider grad
-    return typeof(return)(src.autograd, d, src.shape, src.strides, null);
+    return typeof(return)(src.autograd, src.shape, src.strides, d);
 }
 
 

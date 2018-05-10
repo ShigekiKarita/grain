@@ -7,7 +7,6 @@ struct Context(Storage) {
     Storage[string] dict;
 }
 
-
 struct Autograd {
     auto forward(Op, Args...)(Args args) {
         auto result = Op().forward(args);
@@ -15,8 +14,70 @@ struct Autograd {
     }
 }
 
+abstract class Function {
+    import std.range : empty;
+    UntypedVariable[] saved;
+    UntypedVariable[] vargs, vrets;
+    UntypedVariable[UntypedVariable] gradOutputs;
 
-struct ReLU(T, size_t dim) {
+    void registerGradOutput(UntypedVariable v, UntypedVariable g) {
+        if (v !in this.gradOutputs) {
+            this.gradOutputs[v] = g;
+        } else {
+            // TODO: implement +=
+            // this.gradOutputs[v] += g;
+        }
+    }
+
+    bool isSafficientGrad() {
+        foreach (v; this.vrets) {
+            if (v !in this.gradOutputs) return false;
+        }
+        return true;
+    }
+
+    UntypedVariable[] computeGradInputs()
+    in {
+        assert(!this.vrets.empty);
+    } out {
+        assert(this.gradOutputs.length <= this.vrets.length, "too many grad outputs");
+    } do {
+        if (!this.isSafficientGrad) return [];
+        // FIXME
+        return [];
+    }
+}
+
+mixin template FunctionCommon() {
+    auto applyForward(Args...)(Args args) {
+        import std.traits : hasMember;
+        this.vargs = [];
+        this.vrets = [];
+        // FIXME
+        // this.gradOutputs = [];
+        foreach (a; args) {
+            // TODO find better way
+            static if (hasMember!(typeof(a), "isVariable")) {
+                this.vargs ~= [UntypedVariable(a)];
+            }
+        }
+        auto rets = this.forward(args);
+        static if (hasMember!(typeof(rets), "length")) {
+            foreach (r; rets) {
+                // TODO find better way
+                static if (hasMember!(typeof(r), "isVariable")) {
+                    this.vrets ~= [UntypedVariable(r)];
+                }
+            }
+        } else {
+            this.vrets = [UntypedVariable(rets)];
+        }
+        return rets;
+    }
+}
+
+class ReLU(T, size_t dim) : Function {
+    mixin FunctionCommon;
     bool inplace = false;
 
     auto forward(Variable!(T, dim, HostStorage) x) {
@@ -55,10 +116,20 @@ struct ReLU(T, size_t dim) {
     }
 }
 
+unittest {
+    auto func = new ReLU!(float, 1);
+    auto x = [-1.0f, 2.0f, 3.0f].variable;
+    auto y = func.applyForward(x);
+    func.vargs.writeln;
+    func.vrets.writeln;
+    x.writeln;
+}
+
+
 ///
 unittest {
     foreach (inplace; [true, false]) {
-        ReLU!(float, 1) func;
+        auto func = new ReLU!(float, 1);
         func.inplace = inplace;
 
         // test CPU
@@ -133,9 +204,10 @@ struct MatMul(T, size_t dim) {
                                cast(T*) d.ptr, cast(int) dshape[0]);
             assert(status == CUBLAS_STATUS_SUCCESS);
             return Variable!(T, 2, DeviceStorage)(
-                x.autograd || y.autograd, d,
+                x.autograd || y.autograd,
                 [x.shape[0], y.shape[1]],
-                [x.shape[0], 1], null);
+                [x.shape[0], 1],
+                d);
         }
     }
 }
