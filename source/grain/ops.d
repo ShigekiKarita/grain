@@ -3,6 +3,18 @@ module grain.ops;
 import grain.variable;
 import grain.cuda;
 
+struct Context(Storage) {
+    Storage[string] dict;
+}
+
+
+struct Autograd {
+    auto forward(Op, Args...)(Args args) {
+        auto result = Op().forward(args);
+        return;
+    }
+}
+
 
 struct ReLU(T, size_t dim) {
     bool inplace = false;

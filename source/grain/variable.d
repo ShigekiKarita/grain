@@ -24,6 +24,37 @@ version(grain_cuda) {
     }
 }
 
+/// type-erased variable
+struct UntypedVariable {
+    import std.variant;
+    Variant data;
+    size_t dim;
+    size_t[] shape;
+    ptrdiff_t[] strides;
+    bool isHost;
+    TypeInfo elem;
+    UntypedVariable* grad;
+    this(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) v) {
+        this.data = v.data;
+        this.shape = v.shape;
+        this.strides = v.strides;
+        this.dim = dim;
+        this.isHost = is(Storage!T == HostStorage!T);
+        // this.grad = new UntypedVariable(*v.grad);
+    }
+}
+
+///
+unittest {
+    import std.stdio;
+    UntypedVariable u;
+    {
+        auto v = [[0f, 1f], [2f, 3f]].variable;
+        u = UntypedVariable(v);
+    }
+    assert(u.data.get!(RefCounted!(float[])) == [0, 1, 2, 3]);
+}
+
 // TODO add SliceKind
 struct Variable(T, size_t dim, alias Storage = HostStorage) {
     bool autograd = false;
@@ -34,7 +65,7 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
 
     auto dup() {
         RefCounted!(Storage!T) d = data.dup;
-        auto y = Variable(autograd, d, shape, strides, grad);
+        auto y = Variable(this.autograd, d, this.shape, this.strides, this.grad);
         return y;
     }
 
@@ -74,8 +105,8 @@ Variable!(T, dim, Dst) to(alias Dst, T, size_t dim, alias Src)(Variable!(T, dim,
 ///
 unittest {
     import std.stdio;
-    Variable!(float, 1) x;
-    x.data = [-1, -2, -3];
+    // Variable!(float, 1) x;
+    auto x = [-1f, -2f, -3f].variable;
     auto y = x.dup;
     x.data[0] = 1.0;
     assert(y.data[0] == -1);
