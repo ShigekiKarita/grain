@@ -24,6 +24,40 @@ version(grain_cuda) {
     }
 }
 
+abstract class Function {
+    import std.range : empty;
+    UntypedVariable[] saved;
+    UntypedVariable[] vargs, vrets;
+    UntypedVariable[UntypedVariable] gradOutputs;
+
+    void registerGradOutput(UntypedVariable v, UntypedVariable g) {
+        if (v !in this.gradOutputs) {
+            this.gradOutputs[v] = g;
+        } else {
+            // TODO: implement +=
+            // this.gradOutputs[v] += g;
+        }
+    }
+
+    bool isSafficientGrad() {
+        foreach (v; this.vrets) {
+            if (v !in this.gradOutputs) return false;
+        }
+        return true;
+    }
+
+    UntypedVariable[] computeGradInputs()
+    in {
+        assert(!this.vrets.empty);
+    } out {
+        assert(this.gradOutputs.length <= this.vrets.length, "too many grad outputs");
+    } do {
+        if (!this.isSafficientGrad) return [];
+        // FIXME
+        return [];
+    }
+}
+
 /// type-erased variable
 struct UntypedVariable {
     import std.variant;
@@ -33,6 +67,7 @@ struct UntypedVariable {
     bool isHost;
     TypeInfo elem;
     Variant data; // , gradData;
+    Function func;
     this(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) v) {
         this.shape = v.shape.dup;
         this.strides = v.strides.dup;

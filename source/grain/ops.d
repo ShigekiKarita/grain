@@ -3,58 +3,42 @@ module grain.ops;
 import grain.variable;
 import grain.cuda;
 
-struct Context(Storage) {
-    Storage[string] dict;
-}
 
-struct Autograd {
-    auto forward(Op, Args...)(Args args) {
-        auto result = Op().forward(args);
-        return;
-    }
-}
+/++ NOTE: instead of inheriting Function, make FunctionImpl non-copyable and pass delegate
 
-abstract class Function {
-    import std.range : empty;
-    UntypedVariable[] saved;
-    UntypedVariable[] vargs, vrets;
-    UntypedVariable[UntypedVariable] gradOutputs;
+mixin template FunctionCommon() {
 
-    void registerGradOutput(UntypedVariable v, UntypedVariable g) {
-        if (v !in this.gradOutputs) {
-            this.gradOutputs[v] = g;
-        } else {
-            // TODO: implement +=
-            // this.gradOutputs[v] += g;
+    auto applyForward(F, Args...)(F func, Args args) {
+        ...
+        auto f = uniq!F(func);
+        auto rets = func(args);
+        foreach (r; rets) {
+            r.children = this.vargs;
+            r.bros = this.vrets;
+            r.backProc = (UntypedVariable[] grads) { this.gradOutputs = f.backward(grads); };
         }
-    }
-
-    bool isSafficientGrad() {
-        foreach (v; this.vrets) {
-            if (v !in this.gradOutputs) return false;
-        }
-        return true;
-    }
-
-    UntypedVariable[] computeGradInputs()
-    in {
-        assert(!this.vrets.empty);
-    } out {
-        assert(this.gradOutputs.length <= this.vrets.length, "too many grad outputs");
-    } do {
-        if (!this.isSafficientGrad) return [];
-        // FIXME
-        return [];
+        return ret;
     }
 }
+
+struct Variable(...) {
+
+    void backward() {
+         if (this.bros.any!"a.grad.empty") return;
+         this.backwardProc(this.bros.map!"a.grad".array);
+         this.children.each!"a.backward()";
+    }
+}
+
+ +/
 
 mixin template FunctionCommon() {
     auto applyForward(Args...)(Args args) {
         import std.traits : hasMember;
+        // maybe useless
         this.vargs = [];
         this.vrets = [];
-        // FIXME
-        // this.gradOutputs = [];
+        this.gradOutputs.clear;
         foreach (a; args) {
             // TODO find better way
             static if (hasMember!(typeof(a), "isVariable")) {
@@ -66,14 +50,20 @@ mixin template FunctionCommon() {
             foreach (r; rets) {
                 // TODO find better way
                 static if (hasMember!(typeof(r), "isVariable")) {
-                    this.vrets ~= [UntypedVariable(r)];
+                    auto u = UntypedVariable(r);
+                    u.func = this;
+                    this.vrets ~= [u];
                 }
             }
         } else {
-            this.vrets = [UntypedVariable(rets)];
+            auto u = UntypedVariable(rets);
+            u.func = this;
+            this.vrets = [u];
         }
         return rets;
     }
+
+    // TODO: applyBackward
 }
 
 class ReLU(T, size_t dim) : Function {
