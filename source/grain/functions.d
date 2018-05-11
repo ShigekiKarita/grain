@@ -1,6 +1,6 @@
-module grain.ops;
+module grain.functions;
 
-import grain.variable;
+import grain.autograd;
 import grain.cuda;
 
 import std.stdio;
@@ -34,6 +34,23 @@ struct Variable(...) {
  +/
 
 mixin template FunctionCommon() {
+    import std.typecons : Tuple;
+    import std.traits : arity, Parameters, ReturnType;
+
+    static if (arity!forward == 1 && arity!backward == 1) {
+        static assert(is(ReturnType!backward == Parameters!forward[0]));
+        static assert(is(ReturnType!forward == Parameters!backward[0]));
+    } else static if (arity!backward == 1) {
+        static assert(is(ReturnType!backward == Tuple!(Parameters!forward)));
+        static assert(is(ReturnType!forward == Parameters!backward[0]));
+    } else static if (arity!forward == 1) {
+        static assert(is(ReturnType!backward == Parameters!forward[0]));
+        static assert(is(ReturnType!forward == Tuple!(Parameters!backward)));
+    } else {
+        static assert(is(ReturnType!backward == Tuple!(Parameters!forward)));
+        static assert(is(ReturnType!forward == Tuple!(Parameters!backward)));
+    }
+
     auto applyForward(Args...)(Args args) {
         import std.traits : hasMember;
         // maybe useless
@@ -65,23 +82,34 @@ mixin template FunctionCommon() {
     }
 
     // TODO: applyBackward
+    auto applyBackward(UntypedVariable[] uargs) {
+        UntypedVariable[] ret;
+        return ret;
+    }
+
+    // TODO arg type check vrets(forward) == vargs(backward) && vargs(forward) == vrets(backward)
 }
 
 class ReLU(T, size_t dim) : Function {
     mixin FunctionCommon;
     bool inplace = false;
+    Variable!(T, dim, HostStorage) hx;
+    Variable!(T, dim, DeviceStorage) dx;
 
     auto forward(Variable!(T, dim, HostStorage) x) {
         import mir.ndslice : each;
+        // FIXME if train
+        this.hx = x.dup;
         auto y = this.inplace ? x : x.dup;
         y.sliced.each!((ref a) { if (a < 0) a = 0; });
+        writeln("hx: ", this.hx.dup);
         return y;
     }
 
-    auto backward(Variable!(T, dim, HostStorage) gy, Variable!(T, dim, HostStorage) x) {
+    auto backward(Variable!(T, dim, HostStorage) gy) {
         auto gx = gy.dup;
         foreach (i; 0..gx.data.length) {
-            if (x.data[i] < 0.0) gx.data[i] = 0.0;
+            if (this.hx.data[i] < 0.0) gx.data[i] = 0.0;
         }
         return gx;
     }
@@ -89,6 +117,8 @@ class ReLU(T, size_t dim) : Function {
     version(grain_cuda) {
         auto forward(Variable!(T, dim, DeviceStorage) x) {
             import grain.kernel : relu;
+            // FIXME if train
+            this.dx = x.dup;
             auto y = this.inplace ? x : x.dup;
             auto n = cast(uint) y.data.length;
             Global.kernel!relu
@@ -96,12 +126,12 @@ class ReLU(T, size_t dim) : Function {
             return y;
         }
 
-        auto backward(Variable!(T, dim, DeviceStorage) gy, Variable!(T, dim, DeviceStorage) x) {
+        auto backward(Variable!(T, dim, DeviceStorage) gy) {
             import grain.kernel : reluGrad;
             auto gx = gy.dup; // TODO: create empty
             auto n = cast(uint) gy.data.length;
             Global.kernel!reluGrad
-                .launch(gx.data.ptr, gy.data.ptr, x.data.ptr, n, [1,1,1], [n,1,1]);
+                .launch(gx.data.ptr, gy.data.ptr, this.dx.data.ptr, n, [1,1,1], [n,1,1]);
             return gx;
         }
     }
@@ -111,6 +141,9 @@ unittest {
     auto func = new ReLU!(float, 1);
     auto x = [-1.0f, 2.0f, 3.0f].variable;
     auto y = func.applyForward(x);
+    auto gy = [1.0f, 2.0f, 3.0f].variable;
+    auto gys = [UntypedVariable(gy)];
+    // auto gxs = func.applyBackward(gys);
     func.vargs.writeln;
     func.vrets.writeln;
     x.writeln;
@@ -134,9 +167,10 @@ unittest {
             // Why fail?
             // assert(y.data == [0.0f, 1.0f, 0.0f]);
 
-            x = [-1.0f, 1.0f, 0.0f].variable;
+            // x = [-1.0f, 1.0f, 0.0f].variable;
+            // writeln(func.hx);
             auto gy = [1.0f, 2.0f, 3.0f].variable;
-            auto gx = func.backward(gy, x);
+            auto gx = func.backward(gy);
             assert(gx.data[0] == 0.0);
             assert(gx.data[1] == 2.0);
             assert(gx.data[2] == 3.0);
@@ -154,7 +188,7 @@ unittest {
 
             x = [-1.0f, 1.0f, 0.0f].variable;
             auto gy = [1.0f, 2.0f, 3.0f].variable;
-            auto gxd = func.backward(gy.to!DeviceStorage, x.to!DeviceStorage);
+            auto gxd = func.backward(gy.to!DeviceStorage);
             auto gx = gxd.to!HostStorage;
             assert(gx.data == [0.0, 2.0, 3.0]);
         }
