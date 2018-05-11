@@ -82,6 +82,11 @@ struct UntypedVariable {
     auto get(T)() {
         return this.data.get!(RefCounted!T);
     }
+
+    auto to(V : Variable!(T, dim, Storage), T, size_t dim, alias Storage)() {
+        auto d = this.data.get!(RefCounted!(Storage!T));
+        return Variable!(T, dim, Storage)(false, this.shape[0..dim], this.strides[0..dim], d);
+    }
 }
 
 ///
@@ -114,8 +119,6 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
             return Slice!(Universal, [dim], T*)(shape, strides, data.ptr);
         }
     }
-
-    enum isVariable = true;
 }
 
 enum bool isVariable(T) = is(T : Variable!(Elem, dim, Storage), Elem, size_t dim, alias Storage);

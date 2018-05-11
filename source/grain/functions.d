@@ -34,12 +34,17 @@ struct Variable(...) {
  +/
 
 mixin template FunctionCommon() {
+    import std.meta : allSatisfy;
     import std.typecons : isTuple, tuple, Tuple;
     import std.traits : arity, Parameters, ReturnType;
 
+    /// type checks
     alias Rets = Tuple!(Parameters!backward);
     alias Args = Tuple!(Parameters!forward);
-
+    static assert(allSatisfy!(isVariable, Rets.Types),
+                  "all the function args should be variable.");
+    static assert(allSatisfy!(isVariable, Args.Types),
+                  "function return value should be a variable or tuple of variables.");
     static if (arity!forward == 1 && arity!backward == 1) {
         static assert(is(ReturnType!backward == Parameters!forward[0]));
         static assert(is(ReturnType!forward == Parameters!backward[0]));
@@ -55,15 +60,10 @@ mixin template FunctionCommon() {
     }
 
     auto applyForward(Args...)(Args args) {
-        import std.traits : hasMember;
-        // maybe useless
-        this.vargs = [];
-        this.vrets = [];
-        this.gradOutputs.clear;
-        foreach (a; args) {
-            static if (isVariable!(typeof(a))) {
-                this.vargs ~= [UntypedVariable(a)];
-            }
+        this.vargs.length = args.length;
+        this.vrets.length = Rets.length;
+        foreach (i, a; args) {
+            this.vargs[i] = UntypedVariable(a);
         }
         auto ret = this.forward(args);
         static if (isTuple!(typeof(ret))) {
@@ -71,21 +71,35 @@ mixin template FunctionCommon() {
         } else {
             auto rets = tuple(ret);
         }
-
-        foreach (r; rets) {
-            static if (isVariable!(typeof(r))) {
-                auto u = UntypedVariable(r);
-                u.func = this;
-                this.vrets ~= [u];
-            }
+        foreach (i, r; rets) {
+            auto u = UntypedVariable(r);
+            u.func = this;
+            this.vrets[i] = u;
         }
         return rets;
     }
 
     // TODO: applyBackward
-    override UntypedVariable[] applyBackward(UntypedVariable[] uargs) {
-        UntypedVariable[] ret;
-        return ret;
+    override UntypedVariable[] applyBackward(UntypedVariable[] urets) {
+        Rets vrets;
+        static foreach (i; 0 .. Rets.length) {
+            vrets[i] = urets[i].to!(typeof(vrets[i]));
+        }
+        static if (Rets.length == 1) {
+            auto varg = this.backward(vrets[0]);
+        } else {
+            auto varg = vrets.apply!(this.backward);
+        }
+        static if (Args.length == 1) {
+            auto vargs = tuple(varg);
+        } else {
+            auto vargs = varg;
+        }
+        auto uargs = new UntypedVariable[Args.length];
+        foreach (i, v; vargs) {
+            uargs[i] = UntypedVariable(v);
+        }
+        return uargs;
     }
 }
 
