@@ -34,8 +34,11 @@ struct Variable(...) {
  +/
 
 mixin template FunctionCommon() {
-    import std.typecons : Tuple;
+    import std.typecons : isTuple, tuple, Tuple;
     import std.traits : arity, Parameters, ReturnType;
+
+    alias Rets = Tuple!(Parameters!backward);
+    alias Args = Tuple!(Parameters!forward);
 
     static if (arity!forward == 1 && arity!backward == 1) {
         static assert(is(ReturnType!backward == Parameters!forward[0]));
@@ -58,43 +61,38 @@ mixin template FunctionCommon() {
         this.vrets = [];
         this.gradOutputs.clear;
         foreach (a; args) {
-            // TODO find better way
-            static if (hasMember!(typeof(a), "isVariable")) {
+            static if (isVariable!(typeof(a))) {
                 this.vargs ~= [UntypedVariable(a)];
             }
         }
-        auto rets = this.forward(args);
-        static if (hasMember!(typeof(rets), "length")) {
-            foreach (r; rets) {
-                // TODO find better way
-                static if (hasMember!(typeof(r), "isVariable")) {
-                    auto u = UntypedVariable(r);
-                    u.func = this;
-                    this.vrets ~= [u];
-                }
-            }
+        auto ret = this.forward(args);
+        static if (isTuple!(typeof(ret))) {
+            auto rets = ret;
         } else {
-            auto u = UntypedVariable(rets);
-            u.func = this;
-            this.vrets = [u];
+            auto rets = tuple(ret);
+        }
+
+        foreach (r; rets) {
+            static if (isVariable!(typeof(r))) {
+                auto u = UntypedVariable(r);
+                u.func = this;
+                this.vrets ~= [u];
+            }
         }
         return rets;
     }
 
     // TODO: applyBackward
-    auto applyBackward(UntypedVariable[] uargs) {
+    override UntypedVariable[] applyBackward(UntypedVariable[] uargs) {
         UntypedVariable[] ret;
         return ret;
     }
-
-    // TODO arg type check vrets(forward) == vargs(backward) && vargs(forward) == vrets(backward)
 }
 
 class ReLU(T, size_t dim) : Function {
     mixin FunctionCommon;
     bool inplace = false;
     Variable!(T, dim, HostStorage) hx;
-    Variable!(T, dim, DeviceStorage) dx;
 
     auto forward(Variable!(T, dim, HostStorage) x) {
         import mir.ndslice : each;
@@ -115,6 +113,8 @@ class ReLU(T, size_t dim) : Function {
     }
 
     version(grain_cuda) {
+        Variable!(T, dim, DeviceStorage) dx;
+
         auto forward(Variable!(T, dim, DeviceStorage) x) {
             import grain.kernel : relu;
             // FIXME if train

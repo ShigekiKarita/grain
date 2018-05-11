@@ -56,6 +56,8 @@ abstract class Function {
         // FIXME
         return [];
     }
+
+    UntypedVariable[] applyBackward(UntypedVariable[] uargs);
 }
 
 /// type-erased variable
@@ -116,6 +118,8 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
     enum isVariable = true;
 }
 
+enum bool isVariable(T) = is(T : Variable!(Elem, dim, Storage), Elem, size_t dim, alias Storage);
+
 auto variable(Sl)(Sl sl, bool autograd = false) if (isSlice!Sl) {
     import mir.ndslice : universal, DeepElementType;
     import mir.math.sum : sum;
@@ -148,6 +152,8 @@ unittest {
     auto x = [-1f, -2f, -3f].variable;
     auto y = x.dup;
     x.data[0] = 1.0;
+    static assert(isVariable!(typeof(x)));
+    static assert(!isVariable!void);
     assert(y.data[0] == -1);
 }
 
