@@ -3,6 +3,7 @@ module grain.ops;
 import grain.variable;
 import grain.cuda;
 
+import std.stdio;
 
 /++ NOTE: instead of inheriting Function, make FunctionImpl non-copyable and pass delegate
 
