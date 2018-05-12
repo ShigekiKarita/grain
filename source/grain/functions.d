@@ -169,8 +169,9 @@ unittest {
     auto gy = [1.0f, 2.0f, 3.0f].variable;
     auto ugy = UntypedVariable(gy);
     y.backward(&ugy);
-    // x.grad.data.get!(float[]).writeln;
-    // auto gxs = func.applyBackward(gys);
+    x.data.ptr.writeln;
+    assert(x.grad == [0, 2, 3]);
+    // writeln("x.grad=", x.grad);
 }
 
 

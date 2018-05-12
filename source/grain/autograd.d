@@ -34,8 +34,7 @@ struct UntypedVariable {
     ptrdiff_t[] strides;
     bool isHost;
     TypeInfo elem;
-    Variant data;
-    UntypedVariable* grad; // , gradData;
+    Variant data, grad;
     size_t outPosition = 0;
     RefCounted!BackProp bprop;
 
@@ -47,7 +46,7 @@ struct UntypedVariable {
         this.dim = dim;
         this.isHost = is(Storage!T == HostStorage!T);
         this.data = v.data;
-        this.grad = &v.grad;
+        this.grad = v.grad;
     }
 
     auto get(T)() {
@@ -94,13 +93,18 @@ struct BackProp {
             this.gradOutputs[pos] = *grad; // FIXME??
         }
         if (grad is null || this.nGrad == this.gradOutputs.length) {
-            auto gradInputs = proc(this.gradOutputs);
+            UntypedVariable[] gradInputs = proc(this.gradOutputs);
             assert(gradInputs.length == inputs.length, "invalid number of input gradients");
             foreach (i; 0 .. inputs.length) {
                 if (inputs[i].requiresGrad) {
-                    // *inputs[i].grad = gradInputs[i];
-                    writeln(inputs[i]);
-                    writeln(gradInputs[i]);
+                    import std.stdio;
+                    // TODO instead of dynamic cast here. cast in proc
+                    // FIXME use axpy to += grad
+                    if (inputs[i].isHost) {
+                        inputs[i].grad.get!(RefCounted!(float[]))[] = gradInputs[i].data.get!(RefCounted!(float[]));
+                    } else {
+                        assert(false, "TODO not implemented");
+                    }
                 }
                 inputs[i].backward(&gradInputs[i]);
             }
@@ -132,7 +136,7 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
     size_t[dim] shape;
     ptrdiff_t[dim] strides;
     RefCounted!(Storage!T) data;
-    UntypedVariable grad;
+    RefCounted!(Storage!T) grad;
     RefCounted!BackProp bprop;
 
     this(bool requiresGrad, size_t[dim] shape, ptrdiff_t[dim] strides, RefCounted!(Storage!T) data) {
@@ -140,7 +144,15 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
         this.shape = shape;
         this.strides = strides;
         this.data = data;
-        this.grad.isHost = is(Storage!T == HostStorage!T);
+        // this.grad.isHost = is(Storage!T == HostStorage!T);
+        if (this.requiresGrad) {
+            static if (is(Storage!T == HostStorage!T)) {
+                this.grad = new T[this.data.length];
+                this.grad[] = 0;
+            } else version (grain_cuda) {
+                assert(false, "TODO");
+            }
+        }
     }
 
     auto dup() {
