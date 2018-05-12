@@ -35,8 +35,10 @@ struct Variable(...) {
 
 mixin template FunctionCommon() {
     import std.meta : allSatisfy;
-    import std.typecons : isTuple, tuple, Tuple;
+    import std.typecons : isTuple, tuple, Tuple, RefCounted;
     import std.traits : arity, Parameters, ReturnType;
+
+    RefCounted!(UntypedVariable[]) vargs, vrets;
 
     /// type checks
     alias Rets = Tuple!(Parameters!backward);
@@ -73,14 +75,22 @@ mixin template FunctionCommon() {
         }
         foreach (i, r; rets) {
             auto u = UntypedVariable(r);
-            u.func = this;
+            if (grain.autograd.backprop) {
+                RefCounted!BackProp bp = BackProp(&this.applyBackward, this.vargs, new UntypedVariable[Rets.length]);
+                u.bprop = bp;
+                u.outPosition = i;
+                rets[i].bprop = bp;
+            }
             this.vrets[i] = u;
         }
-        return rets;
+        static if (isTuple!(typeof(ret))) {
+            return rets;
+        } else {
+            return rets[0];
+        }
     }
 
-    // TODO: applyBackward
-    override UntypedVariable[] applyBackward(UntypedVariable[] urets) {
+    UntypedVariable[] applyBackward(UntypedVariable[] urets) {
         Rets vrets;
         static foreach (i; 0 .. Rets.length) {
             vrets[i] = urets[i].to!(typeof(vrets[i]));
@@ -103,7 +113,7 @@ mixin template FunctionCommon() {
     }
 }
 
-class ReLU(T, size_t dim) : Function {
+struct ReLU(T, size_t dim) {
     mixin FunctionCommon;
     bool inplace = false;
     Variable!(T, dim, HostStorage) hx;
@@ -114,7 +124,6 @@ class ReLU(T, size_t dim) : Function {
         this.hx = x.dup;
         auto y = this.inplace ? x : x.dup;
         y.sliced.each!((ref a) { if (a < 0) a = 0; });
-        writeln("hx: ", this.hx.dup);
         return y;
     }
 
@@ -152,15 +161,16 @@ class ReLU(T, size_t dim) : Function {
 }
 
 unittest {
+    import std.typecons;
+    grain.autograd.backprop = true;
     auto func = new ReLU!(float, 1);
-    auto x = [-1.0f, 2.0f, 3.0f].variable;
+    auto x = [-1.0f, 2.0f, 3.0f].variable(true);
     auto y = func.applyForward(x);
     auto gy = [1.0f, 2.0f, 3.0f].variable;
-    auto gys = [UntypedVariable(gy)];
+    auto ugy = UntypedVariable(gy);
+    y.backward(&ugy);
+    // x.grad.data.get!(float[]).writeln;
     // auto gxs = func.applyBackward(gys);
-    func.vargs.writeln;
-    func.vrets.writeln;
-    x.writeln;
 }
 
 
@@ -216,7 +226,7 @@ struct MatMul(T, size_t dim) {
 
     auto forward(Variable!(T, 2, HostStorage) x, Variable!(T, 2, HostStorage) y) {
         import lubeck : mtimes;
-        return mtimes(x.sliced, y.sliced).variable(x.autograd || y.autograd);
+        return mtimes(x.sliced, y.sliced).variable(x.requiresGrad || y.requiresGrad);
     }
 
     version(grain_cuda) {
@@ -243,7 +253,7 @@ struct MatMul(T, size_t dim) {
                                cast(T*) d.ptr, cast(int) dshape[0]);
             assert(status == CUBLAS_STATUS_SUCCESS);
             return Variable!(T, 2, DeviceStorage)(
-                x.autograd || y.autograd,
+                x.requiresGrad || y.requiresGrad,
                 [x.shape[0], y.shape[1]],
                 [x.shape[0], 1],
                 d);

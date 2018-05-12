@@ -24,59 +24,30 @@ version(grain_cuda) {
     }
 }
 
-abstract class Function {
-    import std.range : empty;
-    UntypedVariable[] saved;
-    UntypedVariable[] vargs, vrets;
-    UntypedVariable[UntypedVariable] gradOutputs;
-
-    void registerGradOutput(UntypedVariable v, UntypedVariable g) {
-        if (v !in this.gradOutputs) {
-            this.gradOutputs[v] = g;
-        } else {
-            // TODO: implement +=
-            // this.gradOutputs[v] += g;
-        }
-    }
-
-    bool isSafficientGrad() {
-        foreach (v; this.vrets) {
-            if (v !in this.gradOutputs) return false;
-        }
-        return true;
-    }
-
-    UntypedVariable[] computeGradInputs()
-    in {
-        assert(!this.vrets.empty);
-    } out {
-        assert(this.gradOutputs.length <= this.vrets.length, "too many grad outputs");
-    } do {
-        if (!this.isSafficientGrad) return [];
-        // FIXME
-        return [];
-    }
-
-    UntypedVariable[] applyBackward(UntypedVariable[] uargs);
-}
 
 /// type-erased variable
 struct UntypedVariable {
     import std.variant;
+    bool requiresGrad;
     size_t dim;
     size_t[] shape;
     ptrdiff_t[] strides;
     bool isHost;
     TypeInfo elem;
-    Variant data; // , gradData;
-    Function func;
+    Variant data;
+    UntypedVariable* grad; // , gradData;
+    size_t outPosition = 0;
+    RefCounted!BackProp bprop;
+
     this(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) v) {
+        this.elem = typeid(T);
+        this.requiresGrad = v.requiresGrad;
         this.shape = v.shape.dup;
         this.strides = v.strides.dup;
         this.dim = dim;
         this.isHost = is(Storage!T == HostStorage!T);
         this.data = v.data;
-        // this.gradData = v.gradData;
+        this.grad = &v.grad;
     }
 
     auto get(T)() {
@@ -85,7 +56,62 @@ struct UntypedVariable {
 
     auto to(V : Variable!(T, dim, Storage), T, size_t dim, alias Storage)() {
         auto d = this.data.get!(RefCounted!(Storage!T));
-        return Variable!(T, dim, Storage)(false, this.shape[0..dim], this.strides[0..dim], d);
+        return Variable!(T, dim, Storage)(this.requiresGrad, this.shape[0..dim], this.strides[0..dim], d);
+    }
+
+    void backward(UntypedVariable* gradOutput=null) {
+        if (bprop.refCountedStore.isInitialized) {
+            bprop.backward(gradOutput, outPosition);
+        }
+    }
+
+    string toString() {
+        import std.format : format;
+        return "UntypedVariable(%s, dim=%d, isHost=%s, data=%s, shape=%s)".format(
+            elem, dim, isHost, data, shape);
+    }
+}
+
+/// FIXME maybe singleton?
+shared bool backprop = false;
+
+/// Informations for backpropagation
+struct BackProp {
+    alias Proc = UntypedVariable[] delegate(UntypedVariable[]);
+    Proc proc;
+    UntypedVariable[] inputs;
+    UntypedVariable[] gradOutputs;
+    size_t nGrad = 0;
+
+    void backward(UntypedVariable* grad=null, size_t pos=0) {
+        import std.exception : enforce;
+        import std.range : empty;
+        enforce(!this.inputs.empty, "nothing to backprop");
+        ++this.nGrad;
+        if (grad is null) {
+            enforce(this.gradOutputs.length == 1, "this variable is not loss");
+        } else {
+            this.gradOutputs[pos] = *grad; // FIXME??
+        }
+        if (grad is null || this.nGrad == this.gradOutputs.length) {
+            auto gradInputs = proc(this.gradOutputs);
+            assert(gradInputs.length == inputs.length, "invalid number of input gradients");
+            foreach (i; 0 .. inputs.length) {
+                if (inputs[i].requiresGrad) {
+                    // *inputs[i].grad = gradInputs[i];
+                    writeln(inputs[i]);
+                    writeln(gradInputs[i]);
+                }
+                inputs[i].backward(&gradInputs[i]);
+            }
+        }
+
+        // FIXME: reconsider this maybe
+        import core.memory : GC;
+        destroy(gradOutputs);
+        GC.free(&gradOutputs);
+        destroy(this);
+        GC.free(&this);
     }
 }
 
@@ -102,14 +128,24 @@ unittest {
 
 // TODO add SliceKind
 struct Variable(T, size_t dim, alias Storage = HostStorage) {
-    bool autograd = false;
+    bool requiresGrad = false;
     size_t[dim] shape;
     ptrdiff_t[dim] strides;
-    RefCounted!(Storage!T) data; // , gradData;
+    RefCounted!(Storage!T) data;
+    UntypedVariable grad;
+    RefCounted!BackProp bprop;
+
+    this(bool requiresGrad, size_t[dim] shape, ptrdiff_t[dim] strides, RefCounted!(Storage!T) data) {
+        this.requiresGrad = requiresGrad;
+        this.shape = shape;
+        this.strides = strides;
+        this.data = data;
+        this.grad.isHost = is(Storage!T == HostStorage!T);
+    }
 
     auto dup() {
         RefCounted!(Storage!T) d = data.dup;
-        auto y = Variable(this.autograd, this.shape, this.strides, d);
+        auto y = Variable(this.requiresGrad, this.shape, this.strides, d);
         return y;
     }
 
@@ -119,11 +155,23 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
             return Slice!(Universal, [dim], T*)(shape, strides, data.ptr);
         }
     }
+
+    // TODO pass gradOutput
+    void backward(UntypedVariable* grad=null, size_t pos=0) {
+        this.bprop.backward(grad, pos);
+    }
+
+    string toString() {
+        import std.format : format;
+        return "Variable!(%s, dim=%d, %s)(data=%s, shape=%s)"
+            .format(T.stringof, dim, Storage.stringof,
+                    data, shape);
+    }
 }
 
 enum bool isVariable(T) = is(T : Variable!(Elem, dim, Storage), Elem, size_t dim, alias Storage);
 
-auto variable(Sl)(Sl sl, bool autograd = false) if (isSlice!Sl) {
+auto variable(Sl)(Sl sl, bool requiresGrad = false) if (isSlice!Sl) {
     import mir.ndslice : universal, DeepElementType;
     import mir.math.sum : sum;
     import numir : Ndim;
@@ -133,18 +181,18 @@ auto variable(Sl)(Sl sl, bool autograd = false) if (isSlice!Sl) {
     auto size = s._lengths.sum;
     RefCounted!(E[]) data = s._iterator[0..size];
     return Variable!(E, Ndim!S, HostStorage)(
-        autograd, s._lengths, s._strides, data);
+        requiresGrad, s._lengths, s._strides, data);
 }
 
-auto variable(A)(A a) if (isArray!A) {
+auto variable(A)(A a, bool requiresGrad=false) if (isArray!A) {
     import numir.core : nparray;
-    return a.nparray.variable;
+    return a.nparray.variable(requiresGrad);
 }
 
 Variable!(T, dim, Dst) to(alias Dst, T, size_t dim, alias Src)(Variable!(T, dim, Src) src) {
     RefCounted!(Dst!T) d = src.data.to!Dst;
     // FIXME: consider grad
-    return typeof(return)(src.autograd, src.shape, src.strides, d);
+    return typeof(return)(src.requiresGrad, src.shape, src.strides, d);
 }
 
 
