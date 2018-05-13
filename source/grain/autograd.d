@@ -228,8 +228,11 @@ unittest {
     static assert(isVariable!(typeof(x)));
     static assert(!isVariable!void);
     static assert(isHost!(typeof(x)));
-    static assert(!isHost!(typeof(x.to!DeviceStorage)));
     assert(y.data[0] == -1);
+
+    version (grain_cuda) {
+        static assert(!isHost!(typeof(x.to!DeviceStorage)));
+    }
 }
 
 

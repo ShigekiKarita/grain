@@ -155,19 +155,19 @@ unittest {
     }
     static assert(!__traits(compiles, A!void));
 
-    struct B(DelayInstantiation) {
-        mixin FunctionCommon;
-
-        F1H forward(F1H x) { return x; };
-        F1H backward(F1H x) { return x; };
-
-        // mismatch of args in device
-        version (grain_cuda) {
-            F1D forward(F1D x) { return x; };
-            F1D backward(F1D x, F1D y) { return x; };
+    version (grain_cuda) {
+        struct B(DelayInstantiation) {
+            mixin FunctionCommon;
+            F1H forward(F1H x) { return x; };
+            F1H backward(F1H x) { return x; };
+            // mismatch of args in device
+            version (grain_cuda) {
+                F1D forward(F1D x) { return x; };
+                F1D backward(F1D x, F1D y) { return x; };
+            }
         }
+        static assert(!__traits(compiles, B!void));
     }
-    static assert(!__traits(compiles, B!void));
 }
 
 struct ReLU(T, size_t dim) {

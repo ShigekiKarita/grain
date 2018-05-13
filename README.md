@@ -60,3 +60,9 @@ I have tested with
 - https://github.com/ldc-developers/ldc
 - https://llvm.org/docs/NVPTXUsage.html
 - https://llvm.org/docs/CompileCudaWithLLVM.html
+
+
+## todo
+
+- axpy in grad register
+- kernel type check
