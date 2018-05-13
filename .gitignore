@@ -6,6 +6,7 @@
 !Makefile
 !*.md
 !*.cu
+!*.sh
 !dub.selections.json
 !dub.json
 !tmp/*.ptx

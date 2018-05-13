@@ -64,8 +64,12 @@ class Global {
     private __gshared CuModule* module_;
     private __gshared cublasHandle_t cublasHandle_;
 
-    shared static ~this() {
-        cublasDestroy_v2(cublasHandle_);
+    static ~this() {
+        if (!instantiated_) {
+            synchronized(Global.classinfo) {
+                cublasDestroy_v2(cublasHandle_);
+            }
+        }
     }
 
     static get()
