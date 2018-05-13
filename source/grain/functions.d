@@ -90,26 +90,38 @@ mixin template FunctionCommon() {
         }
     }
 
-    UntypedVariable[] applyBackward(UntypedVariable[] urets) {
-        Rets vrets;
+    void applyBackward(UntypedVariable[] ugradOutputs, UntypedVariable[] uinputs) {
+        Rets vgradOutputs;
         static foreach (i; 0 .. Rets.length) {
-            vrets[i] = urets[i].to!(typeof(vrets[i]));
+            vgradOutputs[i] = ugradOutputs[i].to!(typeof(vgradOutputs[i]));
         }
         static if (Rets.length == 1) {
-            auto varg = this.backward(vrets[0]);
+            auto _vgradInputs = this.backward(vgradOutputs[0]);
         } else {
-            auto varg = vrets.apply!(this.backward);
+            auto _vgradInputs = vgradOutputs.apply!(this.backward);
         }
         static if (Args.length == 1) {
-            auto vargs = tuple(varg);
+            auto vgradInputs = tuple(_vgradInputs);
         } else {
-            auto vargs = varg;
+            auto vgradInputs = _vgradInputs;
         }
-        auto uargs = new UntypedVariable[Args.length];
-        foreach (i, v; vargs) {
-            uargs[i] = UntypedVariable(v);
+        auto ugradInputs = new UntypedVariable[Args.length];
+        foreach (i, v; vgradInputs) {
+            ugradInputs[i] = UntypedVariable(v);
         }
-        return uargs;
+        assert(vgradInputs.length == uinputs.length, "invalid number of input gradients");
+        foreach (i, vgi; vgradInputs) {
+            if (uinputs[i].requiresGrad) {
+                alias Storage = typeof(vgradInputs[i].data);
+                static if (vgradInputs[i].isHost) {
+                    // TODO += grad
+                    uinputs[i].grad.get!Storage[] = vgradInputs[i].data; //  ugradInputs[i].data.get!(RefCounted!(float[]));
+                } else {
+                    assert(false, "TODO not implemented type: " ~ Storage.stringof);
+                }
+            }
+            uinputs[i].backward(&ugradInputs[i]);
+        }
     }
 }
 

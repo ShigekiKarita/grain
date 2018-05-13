@@ -1,19 +1,20 @@
 module grain.autograd;
 
 import std.traits : isArray;
-import std.typecons : RefCounted;
+import std.typecons : RefCounted, RefCountedAutoInitialize;
 import mir.ndslice : isSlice;
 
 import grain.cuda;
 
 alias HostStorage(T) = T[];
 
+// enum bool isHost(T) = isArray!T || is(T : RefCounted!(HostStorage!E, yesno), E, RefCountedAutoInitialize yesno);
+
 version(grain_cuda) {
     alias DeviceStorage(T) = CuPtr!T;
 
     enum bool isDevice(T) = is(typeof({T.init.toHost();}));
 
-    enum bool isHost(T) = !isDevice!T;
 
     auto to(alias S : DeviceStorage, T)(T[] src) {
         return DeviceStorage!T(src);
@@ -76,7 +77,7 @@ shared bool backprop = false;
 
 /// Informations for backpropagation
 struct BackProp {
-    alias Proc = UntypedVariable[] delegate(UntypedVariable[]);
+    alias Proc = void delegate(UntypedVariable[], UntypedVariable[]);
     Proc proc;
     UntypedVariable[] inputs;
     UntypedVariable[] gradOutputs;
@@ -93,21 +94,7 @@ struct BackProp {
             this.gradOutputs[pos] = *grad; // FIXME??
         }
         if (grad is null || this.nGrad == this.gradOutputs.length) {
-            UntypedVariable[] gradInputs = proc(this.gradOutputs);
-            assert(gradInputs.length == inputs.length, "invalid number of input gradients");
-            foreach (i; 0 .. inputs.length) {
-                if (inputs[i].requiresGrad) {
-                    import std.stdio;
-                    // TODO instead of dynamic cast here. cast in proc
-                    // FIXME use axpy to += grad
-                    if (inputs[i].isHost) {
-                        inputs[i].grad.get!(RefCounted!(float[]))[] = gradInputs[i].data.get!(RefCounted!(float[]));
-                    } else {
-                        assert(false, "TODO not implemented");
-                    }
-                }
-                inputs[i].backward(&gradInputs[i]);
-            }
+            proc(this.gradOutputs, this.inputs);
         }
 
         // FIXME: reconsider this maybe
@@ -138,6 +125,7 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
     RefCounted!(Storage!T) data;
     RefCounted!(Storage!T) grad;
     RefCounted!BackProp bprop;
+    enum isHost = is(Storage!T == HostStorage!T);
 
     this(bool requiresGrad, size_t[dim] shape, ptrdiff_t[dim] strides, RefCounted!(Storage!T) data) {
         this.requiresGrad = requiresGrad;
@@ -150,7 +138,7 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
                 this.grad = new T[this.data.length];
                 this.grad[] = 0;
             } else version (grain_cuda) {
-                assert(false, "TODO");
+                assert(false, "FIXME: init cuda grad = 0");
             }
         }
     }

@@ -136,11 +136,10 @@ struct Kernel(alias F) if (is(ReturnType!F == void)) {
 
 struct CuPtr(T) {
     CUdeviceptr ptr;
-    size_t length;
+    const size_t length;
 
     this(T[] host) {
-        this.length = host.length;
-        checkCudaErrors(cuMemAlloc(&ptr, T.sizeof * length));
+        this(host.length);
         checkCudaErrors(cuMemcpyHtoD(ptr, &host[0], T.sizeof * length));
     }
 
@@ -177,6 +176,28 @@ struct CuPtr(T) {
         checkCudaErrors(cuMemAlloc(&ret, T.sizeof * length));
         checkCudaErrors(cuMemcpyDtoD(ret, ptr, T.sizeof * length));
         return typeof(this)(ret, length);
+    }
+
+    // FIXME non zero support
+    private ref fill_(T value, size_t N) {
+        import std.conv : to;
+        import std.traits : Parameters;
+        mixin("alias _memset = cuMemsetD" ~  to!string(T.sizeof * 8) ~ ";");
+        _memset(this.ptr, cast(Parameters!(_memset)[1]) value, N);
+        return this;
+    }
+
+    private ref fill_(T value) {
+        return this.fill_(value, this.length);
+    }
+
+    ref zero_() {
+        return this.fill_(0);
+    }
+
+    static zeros(size_t N) {
+        import std.algorithm : move;
+        return move(CuPtr!T(N).zero_());
     }
 }
 
@@ -217,4 +238,14 @@ unittest
         // writefln!"%f + %f = %f"(hostA[i], hostB[i], hostC[i]);
         assert(hostA[i] + hostB[i] == hostC[i]);
     }
+}
+
+
+unittest {
+    auto d = CuPtr!float(3);
+    d.zero_();
+    auto h = d.toHost();
+    assert(h == [0, 0, 0]);
+
+    // FIXME support non zero value
 }
