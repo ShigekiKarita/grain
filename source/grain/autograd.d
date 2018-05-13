@@ -3,10 +3,29 @@ module grain.autograd;
 import std.traits : isArray;
 import std.typecons : RefCounted, RefCountedAutoInitialize;
 import mir.ndslice : isSlice;
+import std.range : ElementType;
 
 import grain.cuda;
 
 alias HostStorage(T) = T[];
+
+auto zero_(T)(T[] s) {
+    import std.algorithm.mutation : fill;
+    fill(s, 0);
+    return s;
+}
+
+auto zeros(T)(size_t n) if (isArray!T) {
+    auto s = new ElementType!T[n];
+    return s.zero_();
+}
+
+unittest {
+    float[] h = [1f, 2f, 3f];
+    h.zero_();
+    assert(h == [0f, 0f, 0f]);
+    assert(zeros!(HostStorage!float)(3) == [0f, 0f, 0f]);
+}
 
 // enum bool isHost(T) = isArray!T || is(T : RefCounted!(HostStorage!E, yesno), E, RefCountedAutoInitialize yesno);
 
@@ -56,7 +75,8 @@ struct UntypedVariable {
 
     auto to(V : Variable!(T, dim, Storage), T, size_t dim, alias Storage)() {
         auto d = this.data.get!(RefCounted!(Storage!T));
-        return Variable!(T, dim, Storage)(this.requiresGrad, this.shape[0..dim], this.strides[0..dim], d);
+        return Variable!(T, dim, Storage)(
+            this.requiresGrad, this.shape[0..dim], this.strides[0..dim], d);
     }
 
     void backward(UntypedVariable* gradOutput=null) {
@@ -71,6 +91,7 @@ struct UntypedVariable {
             elem, dim, isHost, data, shape);
     }
 }
+
 
 /// FIXME maybe singleton?
 shared bool backprop = false;
@@ -135,10 +156,10 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
         // this.grad.isHost = is(Storage!T == HostStorage!T);
         if (this.requiresGrad) {
             static if (is(Storage!T == HostStorage!T)) {
-                this.grad = new T[this.data.length];
-                this.grad[] = 0;
+                this.grad = zeros!(Storage!T)(this.data.length);
             } else version (grain_cuda) {
-                assert(false, "FIXME: init cuda grad = 0");
+                // TODO why is grain.cuda. required?
+                this.grad = grain.cuda.zeros!(CuPtr!T)(this.data.length);
             }
         }
     }
@@ -170,6 +191,7 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
 }
 
 enum bool isVariable(T) = is(T : Variable!(Elem, dim, Storage), Elem, size_t dim, alias Storage);
+enum bool isHost(V : Variable!(Elem, dim, Storage), Elem, size_t dim, alias Storage) = is(Storage!Elem == HostStorage!Elem);
 
 auto variable(Sl)(Sl sl, bool requiresGrad = false) if (isSlice!Sl) {
     import mir.ndslice : universal, DeepElementType;
@@ -205,6 +227,8 @@ unittest {
     x.data[0] = 1.0;
     static assert(isVariable!(typeof(x)));
     static assert(!isVariable!void);
+    static assert(isHost!(typeof(x)));
+    static assert(!isHost!(typeof(x.to!DeviceStorage)));
     assert(y.data[0] == -1);
 }
 

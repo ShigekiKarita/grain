@@ -33,20 +33,10 @@ struct Variable(...) {
 
  +/
 
-mixin template FunctionCommon() {
-    import std.meta : allSatisfy;
-    import std.typecons : isTuple, tuple, Tuple, RefCounted;
-    import std.traits : arity, Parameters, ReturnType;
 
-    RefCounted!(UntypedVariable[]) vargs, vrets;
-
-    /// type checks
-    alias Rets = Tuple!(Parameters!backward);
-    alias Args = Tuple!(Parameters!forward);
-    static assert(allSatisfy!(isVariable, Rets.Types),
-                  "all the function args should be variable.");
-    static assert(allSatisfy!(isVariable, Args.Types),
-                  "function return value should be a variable or tuple of variables.");
+mixin template TypeChecker(alias forward, alias backward) {
+    static assert(arity!forward == Tuple!(ReturnType!backward).length);
+    static assert(arity!backward == Tuple!(ReturnType!forward).length);
     static if (arity!forward == 1 && arity!backward == 1) {
         static assert(is(ReturnType!backward == Parameters!forward[0]));
         static assert(is(ReturnType!forward == Parameters!backward[0]));
@@ -59,6 +49,34 @@ mixin template FunctionCommon() {
     } else {
         static assert(is(ReturnType!backward == Tuple!(Parameters!forward)));
         static assert(is(ReturnType!forward == Tuple!(Parameters!backward)));
+    }
+}
+
+mixin template FunctionCommon() {
+    import std.meta : allSatisfy;
+    import std.typecons : isTuple, tuple, Tuple, RefCounted;
+    import std.traits : arity, Parameters, ReturnType;
+
+    RefCounted!(UntypedVariable[]) vargs, vrets;
+
+    /// FIXME: type checks might not be for DeviceStorage?
+
+    alias Rets = Tuple!(Parameters!backward);
+    alias Args = Tuple!(Parameters!forward);
+    static assert(allSatisfy!(isVariable, Rets.Types),
+                  "all the function args should be variable.");
+    static assert(allSatisfy!(isVariable, Args.Types),
+                  "function return value should be a variable or tuple of variables.");
+
+    static foreach (i, forward; __traits(getOverloads, typeof(this), "forward")) {
+        static foreach (i, backward; __traits(getOverloads, typeof(this), "backward")) {
+            static if (!allSatisfy!(isHost, Parameters!forward) && !allSatisfy!(isHost, Parameters!backward)) {
+                mixin TypeChecker!(forward, backward);
+            }
+            static if (allSatisfy!(isHost, Parameters!forward) && allSatisfy!(isHost, Parameters!backward)) {
+                mixin TypeChecker!(forward, backward);
+            }
+        }
     }
 
     auto applyForward(Args...)(Args args) {
@@ -125,6 +143,33 @@ mixin template FunctionCommon() {
     }
 }
 
+/// test NG functions
+unittest {
+    alias F1H = Variable!(float, 1, HostStorage);
+    version (grain_cuda) alias F1D = Variable!(float, 1, HostStorage);
+    struct A(DelayInstantiation) {
+        mixin FunctionCommon;
+        // mismatch of args
+        F1H forward(F1H x) { return x; };
+        F1H backward(F1H x, F1H y) { return x; };
+    }
+    static assert(!__traits(compiles, A!void));
+
+    struct B(DelayInstantiation) {
+        mixin FunctionCommon;
+
+        F1H forward(F1H x) { return x; };
+        F1H backward(F1H x) { return x; };
+
+        // mismatch of args in device
+        version (grain_cuda) {
+            F1D forward(F1D x) { return x; };
+            F1D backward(F1D x, F1D y) { return x; };
+        }
+    }
+    static assert(!__traits(compiles, B!void));
+}
+
 struct ReLU(T, size_t dim) {
     mixin FunctionCommon;
     bool inplace = false;
@@ -175,14 +220,27 @@ struct ReLU(T, size_t dim) {
 unittest {
     import std.typecons;
     grain.autograd.backprop = true;
-    auto func = new ReLU!(float, 1);
-    auto x = [-1.0f, 2.0f, 3.0f].variable(true);
-    auto y = func.applyForward(x);
-    auto gy = [1.0f, 2.0f, 3.0f].variable;
-    auto ugy = UntypedVariable(gy);
-    y.backward(&ugy);
-    x.data.ptr.writeln;
-    assert(x.grad == [0, 2, 3]);
+    scope (exit) grain.autograd.backprop = false;
+    {
+        auto func = new ReLU!(float, 1);
+        auto x = [-1.0f, 2.0f, 3.0f].variable(true);
+        auto y = func.applyForward(x);
+        auto gy = [1.0f, 2.0f, 3.0f].variable;
+        auto ugy = UntypedVariable(gy);
+        assert(ugy.isHost);
+        y.backward(&ugy);
+        assert(x.grad == [0, 2, 3]);
+    }
+    version (grain_cuda) {
+        auto func = new ReLU!(float, 1);
+        auto x = [-1.0f, 2.0f, 3.0f].variable(true).to!DeviceStorage;
+        auto y = func.applyForward(x);
+        auto gy = [1.0f, 2.0f, 3.0f].variable.to!DeviceStorage;
+        auto ugy = UntypedVariable(gy);
+        assert(!ugy.isHost);
+        // y.backward(&ugy);
+        // assert(x.grad.toHost() == [0, 2, 3]);
+    }
     // writeln("x.grad=", x.grad);
 }
 

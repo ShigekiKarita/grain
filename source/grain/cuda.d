@@ -194,12 +194,13 @@ struct CuPtr(T) {
     ref zero_() {
         return this.fill_(0);
     }
-
-    static zeros(size_t N) {
-        import std.algorithm : move;
-        return move(CuPtr!T(N).zero_());
-    }
 }
+
+auto zeros(S: CuPtr!T, T)(size_t N) {
+    import std.algorithm : move;
+    return move(CuPtr!T(N).zero_());
+}
+
 
 void checkCudaErrors(CUresult err) {
     const(char)* name, content;
@@ -246,6 +247,6 @@ unittest {
     d.zero_();
     auto h = d.toHost();
     assert(h == [0, 0, 0]);
-
-    // FIXME support non zero value
+    assert(zeros!(CuPtr!float)(3).toHost() == [0, 0, 0]);
+    // TODO support non zero value
 }
