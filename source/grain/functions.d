@@ -119,13 +119,12 @@ mixin template FunctionCommon() {
                     // uinputs[i].grad.get!Storage[] = vgradInputs[i].data;
                     auto gs = uinputs[i].gradSlice!V;
                     import mir.ndslice.slice : sliced;
-                    gs[] = gs + vgradInputs[i].data[].sliced(gs.shape);
+                    gs[] += vgradInputs[i].data[].sliced(gs.shape);
                 } else {
                     // TODO += grad
                     import derelict.cuda.driverapi;
                     auto data = uinputs[i].grad.get!Storage;
                     copy(vgradInputs[i].data, data);
-                    // data.ptr = vgradInputs[i].data.ptr;
                 }
             }
             uinputs[i].backward(&ugradInputs[i]);
@@ -307,7 +306,7 @@ struct MatMul(T, size_t dim) {
             }
             // TODO support transposed (CUBLAS_OP_T)
             // see https://github.com/libmir/mir-blas/blob/master/source/mir/blas.d#L299
-            auto status = gemm(Global.cublas, CUBLAS_OP_N, CUBLAS_OP_N,
+            auto status = gemm(cublasHandle, CUBLAS_OP_N, CUBLAS_OP_N,
                                cast(int) dshape[0], cast(int) dshape[1], cast(int) x.shape[1],
                                &alpha,
                                cast(T*) x.data.ptr, cast(int) x.shape[0],
@@ -322,6 +321,37 @@ struct MatMul(T, size_t dim) {
                 d);
         }
     }
+}
+
+/// cublas wrappers
+version (grain_cuda) {
+    import grain.cublas;
+    void axpy(T)(const ref CuPtr!T x, ref CuPtr!T y, T alpha=1.0, int incx=1, int incy=1)  {
+        static if (is(T == float)) {
+            alias axpy_ = cublasSaxpy;
+        } else static if (is(T == double)) {
+            alias axpy_ = cublasDaxpy;
+        } else {
+            static assert(false, "unsupported type: " ~ T.stringof);
+        }
+        auto status = axpy_(cublasHandle, cast(int) x.length, &alpha,
+                            cast(const float*) x.ptr, incx,
+                            cast (float*) y.ptr, incy);
+        // status = CUBLAS_STATUS_NOT_INITIALIZED;
+        assert(status == CUBLAS_STATUS_SUCCESS, cublasGetErrorEnum(status));
+               
+    }
+
+    /// cublas tests
+    unittest {
+        auto a = CuPtr!float([3, 4, 5]);
+        auto b = CuPtr!float([1, 2, 3]);
+        axpy(a, b, 1.0);
+        writeln(a.toHost(), b.toHost());
+        assert(a.toHost() == [1, 2, 3]);
+        assert(b.toHost() == [4, 6, 8]);
+    }
+    
 }
 
 ///

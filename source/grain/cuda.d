@@ -6,9 +6,13 @@ import std.stdio : writeln, writefln;
 import std.string : toStringz, fromStringz;
 
 import derelict.cuda;
+import grain.cublas;
 
 // TODO: support multiple GPU devices (context)
+// __gshared
 CUcontext context;
+// __gshared
+cublasHandle_t cublasHandle;
 
 shared static this() {
     DerelictCUDADriver.load();
@@ -20,11 +24,15 @@ shared static this() {
     cuDeviceGet(&device, 0);
     // Create a compute device context
     cuCtxCreate(&context, 0, device);
+    writeln("cublas initialize");
+    checkCublasErrors(cublasCreate_v2(&cublasHandle));
+    writeln("cublas initialized");
 }
 
 shared static ~this() {
     import core.memory : GC;
     GC.collect();
+    cublasDestroy_v2(cublasHandle);
     checkCudaErrors(cuCtxDestroy(context));
 }
 
@@ -52,7 +60,6 @@ struct CuModule {
 
 
 class Global {
-    import grain.cublas;
     import K = grain.kernel;
     private this() {}
 
@@ -62,14 +69,14 @@ class Global {
 
     // Thread global
     private __gshared CuModule* module_;
-    private __gshared cublasHandle_t cublasHandle_;
+    // private __gshared cublasHandle_t cublasHandle_;
 
     static ~this() {
-        if (!instantiated_) {
-            synchronized(Global.classinfo) {
-                cublasDestroy_v2(cublasHandle_);
-            }
-        }
+        // if (!instantiated_) {
+        //     synchronized(Global.classinfo) {
+        //         cublasDestroy_v2(cublasHandle_);
+        //     }
+        // }
     }
 
     static get()
@@ -79,7 +86,7 @@ class Global {
             synchronized(Global.classinfo)
             {
                 module_ = new CuModule(K.ptx);
-                cublasCreate_v2(&cublasHandle_);
+                // checkCublasErrors(cublasCreate_v2(&cublasHandle_));
                 instantiated_ = true;
             }
         }
@@ -87,10 +94,11 @@ class Global {
         return module_;
     }
 
-    static cublas() {
-        get();
-        return cublasHandle_;
-    }
+    // static cublas() {
+    //     get();
+    //     assert(instantiated_);
+    //     return cublasHandle_;
+    // }
 
     static kernel(alias F)() {
         return get().kernel!F;
@@ -218,6 +226,11 @@ void checkCudaErrors(CUresult err) {
     cuGetErrorName(err, &name);
     cuGetErrorString(err, &content);
     assert(err == CUDA_SUCCESS, name.fromStringz ~ ": " ~ content.fromStringz);
+}
+
+
+void checkCublasErrors(cublasStatus_t err) {
+    assert(err == CUBLAS_STATUS_SUCCESS, cublasGetErrorEnum(err));
 }
 
 unittest

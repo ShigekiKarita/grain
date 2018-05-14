@@ -1,5 +1,9 @@
 module grain.cublas;
 
+/++
+ TODO: make derelict-cublas (already exist?)
+ +/
+
 extern (C):
 
 
@@ -41,3 +45,42 @@ cublasStatus_t cublasSgemm_v2(cublasHandle_t handle,
                            const float           *beta,
                            float           *C, int ldc);
 
+cublasStatus_t cublasSaxpy(cublasHandle_t handle, int n,
+                           const float           *alpha,
+                           const float           *x, int incx,
+                           float                 *y, int incy);
+
+cublasStatus_t cublasDaxpy(cublasHandle_t handle, int n,
+                           const double          *alpha,
+                           const double          *x, int incx,
+                           double                *y, int incy);
+
+
+auto cublasGetErrorEnum(cublasStatus_t error) {
+    final switch (error)
+    {
+        case CUBLAS_STATUS_SUCCESS:
+            return "CUBLAS_STATUS_SUCCESS";
+
+        case CUBLAS_STATUS_NOT_INITIALIZED:
+            return "CUBLAS_STATUS_NOT_INITIALIZED";
+
+        case CUBLAS_STATUS_ALLOC_FAILED:
+            return "CUBLAS_STATUS_ALLOC_FAILED";
+
+        case CUBLAS_STATUS_INVALID_VALUE:
+            return "CUBLAS_STATUS_INVALID_VALUE";
+
+        case CUBLAS_STATUS_ARCH_MISMATCH:
+            return "CUBLAS_STATUS_ARCH_MISMATCH";
+
+        case CUBLAS_STATUS_MAPPING_ERROR:
+            return "CUBLAS_STATUS_MAPPING_ERROR";
+
+        case CUBLAS_STATUS_EXECUTION_FAILED:
+            return "CUBLAS_STATUS_EXECUTION_FAILED";
+
+        case CUBLAS_STATUS_INTERNAL_ERROR:
+            return "CUBLAS_STATUS_INTERNAL_ERROR";
+    }
+}
