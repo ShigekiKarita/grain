@@ -124,7 +124,8 @@ mixin template FunctionCommon() {
                     // TODO += grad
                     import derelict.cuda.driverapi;
                     auto data = uinputs[i].grad.get!Storage;
-                    copy(vgradInputs[i].data, data);
+                    axpy(vgradInputs[i].data, data);
+                    // copy(vgradInputs[i].data, data);
                 }
             }
             uinputs[i].backward(&ugradInputs[i]);
@@ -232,6 +233,11 @@ unittest {
         auto ugy = UntypedVariable(gy);
         y.backward(&ugy);
         assert(x.grad.toHost() == [0, 2, 3]);
+
+        auto func2 = new ReLU!(float, 1);
+        auto y2 = func.applyForward(x);
+        y2.backward(&ugy);
+        assert(x.grad.toHost() == [0, 4, 6]); // summation
     }
 }
 
@@ -328,30 +334,26 @@ version (grain_cuda) {
     import grain.cublas;
     void axpy(T)(const ref CuPtr!T x, ref CuPtr!T y, T alpha=1.0, int incx=1, int incy=1)  {
         static if (is(T == float)) {
-            alias axpy_ = cublasSaxpy;
+            alias axpy_ = cublasSaxpy_v2;
         } else static if (is(T == double)) {
-            alias axpy_ = cublasDaxpy;
+            alias axpy_ = cublasDaxpy_v2;
         } else {
             static assert(false, "unsupported type: " ~ T.stringof);
         }
         auto status = axpy_(cublasHandle, cast(int) x.length, &alpha,
                             cast(const float*) x.ptr, incx,
-                            cast (float*) y.ptr, incy);
-        // status = CUBLAS_STATUS_NOT_INITIALIZED;
+                            cast(float*) y.ptr, incy);
         assert(status == CUBLAS_STATUS_SUCCESS, cublasGetErrorEnum(status));
-               
     }
 
     /// cublas tests
     unittest {
         auto a = CuPtr!float([3, 4, 5]);
         auto b = CuPtr!float([1, 2, 3]);
-        axpy(a, b, 1.0);
-        writeln(a.toHost(), b.toHost());
-        assert(a.toHost() == [1, 2, 3]);
-        assert(b.toHost() == [4, 6, 8]);
+        axpy(a, b, 2.0);
+        assert(a.toHost() == [3, 4, 5]);
+        assert(b.toHost() == [7, 10, 13]);
     }
-    
 }
 
 ///
@@ -370,7 +372,7 @@ unittest {
         assert(c.sliced == [[1*2+3*8, 1*4+3*10, 1*6+3*12],
                             [5*2+7*8, 5*4+7*10, 5*6+7*12],
                             [9*2+11*8, 9*4+11*10, 9*6+11*12]]);
-        writeln(c.sliced);
+        // writeln(c.sliced);
     }
 
     /* FIXME

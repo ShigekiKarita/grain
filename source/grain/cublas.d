@@ -45,15 +45,15 @@ cublasStatus_t cublasSgemm_v2(cublasHandle_t handle,
                            const float           *beta,
                            float           *C, int ldc);
 
-cublasStatus_t cublasSaxpy(cublasHandle_t handle, int n,
-                           const float           *alpha,
-                           const float           *x, int incx,
-                           float                 *y, int incy);
+cublasStatus_t cublasSaxpy_v2(cublasHandle_t handle, int n,
+                              const float           *alpha,
+                              const float           *x, int incx,
+                              float                 *y, int incy);
 
-cublasStatus_t cublasDaxpy(cublasHandle_t handle, int n,
-                           const double          *alpha,
-                           const double          *x, int incx,
-                           double                *y, int incy);
+cublasStatus_t cublasDaxpy_v2(cublasHandle_t handle, int n,
+                              const double          *alpha,
+                              const double          *x, int incx,
+                              double                *y, int incy);
 
 
 auto cublasGetErrorEnum(cublasStatus_t error) {

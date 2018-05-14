@@ -9,10 +9,8 @@ import derelict.cuda;
 import grain.cublas;
 
 // TODO: support multiple GPU devices (context)
-// __gshared
-CUcontext context;
-// __gshared
-cublasHandle_t cublasHandle;
+__gshared CUcontext context;
+__gshared cublasHandle_t cublasHandle;
 
 shared static this() {
     DerelictCUDADriver.load();
@@ -24,9 +22,7 @@ shared static this() {
     cuDeviceGet(&device, 0);
     // Create a compute device context
     cuCtxCreate(&context, 0, device);
-    writeln("cublas initialize");
     checkCublasErrors(cublasCreate_v2(&cublasHandle));
-    writeln("cublas initialized");
 }
 
 shared static ~this() {
