@@ -65,15 +65,6 @@ class Global {
 
     // Thread global
     private __gshared CuModule* module_;
-    // private __gshared cublasHandle_t cublasHandle_;
-
-    static ~this() {
-        // if (!instantiated_) {
-        //     synchronized(Global.classinfo) {
-        //         cublasDestroy_v2(cublasHandle_);
-        //     }
-        // }
-    }
 
     static get()
     {
@@ -82,19 +73,12 @@ class Global {
             synchronized(Global.classinfo)
             {
                 module_ = new CuModule(K.ptx);
-                // checkCublasErrors(cublasCreate_v2(&cublasHandle_));
                 instantiated_ = true;
             }
         }
 
         return module_;
     }
-
-    // static cublas() {
-    //     get();
-    //     assert(instantiated_);
-    //     return cublasHandle_;
-    // }
 
     static kernel(alias F)() {
         return get().kernel!F;
@@ -188,15 +172,23 @@ struct CuPtr(T) {
     }
 
     // FIXME non zero support
-    private ref fill_(T value, size_t N) {
+    ref fill_(T value, size_t N) {
         import std.conv : to;
         import std.traits : Parameters;
         mixin("alias _memset = cuMemsetD" ~  to!string(T.sizeof * 8) ~ ";");
-        _memset(this.ptr, cast(Parameters!(_memset)[1]) value, N);
+        alias Bytes = Parameters!(_memset)[1];
+        static assert(Bytes.sizeof == T.sizeof);
+        union U {
+            Bytes i;
+            T f;
+        }
+        U u;
+        u.f = value;
+        _memset(this.ptr, u.i, N);
         return this;
     }
 
-    private ref fill_(T value) {
+    ref fill_(T value) {
         return this.fill_(value, this.length);
     }
 
@@ -268,5 +260,5 @@ unittest {
     auto h = d.toHost();
     assert(h == [0, 0, 0]);
     assert(zeros!(CuPtr!float)(3).toHost() == [0, 0, 0]);
-    // TODO support non zero value
+    assert(d.fill_(3).toHost() == [3, 3, 3]);
 }
