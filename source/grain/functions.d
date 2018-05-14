@@ -219,6 +219,11 @@ unittest {
         auto ugy = UntypedVariable(gy);
         y.backward(&ugy);
         assert(x.grad == [0, 2, 3]);
+
+        auto func2 = new ReLU!(float, 1);
+        auto y2 = func.applyForward(x);
+        y2.backward(&ugy);
+        assert(x.grad == [0, 4, 6]); // summation
     }
     version (grain_cuda) {
         auto func = new ReLU!(float, 1);
