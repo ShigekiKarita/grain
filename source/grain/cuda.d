@@ -177,14 +177,7 @@ struct CuPtr(T) {
         mixin("alias _memset = cuMemsetD" ~  to!string(T.sizeof * 8) ~ ";");
         alias Bytes = Parameters!(_memset)[1];
         static assert(Bytes.sizeof == T.sizeof);
-        // kind of reinterpret_cast<Bytes>(T value)
-        union U {
-            Bytes i;
-            T f;
-        }
-        U u;
-        u.f = value;
-        _memset(this.ptr, u.i, N);
+        _memset(this.ptr, *(cast(Bytes*) &value), N);
         return this;
     }
 
@@ -261,4 +254,28 @@ unittest {
     assert(h == [0, 0, 0]);
     assert(zeros!(CuPtr!float)(3).toHost() == [0, 0, 0]);
     assert(d.fill_(3).toHost() == [3, 3, 3]);
+}
+
+
+void axpy(T)(const ref CuPtr!T x, ref CuPtr!T y, T alpha=1.0, int incx=1, int incy=1)  {
+    static if (is(T == float)) {
+        alias axpy_ = cublasSaxpy_v2;
+    } else static if (is(T == double)) {
+        alias axpy_ = cublasDaxpy_v2;
+    } else {
+        static assert(false, "unsupported type: " ~ T.stringof);
+    }
+    auto status = axpy_(cublasHandle, cast(int) x.length, &alpha,
+                        cast(const float*) x.ptr, incx,
+                        cast(float*) y.ptr, incy);
+    assert(status == CUBLAS_STATUS_SUCCESS, cublasGetErrorEnum(status));
+}
+
+/// cublas tests
+unittest {
+    auto a = CuPtr!float([3, 4, 5]);
+    auto b = CuPtr!float([1, 2, 3]);
+    axpy(a, b, 2.0);
+    assert(a.toHost() == [3, 4, 5]);
+    assert(b.toHost() == [7, 10, 13]);
 }

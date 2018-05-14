@@ -115,17 +115,12 @@ mixin template FunctionCommon() {
                 alias Storage = typeof(vgradInputs[i].data);
                 alias V = typeof(vgradInputs[i]);
                 static if (vgradInputs[i].isHost) {
-                    // TODO += grad
-                    // uinputs[i].grad.get!Storage[] = vgradInputs[i].data;
-                    auto gs = uinputs[i].gradSlice!V;
                     import mir.ndslice.slice : sliced;
+                    auto gs = uinputs[i].gradSlice!V;
                     gs[] += vgradInputs[i].data[].sliced(gs.shape);
                 } else {
-                    // TODO += grad
-                    import derelict.cuda.driverapi;
                     auto data = uinputs[i].grad.get!Storage;
                     axpy(vgradInputs[i].data, data);
-                    // copy(vgradInputs[i].data, data);
                 }
             }
             uinputs[i].backward(&ugradInputs[i]);
@@ -326,33 +321,6 @@ struct MatMul(T, size_t dim) {
                 [x.shape[0], 1],
                 d);
         }
-    }
-}
-
-/// cublas wrappers
-version (grain_cuda) {
-    import grain.cublas;
-    void axpy(T)(const ref CuPtr!T x, ref CuPtr!T y, T alpha=1.0, int incx=1, int incy=1)  {
-        static if (is(T == float)) {
-            alias axpy_ = cublasSaxpy_v2;
-        } else static if (is(T == double)) {
-            alias axpy_ = cublasDaxpy_v2;
-        } else {
-            static assert(false, "unsupported type: " ~ T.stringof);
-        }
-        auto status = axpy_(cublasHandle, cast(int) x.length, &alpha,
-                            cast(const float*) x.ptr, incx,
-                            cast(float*) y.ptr, incy);
-        assert(status == CUBLAS_STATUS_SUCCESS, cublasGetErrorEnum(status));
-    }
-
-    /// cublas tests
-    unittest {
-        auto a = CuPtr!float([3, 4, 5]);
-        auto b = CuPtr!float([1, 2, 3]);
-        axpy(a, b, 2.0);
-        assert(a.toHost() == [3, 4, 5]);
-        assert(b.toHost() == [7, 10, 13]);
     }
 }
 

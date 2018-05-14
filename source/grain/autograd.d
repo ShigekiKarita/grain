@@ -27,8 +27,6 @@ unittest {
     assert(zeros!(HostStorage!float)(3) == [0f, 0f, 0f]);
 }
 
-// enum bool isHost(T) = isArray!T || is(T : RefCounted!(HostStorage!E, yesno), E, RefCountedAutoInitialize yesno);
-
 version(grain_cuda) {
     alias DeviceStorage(T) = CuPtr!T;
 
