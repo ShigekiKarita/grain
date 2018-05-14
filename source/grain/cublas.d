@@ -45,6 +45,15 @@ cublasStatus_t cublasSgemm_v2(cublasHandle_t handle,
                            const float           *beta,
                            float           *C, int ldc);
 
+cublasStatus_t cublasDgemm_v2(cublasHandle_t handle,
+                           cublasOperation_t transa, cublasOperation_t transb,
+                           int m, int n, int k,
+                           const double          *alpha,
+                           const double          *A, int lda,
+                           const double          *B, int ldb,
+                           const double          *beta,
+                           double          *C, int ldc);
+
 cublasStatus_t cublasSaxpy_v2(cublasHandle_t handle, int n,
                               const float           *alpha,
                               const float           *x, int incx,

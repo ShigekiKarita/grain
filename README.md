@@ -64,5 +64,8 @@ I have tested with
 
 ## todo
 
-- axpy in grad register
 - kernel type check
+- more functions
+  - matmul
+  - softmax cross entropy
+

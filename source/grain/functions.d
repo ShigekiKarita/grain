@@ -282,8 +282,7 @@ unittest {
     }
 }
 
-
-struct MatMul(T, size_t dim) {
+struct MatMul(T) {
     T alpha = 1;
     T beta = 0;
 
@@ -293,66 +292,130 @@ struct MatMul(T, size_t dim) {
     }
 
     version(grain_cuda) {
-        auto forward(Variable!(T, 2, DeviceStorage) x, Variable!(T, 2, DeviceStorage) y) {
+        auto forward(Variable!(T, 2, DeviceStorage) a, Variable!(T, 2, DeviceStorage) b) {
             import std.typecons : RefCounted;
-            import grain.cublas; // : CUBLAS_STATUS_SUCCESS, cublasSgemm_v2;
-            assert(x.shape[1] == y.shape[0]);
-            auto dshape = [x.shape[0], y.shape[1]];
-            auto d = RefCounted!(CuPtr!T)(x.shape[0] * y.shape[1]);
+            import grain.cublas;
+            assert(a.shape[1] == b.shape[0]);
+            auto m = a.shape[0];
+            auto k = a.shape[1];
+            auto n = b.shape[1];
+            auto cdata = RefCounted!(CuPtr!T)(a.shape[0] * b.shape[1]);
+            auto c = Variable!(T, 2, DeviceStorage)(
+                false, // a.requiresGrad || b.requiresGrad,
+                [m, n], [n, 1],
+                cdata);
             static if (is(T == float)) {
                 alias gemm = cublasSgemm_v2;
+            } else static if (is(T == double)) {
+                alias gemm = cublasDgemm_v2;
             } else {
-                // TODO support double
                 static assert(false, "unsupported type");
             }
             // TODO support transposed (CUBLAS_OP_T)
             // see https://github.com/libmir/mir-blas/blob/master/source/mir/blas.d#L299
-            auto status = gemm(cublasHandle, CUBLAS_OP_N, CUBLAS_OP_N,
-                               cast(int) dshape[0], cast(int) dshape[1], cast(int) x.shape[1],
-                               &alpha,
-                               cast(T*) x.data.ptr, cast(int) x.shape[0],
-                               cast(T*) y.data.ptr, cast(int) y.shape[0],
-                               &beta,
-                               cast(T*) d.ptr, cast(int) dshape[0]);
-            assert(status == CUBLAS_STATUS_SUCCESS);
-            return Variable!(T, 2, DeviceStorage)(
-                x.requiresGrad || y.requiresGrad,
-                [x.shape[0], y.shape[1]],
-                [x.shape[0], 1],
-                d);
+            // checkCublasErrors(gemm(cublasHandle, CUBLAS_OP_N, CUBLAS_OP_N,
+            //                        cast(int) m, cast(int) n, cast(int) k,
+            //                        &alpha,
+            //                        cast(const T*) a.data.ptr, cast(int) a.shape[0],
+            //                        cast(const T*) b.data.ptr, cast(int) b.shape[0],
+            //                        &beta,
+            //                        cast(T*) c.data.ptr, cast(int) c.shape[0]));
+            // C = A x B = (BT x AT)T
+            checkCublasErrors(gemm(cublasHandle, CUBLAS_OP_N, CUBLAS_OP_N,
+                                   cast(int) c.shape[1],
+                                   cast(int) c.shape[0], cast(int) a.shape[1],
+                                   &alpha,
+                                   cast(const T*) b.data.ptr, cast(int) b.shape[1],
+                                   cast(const T*) a.data.ptr, cast(int) a.shape[1],
+                                   &beta,
+                                   cast(T*) c.data.ptr, cast(int) c.shape[1]));
+            return c;
         }
     }
 }
 
-///
+/// test (2x2) x (2x2)
+unittest {
+        // test (2x2) x (2x2)
+    auto a = [[1f, 2f],
+              [3f, 4f]].variable;
+    auto b = [[-1f, -2f],
+              [-3f, -4f]].variable;
+    auto expected = [[1*-1+2*-3, 1*-2+2*-4],
+                     [3*-1+4*-3, 3*-2+4*-4]];
+
+    // test CPU
+    {
+        auto c = MatMul!float().forward(a, b);
+        assert(c.sliced == expected);
+    }
+    version(grain_cuda) {
+        auto c = MatMul!float().forward(a.to!DeviceStorage,
+                                        b.to!DeviceStorage).to!HostStorage;
+        writeln(c.sliced, expected);
+        // assert(c.sliced == expected);
+    }
+}
+
+/*
+/// test (3x5) x (5x4)
+unittest {
+    import mir.ndslice : sliced;
+    import std.format : format;
+    auto a =
+        [-5.0f,  1,  7, 7, -4,
+           -1, -5,  6, 3, -3,
+         -5, -2, -3, 6,  0].sliced(3, 5).variable;
+    auto b =
+        [-5.0f, -3,  3,  1,
+            4,  3,  6,  4,
+           -4, -2, -2,  2,
+           -1,  9,  4,  8,
+            9,  8,  3, -2].sliced(5, 4).variable;
+    auto expected =
+        [[-42,  35,  -7, 77],
+         [-69, -21, -42, 21],
+         [ 23,  69,   3, 29]];
+    // C = 1 * AB + 0 * C
+    {
+        auto c = MatMul!(float, 2)().forward(a, b);
+        assert(c.sliced == expected);
+    }
+    version(grain_cuda) {
+        auto c = MatMul!(float, 2)().forward(a.to!DeviceStorage,
+                                             b.to!DeviceStorage).to!HostStorage;
+        // assert(c.sliced == expected, "c.sliced %s != %s".format(c.sliced, expected));
+    }
+}
+*/
+
+/// test (3x2) x (2x3)
 unittest {
     import std.stdio;
     import mir.ndslice;
+
     auto a = [[1f, 3f],
               [5f, 7f],
               [9f, 11f]].variable;
     auto b = [[2f, 4f, 6f],
               [8f, 10f, 12f]].variable;
+    auto expected = [[1*2+3*8, 1*4+3*10, 1*6+3*12],
+                     [5*2+7*8, 5*4+7*10, 5*6+7*12],
+                     [9*2+11*8, 9*4+11*10, 9*6+11*12]];
 
     // test CPU
     {
-        auto c = MatMul!(float, 2)().forward(a, b);
-        assert(c.sliced == [[1*2+3*8, 1*4+3*10, 1*6+3*12],
-                            [5*2+7*8, 5*4+7*10, 5*6+7*12],
-                            [9*2+11*8, 9*4+11*10, 9*6+11*12]]);
-        // writeln(c.sliced);
+        auto c = MatMul!(float)().forward(a, b);
+        assert(c.sliced == expected);
     }
 
-    /* FIXME
     version(grain_cuda) {
-        auto c = MatMul!(float, 2)().forward(a.to!DeviceStorage,
-                                             b.to!DeviceStorage).to!HostStorage;
-        writeln(c.sliced);
-        assert(c.sliced == [[1*2+3*8, 1*4+3*10, 1*6+3*12],
-                            [5*2+7*8, 5*4+7*10, 5*6+7*12],
-                            [9*2+11*8, 9*4+11*10, 9*6+11*12]]);
+        auto c = MatMul!(float)().forward(a.to!DeviceStorage,
+                                          b.to!DeviceStorage).to!HostStorage;
+        writeln(c.data);
+        writeln(expected);
+        assert(c.sliced == expected);
     }
-    */
 }
 
 struct SoftmaxCrossEntropy {

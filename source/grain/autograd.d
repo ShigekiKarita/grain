@@ -40,6 +40,12 @@ version(grain_cuda) {
     auto to(alias S : HostStorage, Src)(Src src) if (isDevice!Src) {
         return src.toHost();
     }
+
+    unittest {
+        auto h = [[0.1f, 0.2f, 0.3f], [0.4f, 0.5f, 0.6f]].variable;
+        auto d = h.to!DeviceStorage;
+        assert(h.data == d.to!HostStorage.data);
+    }
 }
 
 

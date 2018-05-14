@@ -266,8 +266,8 @@ void axpy(T)(const ref CuPtr!T x, ref CuPtr!T y, T alpha=1.0, int incx=1, int in
         static assert(false, "unsupported type: " ~ T.stringof);
     }
     auto status = axpy_(cublasHandle, cast(int) x.length, &alpha,
-                        cast(const float*) x.ptr, incx,
-                        cast(float*) y.ptr, incy);
+                        cast(const T*) x.ptr, incx,
+                        cast(T*) y.ptr, incy);
     assert(status == CUBLAS_STATUS_SUCCESS, cublasGetErrorEnum(status));
 }
 
