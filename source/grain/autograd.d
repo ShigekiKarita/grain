@@ -52,7 +52,6 @@ struct UntypedVariable {
     size_t dim;
     size_t[] shape;
     ptrdiff_t[] strides;
-    bool isHost;
     TypeInfo elem;
     Variant data, grad;
     size_t outPosition = 0;
@@ -64,7 +63,6 @@ struct UntypedVariable {
         this.shape = v.shape.dup;
         this.strides = v.strides.dup;
         this.dim = dim;
-        this.isHost = is(Storage!T == HostStorage!T);
         this.data = v.data;
         this.grad = v.grad;
     }
@@ -87,8 +85,13 @@ struct UntypedVariable {
 
     string toString() {
         import std.format : format;
-        return "UntypedVariable(%s, dim=%d, isHost=%s, data=%s, shape=%s)".format(
-            elem, dim, isHost, data, shape);
+        return "UntypedVariable(%s, dim=%d, data=%s, shape=%s)".format(
+            elem, dim, data, shape);
+    }
+
+    auto gradSlice(V)() if (isVariable!V && isHost!V) {
+        import mir.ndslice.slice : sliced;
+        return grad.get!(typeof(V.init.data)).ptr.sliced(this.shape[0 .. Ndim!V]);
     }
 }
 
@@ -192,6 +195,9 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
 
 enum bool isVariable(T) = is(T : Variable!(Elem, dim, Storage), Elem, size_t dim, alias Storage);
 enum bool isHost(V : Variable!(Elem, dim, Storage), Elem, size_t dim, alias Storage) = is(Storage!Elem == HostStorage!Elem);
+enum size_t Ndim(V : Variable!(Elem, dim, Storage), Elem, size_t dim, alias Storage) = dim;
+alias ElementType(V : Variable!(Elem, dim, Storage), Elem, size_t dim, alias Storage) = Elem;
+
 
 auto variable(Sl)(Sl sl, bool requiresGrad = false) if (isSlice!Sl) {
     import mir.ndslice : universal, DeepElementType;

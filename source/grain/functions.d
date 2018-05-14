@@ -68,10 +68,6 @@ mixin template FunctionCommon() {
 
         enum isHost = allSatisfy!(isHost, Args);
         auto ugradOuts = new UntypedVariable[rets.length];
-        // static foreach (i; 0..rets.length) {
-        //     ugradOuts[i].isHost = rets[i].isHost;
-        // }
-
         foreach (i, r; rets) {
             auto u = UntypedVariable(r);
             if (grain.autograd.backprop) {
@@ -117,9 +113,13 @@ mixin template FunctionCommon() {
         foreach (i, vgi; vgradInputs) {
             if (uinputs[i].requiresGrad) {
                 alias Storage = typeof(vgradInputs[i].data);
+                alias V = typeof(vgradInputs[i]);
                 static if (vgradInputs[i].isHost) {
                     // TODO += grad
-                    uinputs[i].grad.get!Storage[] = vgradInputs[i].data;
+                    // uinputs[i].grad.get!Storage[] = vgradInputs[i].data;
+                    auto gs = uinputs[i].gradSlice!V;
+                    import mir.ndslice.slice : sliced;
+                    gs[] = gs + vgradInputs[i].data[].sliced(gs.shape);
                 } else {
                     // TODO += grad
                     import derelict.cuda.driverapi;
@@ -217,7 +217,6 @@ unittest {
         auto y = func.applyForward(x);
         auto gy = [1.0f, 2.0f, 3.0f].variable;
         auto ugy = UntypedVariable(gy);
-        assert(ugy.isHost);
         y.backward(&ugy);
         assert(x.grad == [0, 2, 3]);
     }
@@ -227,7 +226,6 @@ unittest {
         auto y = func.applyForward(x);
         auto gy = [1.0f, 2.0f, 3.0f].variable.to!DeviceStorage;
         auto ugy = UntypedVariable(gy);
-        assert(!ugy.isHost);
         y.backward(&ugy);
         assert(x.grad.toHost() == [0, 2, 3]);
     }
