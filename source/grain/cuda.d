@@ -171,13 +171,13 @@ struct CuPtr(T) {
         return typeof(this)(ret, length);
     }
 
-    // FIXME non zero support
     ref fill_(T value, size_t N) {
         import std.conv : to;
         import std.traits : Parameters;
         mixin("alias _memset = cuMemsetD" ~  to!string(T.sizeof * 8) ~ ";");
         alias Bytes = Parameters!(_memset)[1];
         static assert(Bytes.sizeof == T.sizeof);
+        // kind of reinterpret_cast<Bytes>(T value)
         union U {
             Bytes i;
             T f;
