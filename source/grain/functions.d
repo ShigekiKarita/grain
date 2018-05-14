@@ -296,14 +296,6 @@ struct MatMul(T) {
             import std.typecons : RefCounted;
             import grain.cublas;
             assert(a.shape[1] == b.shape[0]);
-            auto m = a.shape[0];
-            auto k = a.shape[1];
-            auto n = b.shape[1];
-            auto cdata = RefCounted!(CuPtr!T)(a.shape[0] * b.shape[1]);
-            auto c = Variable!(T, 2, DeviceStorage)(
-                false, // a.requiresGrad || b.requiresGrad,
-                [m, n], [n, 1],
-                cdata);
             static if (is(T == float)) {
                 alias gemm = cublasSgemm_v2;
             } else static if (is(T == double)) {
@@ -311,19 +303,22 @@ struct MatMul(T) {
             } else {
                 static assert(false, "unsupported type");
             }
+
+            auto cdata = RefCounted!(CuPtr!T)(a.shape[0] * b.shape[1]);
+            auto c = Variable!(T, 2, DeviceStorage)(
+                false, [a.shape[0], b.shape[1]], [b.shape[1], 1], cdata);
+            // import numir;
+            // auto c = empty!float(a.shape[0], b.shape[1]).variable.to!DeviceStorage;
+
+            // C = A x B = (BT x AT)T
             // TODO support transposed (CUBLAS_OP_T)
             // see https://github.com/libmir/mir-blas/blob/master/source/mir/blas.d#L299
-            // checkCublasErrors(gemm(cublasHandle, CUBLAS_OP_N, CUBLAS_OP_N,
-            //                        cast(int) m, cast(int) n, cast(int) k,
-            //                        &alpha,
-            //                        cast(const T*) a.data.ptr, cast(int) a.shape[0],
-            //                        cast(const T*) b.data.ptr, cast(int) b.shape[0],
-            //                        &beta,
-            //                        cast(T*) c.data.ptr, cast(int) c.shape[0]));
-            // C = A x B = (BT x AT)T
+            // FIXME:
+            // see https://peterwittek.com/cublas-matrix-c-style.html
+            // see https://www.beechwood.eu/cublas-sgemm-dimensions-mishmash-in-row-major-order-environment/
             checkCublasErrors(gemm(cublasHandle, CUBLAS_OP_N, CUBLAS_OP_N,
-                                   cast(int) c.shape[1],
-                                   cast(int) c.shape[0], cast(int) a.shape[1],
+                                   cast(int) b.shape[1],
+                                   cast(int) a.shape[0], cast(int) a.shape[1],
                                    &alpha,
                                    cast(const T*) b.data.ptr, cast(int) b.shape[1],
                                    cast(const T*) a.data.ptr, cast(int) a.shape[1],
@@ -353,11 +348,11 @@ unittest {
         auto c = MatMul!float().forward(a.to!DeviceStorage,
                                         b.to!DeviceStorage).to!HostStorage;
         writeln(c.sliced, expected);
-        // assert(c.sliced == expected);
+        assert(c.sliced == expected);
     }
 }
 
-/*
+
 /// test (3x5) x (5x4)
 unittest {
     import mir.ndslice : sliced;
@@ -378,16 +373,17 @@ unittest {
          [ 23,  69,   3, 29]];
     // C = 1 * AB + 0 * C
     {
-        auto c = MatMul!(float, 2)().forward(a, b);
+        auto c = MatMul!float().forward(a, b);
         assert(c.sliced == expected);
     }
     version(grain_cuda) {
-        auto c = MatMul!(float, 2)().forward(a.to!DeviceStorage,
-                                             b.to!DeviceStorage).to!HostStorage;
+        auto c = MatMul!float().forward(a.to!DeviceStorage,
+                                        b.to!DeviceStorage).to!HostStorage;
+        writeln(c.sliced, expected);
         // assert(c.sliced == expected, "c.sliced %s != %s".format(c.sliced, expected));
     }
 }
-*/
+
 
 /// test (3x2) x (2x3)
 unittest {
