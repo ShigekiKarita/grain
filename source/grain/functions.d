@@ -5,36 +5,12 @@ import grain.cuda;
 
 import std.stdio;
 
-/++ NOTE: instead of inheriting Function, make FunctionImpl non-copyable and pass delegate
-
-mixin template FunctionCommon() {
-
-    auto applyForward(F, Args...)(F func, Args args) {
-        ...
-        auto f = uniq!F(func);
-        auto rets = func(args);
-        foreach (r; rets) {
-            r.children = this.vargs;
-            r.bros = this.vrets;
-            r.backProc = (UntypedVariable[] grads) { this.gradOutputs = f.backward(grads); };
-        }
-        return ret;
-    }
-}
-
-struct Variable(...) {
-
-    void backward() {
-         if (this.bros.any!"a.grad.empty") return;
-         this.backwardProc(this.bros.map!"a.grad".array);
-         this.children.each!"a.backward()";
-    }
-}
-
- +/
-
 
 mixin template TypeChecker(alias forward, alias backward) {
+    static assert(allSatisfy!(isVariable, Parameters!forward),
+                  "all the forward function args should be variable.");
+    static assert(allSatisfy!(isVariable, Parameters!backward),
+                  "all the backward function args should be variable.");
     static assert(arity!forward == Tuple!(ReturnType!backward).length);
     static assert(arity!backward == Tuple!(ReturnType!forward).length);
     static if (arity!forward == 1 && arity!backward == 1) {
@@ -57,31 +33,29 @@ mixin template FunctionCommon() {
     import std.typecons : isTuple, tuple, Tuple, RefCounted;
     import std.traits : arity, Parameters, ReturnType;
 
-    RefCounted!(UntypedVariable[]) vargs, vrets;
-
-    /// FIXME: type checks might not be for DeviceStorage?
-
-    alias Rets = Tuple!(Parameters!backward);
-    alias Args = Tuple!(Parameters!forward);
-    static assert(allSatisfy!(isVariable, Rets.Types),
-                  "all the function args should be variable.");
-    static assert(allSatisfy!(isVariable, Args.Types),
-                  "function return value should be a variable or tuple of variables.");
+    RefCounted!(UntypedVariable[]) vargs,  vrets;
 
     static foreach (i, forward; __traits(getOverloads, typeof(this), "forward")) {
         static foreach (i, backward; __traits(getOverloads, typeof(this), "backward")) {
-            static if (!allSatisfy!(isHost, Parameters!forward) && !allSatisfy!(isHost, Parameters!backward)) {
+            static if (!allSatisfy!(isHost, Parameters!forward) &&
+                       !allSatisfy!(isHost, Parameters!backward)) {
+                alias DeviceRets = Tuple!(Parameters!backward);
+                alias DeviceArgs = Tuple!(Parameters!forward);
                 mixin TypeChecker!(forward, backward);
             }
-            static if (allSatisfy!(isHost, Parameters!forward) && allSatisfy!(isHost, Parameters!backward)) {
+            static if (allSatisfy!(isHost, Parameters!forward) &&
+                       allSatisfy!(isHost, Parameters!backward)) {
+                alias HostRets = Tuple!(Parameters!backward);
+                alias HostArgs = Tuple!(Parameters!forward);
                 mixin TypeChecker!(forward, backward);
             }
         }
     }
 
     auto applyForward(Args...)(Args args) {
+        import std.algorithm : each;
         this.vargs.length = args.length;
-        this.vrets.length = Rets.length;
+        this.vrets.length = HostRets.length; // TODO: remove this line
         foreach (i, a; args) {
             this.vargs[i] = UntypedVariable(a);
         }
@@ -91,10 +65,18 @@ mixin template FunctionCommon() {
         } else {
             auto rets = tuple(ret);
         }
+
+        enum isHost = allSatisfy!(isHost, Args);
+        auto ugradOuts = new UntypedVariable[rets.length];
+        // static foreach (i; 0..rets.length) {
+        //     ugradOuts[i].isHost = rets[i].isHost;
+        // }
+
         foreach (i, r; rets) {
             auto u = UntypedVariable(r);
             if (grain.autograd.backprop) {
-                RefCounted!BackProp bp = BackProp(&this.applyBackward, this.vargs, new UntypedVariable[Rets.length]);
+                RefCounted!BackProp bp = BackProp(&this.applyBackward!isHost,
+                                                  this.vargs, ugradOuts);
                 u.bprop = bp;
                 u.outPosition = i;
                 rets[i].bprop = bp;
@@ -108,22 +90,26 @@ mixin template FunctionCommon() {
         }
     }
 
-    void applyBackward(UntypedVariable[] ugradOutputs, UntypedVariable[] uinputs) {
-        Rets vgradOutputs;
-        static foreach (i; 0 .. Rets.length) {
+    void applyBackward(bool isHost)(UntypedVariable[] ugradOutputs, UntypedVariable[] uinputs) {
+        static if (isHost) {
+            HostRets vgradOutputs;
+        } else {
+            DeviceRets vgradOutputs;
+        }
+        static foreach (i; 0 .. vgradOutputs.length) {
             vgradOutputs[i] = ugradOutputs[i].to!(typeof(vgradOutputs[i]));
         }
-        static if (Rets.length == 1) {
+        static if (vgradOutputs.length == 1) {
             auto _vgradInputs = this.backward(vgradOutputs[0]);
         } else {
             auto _vgradInputs = vgradOutputs.apply!(this.backward);
         }
-        static if (Args.length == 1) {
-            auto vgradInputs = tuple(_vgradInputs);
-        } else {
+        static if (isTuple!(typeof(_vgradInputs))) {
             auto vgradInputs = _vgradInputs;
+        } else {
+            auto vgradInputs = tuple(_vgradInputs);
         }
-        auto ugradInputs = new UntypedVariable[Args.length];
+        auto ugradInputs = new UntypedVariable[vgradInputs.length];
         foreach (i, v; vgradInputs) {
             ugradInputs[i] = UntypedVariable(v);
         }
@@ -133,9 +119,13 @@ mixin template FunctionCommon() {
                 alias Storage = typeof(vgradInputs[i].data);
                 static if (vgradInputs[i].isHost) {
                     // TODO += grad
-                    uinputs[i].grad.get!Storage[] = vgradInputs[i].data; //  ugradInputs[i].data.get!(RefCounted!(float[]));
+                    uinputs[i].grad.get!Storage[] = vgradInputs[i].data;
                 } else {
-                    assert(false, "TODO not implemented type: " ~ Storage.stringof);
+                    // TODO += grad
+                    import derelict.cuda.driverapi;
+                    auto data = uinputs[i].grad.get!Storage;
+                    copy(vgradInputs[i].data, data);
+                    // data.ptr = vgradInputs[i].data.ptr;
                 }
             }
             uinputs[i].backward(&ugradInputs[i]);
@@ -238,10 +228,9 @@ unittest {
         auto gy = [1.0f, 2.0f, 3.0f].variable.to!DeviceStorage;
         auto ugy = UntypedVariable(gy);
         assert(!ugy.isHost);
-        // y.backward(&ugy);
-        // assert(x.grad.toHost() == [0, 2, 3]);
+        y.backward(&ugy);
+        assert(x.grad.toHost() == [0, 2, 3]);
     }
-    // writeln("x.grad=", x.grad);
 }
 
 

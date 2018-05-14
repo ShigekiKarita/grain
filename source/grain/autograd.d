@@ -119,11 +119,11 @@ struct BackProp {
         }
 
         // FIXME: reconsider this maybe
-        import core.memory : GC;
-        destroy(gradOutputs);
-        GC.free(&gradOutputs);
-        destroy(this);
-        GC.free(&this);
+        // import core.memory : GC;
+        // destroy(gradOutputs);
+        // GC.free(&gradOutputs);
+        // destroy(this);
+        // GC.free(&this);
     }
 }
 

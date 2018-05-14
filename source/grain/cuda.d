@@ -160,7 +160,8 @@ struct CuPtr(T) {
     }
 
     ~this() {
-        checkCudaErrors(cuMemFree(ptr));
+        if (ptr != 0x0) checkCudaErrors(cuMemFree(ptr));
+        ptr = 0x0;
     }
 
     ref toHost(scope ref T[] host) {
@@ -198,6 +199,12 @@ struct CuPtr(T) {
     ref zero_() {
         return this.fill_(0);
     }
+}
+
+void copy(T)(ref CuPtr!T src, ref CuPtr!T dst)
+    in { assert(src.length == dst.length); }
+do {
+    checkCudaErrors(cuMemcpyDtoD(dst.ptr, src.ptr, T.sizeof * src.length));
 }
 
 auto zeros(S: CuPtr!T, T)(size_t N) {
