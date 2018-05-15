@@ -48,10 +48,6 @@ struct CuModule {
     auto kernel(alias F)() {
         return Kernel!F(cuModule);
     }
-
-    static opDispatch(string name)() {
-        return GlobalModule!name();
-    }
 }
 
 
@@ -61,10 +57,10 @@ class Global {
 
     // Cache instantiation flag in thread-local bool
     // Thread local
-    private static bool instantiated_;
+    private static bool instantiated_, cxxInstantiated_;
 
     // Thread global
-    private __gshared CuModule* module_;
+    private __gshared CuModule* module_, cxxModule_;
 
     static get()
     {
@@ -79,6 +75,24 @@ class Global {
 
         return module_;
     }
+
+    static cxxKernel(T...)(string name, T args)
+    {
+        if (!cxxInstantiated_)
+        {
+            synchronized(Global.classinfo)
+            {
+                cxxModule_ = new CuModule(K.cxxptx);
+                cxxInstantiated_ = true;
+            }
+        }
+        CUfunction cuFunction;
+        writeln("getFunction...");
+        checkCudaErrors(cuModuleGetFunction(&cuFunction, cxxModule_, name.toStringz));
+        writeln("getFunction...");
+        return Launcher!T(cuFunction, args);
+    }
+
 
     static kernel(alias F)() {
         return get().kernel!F;
@@ -115,7 +129,6 @@ struct Launcher(Args...) {
 struct Kernel(alias F) if (is(ReturnType!F == void)) {
     enum name = __traits(identifier, F);
     CUfunction cuFunction;
-    void*[arity!F] params;
 
     this(CUmodule m) {
         checkCudaErrors(cuModuleGetFunction(&cuFunction, m, name.toStringz));
@@ -259,6 +272,19 @@ unittest {
     auto N = cast(int) a.length;
     assert(N == 3);
     Global.kernel!sum.call(a.ptr, b.ptr, N)
+        .launch(cast(uint[3]) [1U,1,1], cast(uint[3]) [1U,1,1], 0U);
+    checkCudaErrors(cuCtxSynchronize());
+    writeln(b.toHost());
+    assert(b.toHost()[0] == 3+4+5);
+}
+
+// test cxx kernel
+unittest {
+    auto a = CuPtr!float([3, 4, 5]);
+    auto b = CuPtr!float([0]);
+    auto N = cast(int) a.length;
+    assert(N == 3);
+    Global.cxxKernel("sum_naive", a.ptr, b.ptr, N)
         .launch(cast(uint[3]) [1U,1,1], cast(uint[3]) [1U,1,1], 0U);
     checkCudaErrors(cuCtxSynchronize());
     writeln(b.toHost());
