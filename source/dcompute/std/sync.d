@@ -1,6 +1,7 @@
 @compute(CompileFor.deviceOnly) module dcompute.std.sync;
 
 import ldc.dcompute;
+nothrow: @nogc:
 
 import ocl  = dcompute.std.opencl.sync;
 import cuda = dcompute.std.cuda.sync;

@@ -2,6 +2,8 @@
 
 import ldc.dcompute;
 
+nothrow @nogc:
+
 extern(C) void barrier();
 
 extern(C) void mem_fence(ulong);

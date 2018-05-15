@@ -9,7 +9,7 @@
         "numir": "~>0.1.2",
         "lubeck": "~>0.0.5"
     },
-    "libs": ["mkl_rt"],
+    "libs": ["openblas"],
     "buildTypes": {
         "cuda-unittest": {
             "buildOptions": ["unittests", "debugMode", "debugInfo"],

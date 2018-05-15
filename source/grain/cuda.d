@@ -90,14 +90,9 @@ auto global() {
     return Global.get();
 }
 
-struct Kernel(alias F) if (is(ReturnType!F == void)) {
-    enum name = __traits(identifier, F);
+struct Launcher(Args...) {
     CUfunction cuFunction;
-    void*[arity!F] params;
-
-    this(CUmodule m) {
-        checkCudaErrors(cuModuleGetFunction(&cuFunction, m, name.toStringz));
-    }
+    Args args;
 
     auto kernelParams(T...)(T args) {
         void*[args.length] ret;
@@ -107,21 +102,32 @@ struct Kernel(alias F) if (is(ReturnType!F == void)) {
         return ret;
     }
 
-    // TODO: compile-time type check like d-nv
-    // TODO: separate this to struct Launcher
-    void launch(T...)(
-        T args, uint[3] grid, uint[3] block,
-        uint sharedMemBytes = 0,
-        CUstream stream = null
-        ) {
-        static assert(args.length == arity!F);
-        // Kernel launch
+    void launch(uint[3] grid, uint[3] block, uint sharedMemBytes=0, CUstream stream=null) {
         checkCudaErrors(cuLaunchKernel(
                             cuFunction,
                             grid[0], grid[1], grid[2],
                             block[0], block[1], block[2],
                             sharedMemBytes, stream,
                             kernelParams(args).ptr, null));
+    }
+}
+
+struct Kernel(alias F) if (is(ReturnType!F == void)) {
+    enum name = __traits(identifier, F);
+    CUfunction cuFunction;
+    void*[arity!F] params;
+
+    this(CUmodule m) {
+        checkCudaErrors(cuModuleGetFunction(&cuFunction, m, name.toStringz));
+    }
+
+    // TODO: compile-time type check like d-nv
+    // TODO: separate this to struct Launcher
+    auto call(T...)(T args) {
+        static assert(args.length == arity!F);
+        // Kernel launch
+        // checkCudaErrors(cuCtxSynchronize());
+        return Launcher!T(cuFunction, args);
     }
 }
 
@@ -235,8 +241,7 @@ unittest
     auto devC = CuPtr!float(n);
 
     // Kernel launch
-    Global.kernel!saxpy
-        .launch(devC.ptr, devA.ptr, devB.ptr, n, [1,1,1], [n,1,1]);
+    Global.kernel!saxpy.call(devC.ptr, devA.ptr, devB.ptr, n).launch([1,1,1], [n,1,1]);
 
     // Validation
     devC.toHost(hostC);
@@ -246,6 +251,19 @@ unittest
     }
 }
 
+/// test sum
+unittest {
+    import grain.kernel : sum;
+    auto a = CuPtr!float([3, 4, 5]);
+    auto b = CuPtr!float([0]);
+    auto N = cast(int) a.length;
+    assert(N == 3);
+    Global.kernel!sum.call(a.ptr, b.ptr, N)
+        .launch(cast(uint[3]) [1U,1,1], cast(uint[3]) [1U,1,1], 0U);
+    checkCudaErrors(cuCtxSynchronize());
+    writeln(b.toHost());
+    assert(b.toHost()[0] == 3+4+5);
+}
 
 unittest {
     auto d = CuPtr!float(3);
