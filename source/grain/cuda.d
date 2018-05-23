@@ -278,6 +278,7 @@ unittest {
     assert(b.toHost()[0] == 3+4+5);
 }
 
+/*
 // test cxx kernel
 unittest {
     auto a = CuPtr!float([3, 4, 5]);
@@ -290,6 +291,7 @@ unittest {
     writeln(b.toHost());
     assert(b.toHost()[0] == 3+4+5);
 }
+*/
 
 unittest {
     auto d = CuPtr!float(3);

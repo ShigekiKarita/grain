@@ -65,6 +65,7 @@ I have tested with
 ## todo
 
 - kernel type check
+- more cuda intrinsics like exp/log
 - more functions
   - matmul
   - softmax cross entropy
