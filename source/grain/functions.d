@@ -283,13 +283,33 @@ unittest {
     }
 }
 
+/++
+ Matrix-Matrix multiplication
+
+ See_Also: https://github.com/chainer/chainer/blob/v1/chainer/functions/connection/linear.py#L11
+ +/
 struct MatMul(T) {
+    import mir.ndslice : transposed, universal;
+    import std.typecons : tuple;
+    import lubeck : mtimes;
     T alpha = 1;
     T beta = 0;
+    Variable!(T, 2, HostStorage) ha, hb;
 
-    auto forward(Variable!(T, 2, HostStorage) x, Variable!(T, 2, HostStorage) y) {
-        import lubeck : mtimes;
-        return mtimes(x.sliced, y.sliced).variable(x.requiresGrad || y.requiresGrad);
+    // TODO uncomment this line
+    // mixin FunctionCommon;
+
+    auto forward(Variable!(T, 2, HostStorage) a, Variable!(T, 2, HostStorage) b) {
+        // TODO if training
+        this.ha = a;
+        this.hb = b;
+        return mtimes(a.sliced, b.sliced).variable(a.requiresGrad || b.requiresGrad);
+    }
+
+    auto backward(Variable!(T, 2, HostStorage) gy) {
+        auto ga = mtimes(gy.sliced, this.hb.sliced.transposed);
+        auto gb = mtimes(gy.sliced.transposed, this.ha.sliced);
+        return tuple(ga, gb);
     }
 
     version(grain_cuda) {
@@ -413,6 +433,16 @@ unittest {
         writeln(expected);
         // FIXME assert(c.sliced == expected);
     }
+}
+
+unittest {
+    import std.typecons : tuple;
+    import grain.testing;
+    auto a = [[1.0f,2.0f],[3.0f,4.0f]].variable;
+    auto b = [[1.0f,2.0f],[3.0f,4.0f]].variable;
+    auto gc = [[1.0f,2.0f],[3.0f,4.0f]].variable;
+    MatMul!float func;
+    gradCheck(func, tuple(a, b), gc);
 }
 
 struct LogSoftmax(F) {
