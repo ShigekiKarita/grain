@@ -353,6 +353,47 @@ struct MatMul(T) {
     }
 }
 
+/// test (3x2) x (2x3)
+unittest {
+    import std.stdio;
+    import mir.ndslice;
+
+    auto a = [[1f, 3f],
+              [5f, 7f],
+              [9f, 11f]].variable;
+    auto b = [[2f, 4f, 6f],
+              [8f, 10f, 12f]].variable;
+    auto expected = [[1*2+3*8, 1*4+3*10, 1*6+3*12],
+                     [5*2+7*8, 5*4+7*10, 5*6+7*12],
+                     [9*2+11*8, 9*4+11*10, 9*6+11*12]];
+
+    version(grain_cuda) {{
+        import numir;
+        import grain.cublas;
+        auto ad = a.to!DeviceStorage.data;
+        auto bd = b.to!DeviceStorage.data;
+        auto z = zeros!float(3, 3).variable;
+        auto c = z.to!DeviceStorage;
+
+        float alpha = 1.0, beta = 0.0;
+        checkCublasErrors(cublasSgemm_v2(
+                              cublasHandle, CUBLAS_OP_N, CUBLAS_OP_N,
+                              3, // cast(int) b.shape[1],
+                              3, // cast(int) a.shape[0],c.
+                              2, // cast(int) a.shape[1],
+                              &alpha,
+                              cast(float*) bd.ptr, cast(int) 3,
+                              cast(float*) ad.ptr, cast(int) 2,
+                              &beta,
+                              cast(float*) c.data.ptr, cast(int) 3));
+        auto cdata = c.to!HostStorage.sliced;
+        assert(cdata == expected);
+    }}
+}
+
+
+
+
 /// test (2x2) x (2x2)
 unittest {
         // test (2x2) x (2x2)
@@ -423,18 +464,19 @@ unittest {
                      [5*2+7*8, 5*4+7*10, 5*6+7*12],
                      [9*2+11*8, 9*4+11*10, 9*6+11*12]];
 
-    // test CPU
-    {
-        auto c = MatMul!(float)().forward(a, b);
-        assert(c.sliced == expected);
-    }
-
-    version(grain_cuda) {
+    version(grain_cuda) {{
         auto c = MatMul!(float)().forward(a.to!DeviceStorage,
                                           b.to!DeviceStorage).to!HostStorage;
         writeln(c.data);
         writeln(expected);
         // FIXME assert(c.sliced == expected);
+    }}
+
+
+    // test CPU
+    {
+        auto c = MatMul!(float)().forward(a, b);
+        assert(c.sliced == expected);
     }
 }
 

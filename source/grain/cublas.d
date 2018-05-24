@@ -1,5 +1,7 @@
 module grain.cublas;
 
+import derelict.cuda;
+
 /++
  TODO: make derelict-cublas (already exist?)
  +/
@@ -36,6 +38,9 @@ enum : cublasOperation_t {
 cublasStatus_t cublasCreate_v2(cublasHandle_t*);
 cublasStatus_t cublasDestroy_v2(cublasHandle_t handle);
 
+ cublasStatus_t cublasSgemm_v2(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const float *alpha, const float *A, int lda, const float *B, int ldb, const float *beta, float *C, int ldc);
+
+/*
 cublasStatus_t cublasSgemm_v2(cublasHandle_t handle,
                            cublasOperation_t transa, cublasOperation_t transb,
                            int m, int n, int k,
@@ -44,6 +49,7 @@ cublasStatus_t cublasSgemm_v2(cublasHandle_t handle,
                            const float           *B, int ldb,
                            const float           *beta,
                            float           *C, int ldc);
+*/
 
 cublasStatus_t cublasDgemm_v2(cublasHandle_t handle,
                            cublasOperation_t transa, cublasOperation_t transb,

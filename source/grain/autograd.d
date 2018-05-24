@@ -6,6 +6,7 @@ import mir.ndslice : isSlice;
 import std.range : ElementType;
 
 import grain.cuda;
+import grain.utility : castArray;
 
 alias HostStorage(T) = T[];
 
@@ -97,12 +98,7 @@ struct UntypedVariable {
 
     auto gradSlice(V)() if (isVariable!V && isHost!V) {
         import mir.ndslice.slice : sliced;
-        enum dim = Ndim!V;
-        size_t[dim] _shape;
-        static foreach (i; 0 .. dim) {
-            _shape[i] = this.shape[i];
-        }
-        return grad.get!(typeof(V.init.data)).ptr.sliced(_shape);
+        return grad.get!(typeof(V.init.data)).ptr.sliced(this.shape[0 .. Ndim!V].castArray!size_t);
     }
 }
 
@@ -181,7 +177,12 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
     }
 
     auto dup() {
-        RefCounted!(Storage!T) d = data.dup;
+        static if (is(Storage!T == HostStorage!T)) {
+            RefCounted!(Storage!T) d = new T[data.length];
+            d[] = data[];
+        } else {
+            RefCounted!(Storage!T) d = data.dup;
+        }
         auto y = Variable(this.requiresGrad, this.shape, this.strides, d);
         return y;
     }
@@ -189,13 +190,9 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
     static if (is(Storage!T == HostStorage!T)) {
         auto sliced() {
             import mir.ndslice.slice : Slice, Universal;
-            size_t[dim] _shape;
-            ptrdiff_t[dim] _strides;
-            static foreach (i; 0 .. dim) {
-                _shape[i] = shape[i];
-                _strides[i] = strides[i];
-            }
-            return Slice!(Universal, [dim], T*)(_shape, _strides, data.ptr);
+            return Slice!(Universal, [dim], T*)(
+                this.shape.castArray!size_t,
+                this.strides.castArray!ptrdiff_t, data.ptr);
         }
     }
 
@@ -220,12 +217,13 @@ alias ElementType(V : Variable!(Elem, dim, Storage), Elem, size_t dim, alias Sto
 
 auto variable(Sl)(Sl sl, bool requiresGrad = false) if (isSlice!Sl) {
     import mir.ndslice : universal, DeepElementType;
-    import mir.math.sum : sum;
+    import std.algorithm : reduce;
+
     import numir : Ndim;
     auto s = sl.universal;
     alias S = typeof(s);
     alias E = DeepElementType!S;
-    auto size = s._lengths.sum;
+    auto size = s._lengths.reduce!"a * b";
     RefCounted!(E[]) data = s._iterator[0..size];
     int[Ndim!S] shape, strides;
     static foreach (i; 0 .. Ndim!S) {
@@ -253,6 +251,7 @@ Variable!(T, dim, Dst) to(alias Dst, T, size_t dim, alias Src)(Variable!(T, dim,
 ///
 unittest {
     import std.stdio;
+    {
     // Variable!(float, 1) x;
     auto x = [-1f, -2f, -3f].variable;
     auto y = x.dup;
@@ -261,10 +260,19 @@ unittest {
     static assert(!isVariable!void);
     static assert(isHost!(typeof(x)));
     assert(y.data[0] == -1);
-
-    version (grain_cuda) {
-        static assert(!isHost!(typeof(x.to!DeviceStorage)));
     }
+    version (grain_cuda) {{
+            auto x = [[1f, 3f],
+                      [5f, 7f],
+                      [9f, 11f]].variable;
+
+            assert(x.data.length == 6);
+            writeln("sliced:", x.sliced);
+            writeln("sliced:", x.dup);
+        static assert(!isHost!(typeof(x.to!DeviceStorage)));
+        auto xx = x.dup;
+        assert(x.to!DeviceStorage.to!HostStorage.sliced == x.sliced);
+    }}
 }
 
 
