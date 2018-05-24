@@ -240,6 +240,7 @@ unittest {
 
 ///
 unittest {
+    import grain.testing : gradCheck;
     foreach (inplace; [true, false]) {
         auto func = new ReLU!(float, 1);
         func.inplace = inplace;
@@ -247,6 +248,8 @@ unittest {
         // test CPU
         {
             auto x = [-1.0f, 1.0f, 0.0f].variable;
+            // gradCheck(func, x, [0.1f, 0.1f, 0.1f].variable);
+
             auto y = func.forward(x);
             assert(x.data == (inplace ? y.data : [-1.0f, 1.0f, 0.0f]));
             assert(y.data[0] == 0.0);
@@ -307,8 +310,8 @@ struct MatMul(T) {
     }
 
     auto backward(Variable!(T, 2, HostStorage) gy) {
-        auto ga = mtimes(gy.sliced, this.hb.sliced.transposed);
-        auto gb = mtimes(gy.sliced.transposed, this.ha.sliced);
+        auto ga = mtimes(gy.sliced, this.hb.sliced.transposed).variable;
+        auto gb = mtimes(gy.sliced.transposed, this.ha.sliced).variable;
         return tuple(ga, gb);
     }
 
@@ -341,10 +344,10 @@ struct MatMul(T) {
                                    cast(int) b.shape[1],
                                    cast(int) a.shape[0], cast(int) a.shape[1],
                                    &alpha,
-                                   cast(const T*) b.data.ptr, cast(int) b.shape[1],
-                                   cast(const T*) a.data.ptr, cast(int) a.shape[1],
+                                   cast(const T*) b.data.ptr, cast(int) b.strides[0],
+                                   cast(const T*) a.data.ptr, cast(int) a.strides[0],
                                    &beta,
-                                   cast(T*) c.data.ptr, cast(int) c.shape[1]));
+                                   cast(T*) c.data.ptr, cast(int) c.strides[0]));
             return c;
         }
     }

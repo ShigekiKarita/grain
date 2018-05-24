@@ -54,8 +54,10 @@ struct UntypedVariable {
     import std.variant;
     bool requiresGrad;
     size_t dim;
-    size_t[] shape;
-    ptrdiff_t[] strides;
+    // size_t[]
+    int[] shape;
+    // ptrdiff_t[]
+    int[] strides;
     TypeInfo elem;
     Variant data, grad;
     size_t outPosition = 0;
@@ -95,7 +97,12 @@ struct UntypedVariable {
 
     auto gradSlice(V)() if (isVariable!V && isHost!V) {
         import mir.ndslice.slice : sliced;
-        return grad.get!(typeof(V.init.data)).ptr.sliced(this.shape[0 .. Ndim!V]);
+        enum dim = Ndim!V;
+        size_t[dim] _shape;
+        static foreach (i; 0 .. dim) {
+            _shape[i] = this.shape[i];
+        }
+        return grad.get!(typeof(V.init.data)).ptr.sliced(_shape);
     }
 }
 
@@ -148,14 +155,16 @@ unittest {
 // TODO add SliceKind
 struct Variable(T, size_t dim, alias Storage = HostStorage) {
     bool requiresGrad = false;
-    size_t[dim] shape;
-    ptrdiff_t[dim] strides;
+    // size_t[dim]
+    int[dim] shape;
+    // ptrdiff_t[dim]
+    int[dim] strides;
     RefCounted!(Storage!T) data;
     RefCounted!(Storage!T) grad;
     RefCounted!BackProp bprop;
     enum isHost = is(Storage!T == HostStorage!T);
 
-    this(bool requiresGrad, size_t[dim] shape, ptrdiff_t[dim] strides, RefCounted!(Storage!T) data) {
+    this(bool requiresGrad, int[dim] shape, int[dim] strides, RefCounted!(Storage!T) data) {
         this.requiresGrad = requiresGrad;
         this.shape = shape;
         this.strides = strides;
@@ -180,7 +189,13 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
     static if (is(Storage!T == HostStorage!T)) {
         auto sliced() {
             import mir.ndslice.slice : Slice, Universal;
-            return Slice!(Universal, [dim], T*)(shape, strides, data.ptr);
+            size_t[dim] _shape;
+            ptrdiff_t[dim] _strides;
+            static foreach (i; 0 .. dim) {
+                _shape[i] = shape[i];
+                _strides[i] = strides[i];
+            }
+            return Slice!(Universal, [dim], T*)(_shape, _strides, data.ptr);
         }
     }
 
@@ -212,8 +227,15 @@ auto variable(Sl)(Sl sl, bool requiresGrad = false) if (isSlice!Sl) {
     alias E = DeepElementType!S;
     auto size = s._lengths.sum;
     RefCounted!(E[]) data = s._iterator[0..size];
+    int[Ndim!S] shape, strides;
+    static foreach (i; 0 .. Ndim!S) {
+        assert(s._lengths[i] < int.max);
+        assert(s._strides[i] < int.max);
+        shape[i] = cast(int) s.length!i;
+        strides[i] = cast(int) s._strides[i];
+    }
     return Variable!(E, Ndim!S, HostStorage)(
-        requiresGrad, s._lengths, s._strides, data);
+        requiresGrad, shape, strides, data);
 }
 
 auto variable(A)(A a, bool requiresGrad=false) if (isArray!A) {
