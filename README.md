@@ -1,6 +1,13 @@
 # grain (WIP)
 
-Grain automatically differentiates native [mir](https://github.com/libmir/mir-algorithm)-like and high-level CUDA functions in D. Inspired by PyTorch.
+differentiates native [mir](https://github.com/libmir/mir-algorithm) and CUDA functions in D.
+
+## features
+
+- dynamic computation graph like chainer or pytorch
+- statically typed tensor `Variable(T, size_t dim, alias Storage)` unlike numpy
+- CPU (mir) and CUDA (cublas/cudnn) backend
+- extensible (i.e., user-defined) autograd function
 
 ## how to test
 
@@ -15,28 +22,43 @@ I have tested with
 
 - LDC1.9.0 (prebuilt binary)
 - CUDA9.1 (optional)
+- CUDNN7 (optional but required if you use CUDA)
 - NVidia GTX760, GTX1080 (optional)
 
 ## links
 
-- https://github.com/ldc-developers/ldc
-- https://llvm.org/docs/NVPTXUsage.html
-- https://llvm.org/docs/CompileCudaWithLLVM.html
+- CUDA in D
+  - https://github.com/ldc-developers/ldc
+  - https://llvm.org/docs/NVPTXUsage.html
+  - https://llvm.org/docs/CompileCudaWithLLVM.html
+
+- Referenced autograd libraries
+  - Pytorch https://github.com/pytorch/pytorch
+  - Chainer v1 https://github.com/chainer/chainer/tree/v1
 
 
 ## todo
 
+sorted by higher priority for me
+
 - kernel type check
-- more cuda intrinsics like exp/log
-- more functions
-  - matmul
+- test CPU/CUDA function equality
+- practical examples (MNIST, CIFAR10, WordLM)
+- more autograd functions
+  - matmul (done by mir and cudnn)
   - softmax cross entropy
+  - convolution/cross correlation
   - optimizer (SGD, Adadelta, Adam)
   - basic ops
-    - add
-    - mul
+    - add/sub/mul/div
     - concat
     - view
     - transpose
-- practical examples (MNIST, CIFAR10, WordLM)
+  - cudnn compatible activations (done in grain.cudnn)
+    - relu (done by mir, custom kernel and cudnn)
+    - sigmoid
+    - tanh
+    - clipped relu
+- more cuda intrinsics like exp/log
+- multi GPU
 

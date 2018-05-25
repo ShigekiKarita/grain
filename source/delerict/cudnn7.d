@@ -655,7 +655,7 @@ shared static this()
     DerelictCuDNN7 = new DerelictCuDNN7Loader();
 }
 
-unittest
+version (grain_cuda) unittest
 {
     import std.conv : to;
     import std.stdio : writeln;

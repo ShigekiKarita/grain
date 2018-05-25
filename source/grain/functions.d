@@ -15,8 +15,8 @@ mixin template TypeChecker(alias forward, alias backward) {
                   "all the forward function args should be variable.");
     static assert(allSatisfy!(isVariable, Parameters!backward),
                   "all the backward function args should be variable.");
-    static assert(arity!forward == Tuple!(ReturnType!backward).length);
-    static assert(arity!backward == Tuple!(ReturnType!forward).length);
+    // static assert(arity!forward == Tuple!(ReturnType!backward).length);
+    // static assert(arity!backward == Tuple!(ReturnType!forward).length);
     static if (arity!forward == 1 && arity!backward == 1) {
         static assert(is(ReturnType!backward == Parameters!forward[0]));
         static assert(is(ReturnType!forward == Parameters!backward[0]));
@@ -317,7 +317,7 @@ struct MatMul(T) {
     Variable!(T, 2, HostStorage) ha, hb;
 
     // TODO uncomment this line
-    // mixin FunctionCommon;
+    mixin FunctionCommon;
 
     auto forward(Variable!(T, 2, HostStorage) a, Variable!(T, 2, HostStorage) b) {
         // TODO if training
@@ -333,10 +333,10 @@ struct MatMul(T) {
     }
 
     version(grain_cuda) {
+        Variable!(T, 2, DeviceStorage) da, db;
+
         auto forward(Variable!(T, 2, DeviceStorage) a, Variable!(T, 2, DeviceStorage) b) {
-            import std.typecons : RefCounted;
             import grain.cublas;
-            assert(a.shape[1] == b.shape[0]);
             static if (is(T == float)) {
                 alias gemm = cublasSgemm_v2;
             } else static if (is(T == double)) {
@@ -345,18 +345,17 @@ struct MatMul(T) {
                 static assert(false, "unsupported type");
             }
 
+            import std.typecons : RefCounted;
+            assert(a.shape[1] == b.shape[0]);
             auto cdata = RefCounted!(CuPtr!T)(a.shape[0] * b.shape[1]);
             auto c = Variable!(T, 2, DeviceStorage)(
                 false, [a.shape[0], b.shape[1]], [b.shape[1], 1], cdata);
-            // import numir;
-            // auto c = empty!float(a.shape[0], b.shape[1]).variable.to!DeviceStorage;
-
             // C = A x B = (BT x AT)T
             // TODO support transposed (CUBLAS_OP_T)
             // see https://github.com/libmir/mir-blas/blob/master/source/mir/blas.d#L299
-            // FIXME:
-            // see https://peterwittek.com/cublas-matrix-c-style.html
-            // see https://www.beechwood.eu/cublas-sgemm-dimensions-mishmash-in-row-major-order-environment/
+            // TODO if train
+            this.da = a;
+            this.db = b;
             checkCublasErrors(gemm(cublasHandle, CUBLAS_OP_N, CUBLAS_OP_N,
                                    cast(int) b.shape[1],
                                    cast(int) a.shape[0], cast(int) a.shape[1],
@@ -366,6 +365,38 @@ struct MatMul(T) {
                                    &beta,
                                    cast(T*) c.data.ptr, cast(int) c.strides[0]));
             return c;
+        }
+
+        auto backward(Variable!(T, 2, DeviceStorage) gc) {
+            import grain.cublas;
+            static if (is(T == float)) {
+                alias gemm = cublasSgemm_v2;
+            } else static if (is(T == double)) {
+                alias gemm = cublasDgemm_v2;
+            } else {
+                static assert(false, "unsupported type");
+            }
+            auto ga = this.da.dup;
+            auto gb = this.db.dup;
+            // auto ga = mtimes(gc.sliced, this.hb.sliced.transposed).variable;
+            checkCublasErrors(gemm(cublasHandle, CUBLAS_OP_T, CUBLAS_OP_N,
+                                   cast(int) db.shape[1],
+                                   cast(int) gc.shape[0], cast(int) gc.shape[1],
+                                   &alpha,
+                                   cast(const T*) db.data.ptr, cast(int) db.strides[0],
+                                   cast(const T*) gc.data.ptr, cast(int) gc.strides[0],
+                                   &beta,
+                                   cast(T*) ga.data.ptr, cast(int) ga.strides[0]));
+            // auto gb = mtimes(gc.sliced.transposed, this.ha.sliced).variable;
+            checkCublasErrors(gemm(cublasHandle, CUBLAS_OP_N, CUBLAS_OP_T,
+                                   cast(int) da.shape[1],
+                                   cast(int) gc.shape[0], cast(int) gc.shape[1],
+                                   &alpha,
+                                   cast(const T*) da.data.ptr, cast(int) da.strides[0],
+                                   cast(const T*) gc.data.ptr, cast(int) gc.strides[0],
+                                   &beta,
+                                   cast(T*) gb.data.ptr, cast(int) gb.strides[0]));
+            return tuple(ga, gb);
         }
     }
 }
@@ -505,12 +536,56 @@ unittest {
     auto gc = [[1.0f,2.0f],[3.0f,4.0f]].variable;
     MatMul!float func;
     gradCheck(func, tuple(a, b), gc);
+
+    version (grain_cuda) {
+        import numir.testing;
+        MatMul!float func2;
+        auto hc = func.forward(a, b);
+        auto dc = func2.forward(a.to!DeviceStorage, b.to!DeviceStorage);
+        assert(approxEqual(dc.to!HostStorage.sliced, hc.sliced));
+        auto hgab = func.backward(gc);
+        auto dgab = func2.backward(gc.to!DeviceStorage);
+        assert(approxEqual(dgab[0].to!HostStorage.sliced, hgab[0].sliced));
+        assert(approxEqual(dgab[1].to!HostStorage.sliced, hgab[1].sliced));
+    }
 }
 
-struct LogSoftmax(F) {
-    // TODO use cudnn
-    auto forward(Variable!(F, 2, HostStorage) x) {
-        
+struct LogSoftmax(T, size_t dim=2) {
+    auto forward(Variable!(T, dim, HostStorage) x) {
+    }
+
+    version (grain_cuda) {
+        import grain.cudnn;
+        Variable!(T, dim, DeviceStorage) dy;
+
+        auto forward(Variable!(T, dim, DeviceStorage) x) {
+            auto y = x.dup;
+            softmaxForward!CUDNN_SOFTMAX_LOG(x, y);
+            // TODO if train
+            this.dy = y;
+            return y;
+        }
+
+        auto backward(Variable!(T, dim, DeviceStorage) gy) {
+            auto gx = gy.dup;
+            softmaxBackward!CUDNN_SOFTMAX_LOG(gx, gy, this.dy);
+            return gx;
+        }
+    }
+}
+
+///
+unittest {
+    version (grain_cuda) {
+        alias Storage = DeviceStorage;
+        import numir;
+        import mir.ndslice;
+        auto func = LogSoftmax!float();
+        auto x = uniform!float(3, 4).slice.variable.to!Storage;
+        auto y = func.forward(x);
+        auto gy = uniform!float(3, 4).slice.variable.to!Storage;
+        auto gx = func.backward(gy);
+        writeln(gx.to!HostStorage);
     }
 }
 

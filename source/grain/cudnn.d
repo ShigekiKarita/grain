@@ -1,5 +1,7 @@
 module grain.cudnn;
 
+version (grain_cuda):
+
 public import grain.cuda : cudnnHandle, checkCUDNN;
 import grain.autograd; //  : Variable, DeviceStorage;
 public import derelict.cuda;
@@ -56,7 +58,7 @@ auto makeCudnnTensor(T, size_t dim)(Variable!(T, dim, DeviceStorage) x) {
 void activationForward(cudnnActivationMode_t A, T, size_t dim)(
     Variable!(T, dim, DeviceStorage) x, Variable!(T, dim, DeviceStorage) y,
     T alpha=1.0, T beta=0.0, double coeff=0.0) {
-    static assert(dim < 5, "cuDNN only supports < 5 dim tensors. and pack dim is not supported yet.");
+    static assert(dim <= 5, "cuDNN only supports <= 5 dim tensors. and pack dim is not supported yet.");
     // init descriptors
     cudnnActivationDescriptor_t  activDesc;
     checkCUDNN( cudnnCreateActivationDescriptor(&activDesc) );
@@ -82,7 +84,7 @@ void activationBackward(cudnnActivationMode_t A, T, size_t dim)(
     Variable!(T, dim, DeviceStorage) gx, Variable!(T, dim, DeviceStorage) gy,
     Variable!(T, dim, DeviceStorage) x, Variable!(T, dim, DeviceStorage) y,
     T alpha=1.0, T beta=0.0, double coeff=0.0) {
-    static assert(dim < 5, "cuDNN only supports < 5 dim tensors. and pack dim is not supported yet.");
+    static assert(dim <= 5, "cuDNN only supports <= 5 dim tensors. and pack dim is not supported yet.");
     // init descriptors
     cudnnActivationDescriptor_t  activDesc;
     checkCUDNN( cudnnCreateActivationDescriptor(&activDesc) );
@@ -108,4 +110,40 @@ void activationBackward(cudnnActivationMode_t A, T, size_t dim)(
                                         tgx,
                                         cast(void*) tgx.ptr,
                     ) );
+}
+
+/// compute the softmax over all C for each H, W, N
+void softmaxForward(cudnnSoftmaxAlgorithm_t A, T, size_t dim)(
+    Variable!(T, dim, DeviceStorage) x, Variable!(T, dim, DeviceStorage) y, T alpha=1.0, T beta=0.0) {
+    static assert(dim <= 4, "cuDNN only supports <= 4 dim tensors. and pack dim is not supported yet.");
+    // init descriptors
+    checkCUDNN( cudnnSoftmaxForward(cudnnHandle,
+                                    A,
+                                    CUDNN_SOFTMAX_MODE_CHANNEL,
+                                    &alpha,
+                                    x.makeCudnnTensor,
+                                    cast(void*) x.data.ptr,
+                                    &beta,
+                                    y.makeCudnnTensor,
+                                    cast(void*) y.data.ptr));
+}
+
+
+void softmaxBackward(cudnnSoftmaxAlgorithm_t A, T, size_t dim)(
+    Variable!(T, dim, DeviceStorage) gx, Variable!(T, dim, DeviceStorage) gy,
+    Variable!(T, dim, DeviceStorage) y, T alpha=1.0, T beta=0.0) {
+    static assert(dim <= 4, "cuDNN only supports <= 4 dim tensors. and pack dim is not supported yet.");
+    // init descriptors
+    checkCUDNN( cudnnSoftmaxBackward(cudnnHandle,
+                                     A,
+                                     CUDNN_SOFTMAX_MODE_CHANNEL,
+                                     &alpha,
+                                     y.makeCudnnTensor,
+                                     cast(const void*) y.data.ptr,
+                                     gy.makeCudnnTensor,
+                                     cast(const void*) gy.data.ptr,
+                                     &beta,
+                                     gx.makeCudnnTensor,
+                                     cast(void*) gx.data.ptr
+                    ));
 }
