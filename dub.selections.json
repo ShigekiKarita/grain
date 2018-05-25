@@ -4,6 +4,7 @@
 		"cblas": "2.0.1",
 		"derelict-cl": "3.2.0",
 		"derelict-cuda": "3.1.1",
+		"derelict-cudnn": "2.0.4",
 		"derelict-util": "3.0.0-beta.2",
 		"lapack": "0.0.4",
 		"lubeck": "0.0.5",

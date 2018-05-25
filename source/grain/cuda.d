@@ -6,29 +6,36 @@ import std.stdio : writeln, writefln;
 import std.string : toStringz, fromStringz;
 
 import derelict.cuda;
+import derelict.cudnn7;
 import grain.cublas;
 
 // TODO: support multiple GPU devices (context)
 __gshared CUcontext context;
 __gshared cublasHandle_t cublasHandle;
+__gshared cudnnHandle_t cudnnHandle;
 
 shared static this() {
+    // Initialize the driver API
     DerelictCUDADriver.load();
     CUdevice device;
-
-    // Initialize the driver API
     cuInit(0);
     // Get a handle to the first compute device
     cuDeviceGet(&device, 0);
     // Create a compute device context
     cuCtxCreate(&context, 0, device);
+
+
+    // init CUDA libraries
     checkCublasErrors(cublasCreate_v2(&cublasHandle));
+    DerelictCuDNN7.load();
+    checkCUDNN( cudnnCreate(&cudnnHandle) );
 }
 
 shared static ~this() {
     import core.memory : GC;
     GC.collect();
     cublasDestroy_v2(cublasHandle);
+    checkCUDNN( cudnnDestroy(cudnnHandle) );
     checkCudaErrors(cuCtxDestroy(context));
 }
 
@@ -231,6 +238,12 @@ void checkCudaErrors(CUresult err) {
 
 void checkCublasErrors(cublasStatus_t err) {
     assert(err == CUBLAS_STATUS_SUCCESS, cublasGetErrorEnum(err));
+}
+
+void checkCUDNN(string file = __FILE__, size_t line = __LINE__)(cudnnStatus_t err) {
+    import std.conv : to;
+    import std.format : format;
+    assert(err == CUDNN_STATUS_SUCCESS, cudnnGetErrorString(err).fromStringz ~ format!" at %s (%d)"(file, line));
 }
 
 unittest

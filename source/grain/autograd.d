@@ -92,8 +92,8 @@ struct UntypedVariable {
 
     string toString() {
         import std.format : format;
-        return "UntypedVariable(%s, dim=%d, data=%s, shape=%s)".format(
-            elem, dim, data, shape);
+        return "UntypedVariable(%s, dim=%d, data=%s, shape=%s, strides=%s)".format(
+            elem, dim, data, shape, strides);
     }
 
     auto gradSlice(V)() if (isVariable!V && isHost!V) {
@@ -203,9 +203,9 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
 
     string toString() {
         import std.format : format;
-        return "Variable!(%s, dim=%d, %s)(data=%s, shape=%s)"
+        return "Variable!(%s, dim=%d, %s)(data=%s, shape=%s, strides=%s)"
             .format(T.stringof, dim, Storage.stringof,
-                    data, shape);
+                    data, shape, strides);
     }
 }
 

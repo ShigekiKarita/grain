@@ -5,6 +5,10 @@ import grain.cuda;
 
 import std.stdio;
 
+version (grain_cuda) {
+    import cudnn = derelict.cudnn7;
+}
+
 
 mixin template TypeChecker(alias forward, alias backward) {
     static assert(allSatisfy!(isVariable, Parameters!forward),
@@ -158,6 +162,7 @@ unittest {
 struct ReLU(T, size_t dim) {
     mixin FunctionCommon;
     bool inplace = false;
+    bool useCuDNN = true;
     Variable!(T, dim, HostStorage) hx;
 
     auto forward(Variable!(T, dim, HostStorage) x) {
@@ -182,13 +187,19 @@ struct ReLU(T, size_t dim) {
         Variable!(T, dim, DeviceStorage) dx;
 
         auto forward(Variable!(T, dim, DeviceStorage) x) {
-            import grain.kernel : relu;
             // FIXME if train
             this.dx = x.dup;
             auto y = this.inplace ? x : x.dup;
-            auto n = cast(uint) y.data.length;
-            Global.kernel!relu
-                .call(y.data.ptr, n).launch([1,1,1], [n,1,1]);
+
+            if (this.useCuDNN) {
+                import grain.cudnn;
+                activationForward!CUDNN_ACTIVATION_RELU(x, y);
+            } else {
+                import grain.kernel : relu;
+                auto n = cast(uint) y.data.length; // FIXME use y.nElement
+                Global.kernel!relu
+                    .call(y.data.ptr, n).launch([1,1,1], [n,1,1]);
+            }
             return y;
         }
 
