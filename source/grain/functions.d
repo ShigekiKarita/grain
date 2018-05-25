@@ -328,7 +328,7 @@ struct MatMul(T) {
 
     auto backward(Variable!(T, 2, HostStorage) gy) {
         auto ga = mtimes(gy.sliced, this.hb.sliced.transposed).variable;
-        auto gb = mtimes(gy.sliced.transposed, this.ha.sliced).variable;
+        auto gb = mtimes(this.ha.sliced.transposed, gy.sliced).variable;
         return tuple(ga, gb);
     }
 
@@ -387,13 +387,13 @@ struct MatMul(T) {
                                    cast(const T*) gc.data.ptr, cast(int) gc.strides[0],
                                    &beta,
                                    cast(T*) ga.data.ptr, cast(int) ga.strides[0]));
-            // auto gb = mtimes(gc.sliced.transposed, this.ha.sliced).variable;
+            // auto gb = mtimes(this.ha.sliced.transposed, gy.sliced).variable;
             checkCublasErrors(gemm(cublasHandle, CUBLAS_OP_N, CUBLAS_OP_T,
-                                   cast(int) da.shape[1],
-                                   cast(int) gc.shape[0], cast(int) gc.shape[1],
+                                   cast(int) gc.shape[1],
+                                   cast(int) da.shape[0], cast(int) da.shape[1],
                                    &alpha,
-                                   cast(const T*) da.data.ptr, cast(int) da.strides[0],
                                    cast(const T*) gc.data.ptr, cast(int) gc.strides[0],
+                                   cast(const T*) da.data.ptr, cast(int) da.strides[0],
                                    &beta,
                                    cast(T*) gb.data.ptr, cast(int) gb.strides[0]));
             return tuple(ga, gb);
@@ -530,10 +530,12 @@ unittest {
 
 unittest {
     import std.typecons : tuple;
+    import numir : uniform;
+    import mir.ndslice : slice;
     import grain.testing;
-    auto a = [[1.0f,2.0f],[3.0f,4.0f]].variable;
-    auto b = [[1.0f,2.0f],[3.0f,4.0f]].variable;
-    auto gc = [[1.0f,2.0f],[3.0f,4.0f]].variable;
+    auto a = uniform!float(2, 2).slice.variable;
+    auto b = uniform!float(2, 2).slice.variable;
+    auto gc = uniform!float(2, 2).slice.variable;
     MatMul!float func;
     gradCheck(func, tuple(a, b), gc);
 
@@ -550,8 +552,67 @@ unittest {
     }
 }
 
+// TODO add to numir
+import mir.ndslice : isSlice;
+import numir : Ndim;
+pure nothrow @nogc
+logsumexp(S)(S x) if (isSlice!S && Ndim!S == 1) {
+    import mir.ndslice : map, maxIndex;
+    import mir.math : log, sum, exp;
+    auto m = x[x.maxIndex];
+    auto s = map!exp(x - m).sum!"fast".log;
+    return m + s;
+}
+
+///
+pure nothrow @nogc
+unittest {
+    import numir;
+    import mir.ndslice;
+    // import mir.math;
+    import std.math;
+    static immutable x = [-1.0, 2.0, 3.0];
+    static immutable e = log(exp(-1.0) + exp(2.0) + exp(3.0));
+    assert(approxEqual(x.sliced.logsumexp, e));
+    static immutable xs = [-1.0, 2.0, 3.0,
+                           -1.0, 2.0, 3.0,
+                           -1.0, 2.0, 3.0];
+    static immutable es = [e, e, e];
+    assert(approxEqual(xs.sliced(3, 3).alongDim!1.map!logsumexp, es));
+}
+
+/++
+See_also: https://github.com/chainer/chainer/blob/v1/chainer/functions/activation/log_softmax.py
+ +/
 struct LogSoftmax(T, size_t dim=2) {
+    // TODO support custom dim to compute softmax over (now only dim=1)
+    // mixin FunctionCommon;
+
+    Variable!(T, dim, HostStorage) hy;
+
     auto forward(Variable!(T, dim, HostStorage) x) {
+        import mir.ndslice;
+        import numir;
+        // return slice(x.sliced.alongDim!0.map!(e => e - e.logsumexp)).variable;
+        auto y = x.dup;
+        foreach (i; 0 .. y.shape[0]) {
+            y.sliced[i][] -= x.sliced[i].logsumexp;
+        }
+        // TODO if train
+        this.hy = y;
+        return y;
+    }
+
+    auto backward(Variable!(T, dim, HostStorage) gy) {
+        import mir.math;
+        import numir;
+        import mir.ndslice;
+        auto gx = gy.dup;
+        auto m = gy.sliced.alongDim!1.map!(sum!"fast");
+        foreach (i; 0 .. gx.shape[0]) {
+            gx.sliced[i][] -= this.hy.sliced[i].map!exp * m[i];
+        }
+        return gx;
     }
 
     version (grain_cuda) {
@@ -576,16 +637,33 @@ struct LogSoftmax(T, size_t dim=2) {
 
 ///
 unittest {
+    import grain.testing;
+    import std.typecons;
+    import numir;
+    import mir.ndslice;
+    import mir.math;
+    auto e = log(exp(-1.0) + exp(2.0) + exp(3.0));
+    auto xs = [[-1.0f, 2.0f, 3.0f], [-1.0f, 2.0f, 3.0f], [-1.0f, 2.0f, 3.0f]].nparray;
+    LogSoftmax!float hfunc;
+    auto _hx = xs.variable;
+    auto _hy = hfunc.forward(_hx);
+    assert(approxEqual(_hy.sliced, xs - e));
+
+    auto hx = uniform!float(2, 2).slice.variable;
+    auto hy = hfunc.forward(hx);
+    auto hgy = uniform!float(2, 2).slice.variable;
+    auto hgx = hfunc.backward(hgy);
+    gradCheck(hfunc, hx, hgy, 1e-3);
+
     version (grain_cuda) {
         alias Storage = DeviceStorage;
-        import numir;
-        import mir.ndslice;
         auto func = LogSoftmax!float();
-        auto x = uniform!float(3, 4).slice.variable.to!Storage;
-        auto y = func.forward(x);
-        auto gy = uniform!float(3, 4).slice.variable.to!Storage;
-        auto gx = func.backward(gy);
-        writeln(gx.to!HostStorage);
+        auto dx = hx.to!Storage;
+        auto dy = func.forward(dx);
+        assert(approxEqual(dy.to!HostStorage.sliced, hy.sliced));
+        auto dgy = hgy.to!Storage;
+        auto dgx = func.backward(dgy);
+        assert(approxEqual(dgx.to!HostStorage.sliced, hgx.sliced));
     }
 }
 

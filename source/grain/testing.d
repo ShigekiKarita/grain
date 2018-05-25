@@ -44,15 +44,18 @@ auto numericGrad(F, In, Out)(F func, In inputs, Out gradOutputs, float eps) {
 }
 
 /// gradient check function to compare numeric grad and autograd
-auto gradCheck(F, In, Out)(F func, In inputs, Out gradOutputs,
-                           float eps=1e-3, float rtol=1e-3, float atol=1e-5) {
+auto gradCheck(F, In, Out, string file = __FILE__, size_t line = __LINE__)(
+    F func, In inputs, Out gradOutputs,
+    float eps=1e-3, float rtol=1e-3, float atol=1e-5) {
+    import std.format : format;
     import numir.testing : approxEqual;
     auto ys = func.forward(inputs.toTuple.expand).toTuple;
     auto agrad = func.backward(gradOutputs.toTuple.expand).toTuple;
     // FIXME transfer device variable to host before computing numericGrad
     auto ngrad = numericGrad(func, inputs.toTuple, gradOutputs.toTuple, eps).toTuple;
     static foreach (i; 0 .. ngrad.length) {
-        assert(approxEqual(agrad[i].sliced, ngrad[i].sliced, rtol, atol));
+        assert(approxEqual(agrad[i].sliced, ngrad[i].sliced, rtol, atol),
+               format!"%d th input grad %s != %s from %s %d"(i, agrad[i].sliced, ngrad[i].sliced, file , line));
     }
 }
 
