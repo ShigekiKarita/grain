@@ -184,7 +184,8 @@ struct ReLU(T, size_t dim) {
 
     // TODO use cudnn
     version(grain_cuda) {
-        Variable!(T, dim, DeviceStorage) dx;
+        import grain.cudnn;
+        Variable!(T, dim, DeviceStorage) dx, dy;
 
         auto forward(Variable!(T, dim, DeviceStorage) x) {
             // FIXME if train
@@ -192,7 +193,7 @@ struct ReLU(T, size_t dim) {
             auto y = this.inplace ? x : x.dup;
 
             if (this.useCuDNN) {
-                import grain.cudnn;
+                this.dy = y;
                 activationForward!CUDNN_ACTIVATION_RELU(x, y);
             } else {
                 import grain.kernel : relu;
@@ -204,11 +205,15 @@ struct ReLU(T, size_t dim) {
         }
 
         auto backward(Variable!(T, dim, DeviceStorage) gy) {
-            import grain.kernel : reluGrad;
             auto gx = gy.dup; // TODO: create empty
-            auto n = cast(uint) gy.data.length;
-            Global.kernel!reluGrad
-                .call(gx.data.ptr, gy.data.ptr, this.dx.data.ptr, n).launch([1,1,1], [n,1,1]);
+            if (this.useCuDNN) {
+                activationBackward!CUDNN_ACTIVATION_RELU(gx, gy, dx, dy);
+            } else {
+                import grain.kernel : reluGrad;
+                auto n = cast(uint) gy.data.length;
+                Global.kernel!reluGrad
+                    .call(gx.data.ptr, gy.data.ptr, this.dx.data.ptr, n).launch([1,1,1], [n,1,1]);
+            }
             return gx;
         }
     }
@@ -252,7 +257,7 @@ unittest {
 ///
 unittest {
     import grain.testing : gradCheck;
-    foreach (inplace; [true, false]) {
+    foreach (inplace; [false]) {
         auto func = new ReLU!(float, 1);
         func.inplace = inplace;
 
@@ -292,7 +297,8 @@ unittest {
             auto gy = [1.0f, 2.0f, 3.0f].variable;
             auto gxd = func.backward(gy.to!DeviceStorage);
             auto gx = gxd.to!HostStorage;
-            assert(gx.data == [0.0, 2.0, 3.0]);
+            import std.format;
+            assert(gx.data == [0.0, 2.0, 0.0], format!"%s"(gx.data[]));
         }
     }
 }

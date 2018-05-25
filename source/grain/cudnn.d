@@ -52,9 +52,11 @@ auto makeCudnnTensor(T, size_t dim)(Variable!(T, dim, DeviceStorage) x) {
     return tdesc;
 }
 
+/// y = alpha * f(x) + beta * y
 void activationForward(cudnnActivationMode_t A, T, size_t dim)(
-    Variable!(T, dim, DeviceStorage) vx, Variable!(T, dim, DeviceStorage) vy,
+    Variable!(T, dim, DeviceStorage) x, Variable!(T, dim, DeviceStorage) y,
     T alpha=1.0, T beta=0.0, double coeff=0.0) {
+    static assert(dim < 5, "cuDNN only supports < 5 dim tensors. and pack dim is not supported yet.");
     // init descriptors
     cudnnActivationDescriptor_t  activDesc;
     checkCUDNN( cudnnCreateActivationDescriptor(&activDesc) );
@@ -63,14 +65,47 @@ void activationForward(cudnnActivationMode_t A, T, size_t dim)(
                                              A, // CUDNN_ACTIVATION_RELU,
                                              CUDNN_PROPAGATE_NAN,
                                              coeff) );
-    auto x = vx.makeCudnnTensor;
-    auto y = vy.makeCudnnTensor;
+    auto tx = x.makeCudnnTensor;
+    auto ty = y.makeCudnnTensor;
     checkCUDNN( cudnnActivationForward(cudnnHandle,
                                        activDesc,
                                        &alpha,
-                                       x,
-                                       cast(void*) x.ptr,
+                                       tx,
+                                       cast(void*) tx.ptr,
                                        &beta,
-                                       y,
-                                       cast(void*) y.ptr) );
+                                       ty,
+                                       cast(void*) ty.ptr) );
+}
+
+///
+void activationBackward(cudnnActivationMode_t A, T, size_t dim)(
+    Variable!(T, dim, DeviceStorage) gx, Variable!(T, dim, DeviceStorage) gy,
+    Variable!(T, dim, DeviceStorage) x, Variable!(T, dim, DeviceStorage) y,
+    T alpha=1.0, T beta=0.0, double coeff=0.0) {
+    static assert(dim < 5, "cuDNN only supports < 5 dim tensors. and pack dim is not supported yet.");
+    // init descriptors
+    cudnnActivationDescriptor_t  activDesc;
+    checkCUDNN( cudnnCreateActivationDescriptor(&activDesc) );
+    scope(exit) checkCUDNN( cudnnCreateActivationDescriptor(&activDesc) );
+    checkCUDNN( cudnnSetActivationDescriptor(activDesc,
+                                             A, // CUDNN_ACTIVATION_RELU,
+                                             CUDNN_PROPAGATE_NAN,
+                                             coeff) );
+    auto tgx = gx.makeCudnnTensor;
+    auto tgy = gy.makeCudnnTensor;
+    auto tx = x.makeCudnnTensor;
+    auto ty = y.makeCudnnTensor;
+    checkCUDNN( cudnnActivationBackward(cudnnHandle,
+                                        activDesc,
+                                        &alpha,
+                                        ty,
+                                        cast(void*) ty.ptr,
+                                        tgy,
+                                        cast(void*) tgy.ptr,
+                                        tx,
+                                        cast(void*) tx.ptr,
+                                        &beta,
+                                        tgx,
+                                        cast(void*) tgx.ptr,
+                    ) );
 }

@@ -37,7 +37,7 @@ extern (C)
 {
     auto i = GlobalIndex.x;
     if (i >= N) return;
-    gx[i] = (x[i] < 0) ? 0 : gy[i];
+    gx[i] = (x[i] <= 0) ? 0 : gy[i];
 }
 
 version = naive;
