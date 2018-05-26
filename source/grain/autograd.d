@@ -189,10 +189,14 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
 
     static if (is(Storage!T == HostStorage!T)) {
         auto sliced() {
-            import mir.ndslice.slice : Slice, Universal;
-            return Slice!(Universal, [dim], T*)(
-                this.shape.castArray!size_t,
-                this.strides.castArray!ptrdiff_t, data.ptr);
+            import mir.ndslice; // .slice : Slice, Universal;
+            static if (dim == 0) {
+                return [this.data[0]].sliced.universal;
+            } else {
+                return Slice!(Universal, [dim], T*)(
+                    this.shape.castArray!size_t,
+                    this.strides.castArray!ptrdiff_t, data.ptr);
+            }
         }
     }
 
@@ -236,9 +240,22 @@ auto variable(Sl)(Sl sl, bool requiresGrad = false) if (isSlice!Sl) {
         requiresGrad, shape, strides, data);
 }
 
+import std.traits : isNumeric;
+auto variable(alias Storage=HostStorage, bool requiresGrad=false, T)(T x) if (isNumeric!T) {
+    RefCounted!(T[]) data = [x];
+    return Variable!(T, 0, Storage)(requiresGrad, [], [], data);
+}
+
 auto variable(A)(A a, bool requiresGrad=false) if (isArray!A) {
     import numir.core : nparray;
     return a.nparray.variable(requiresGrad);
+}
+
+///
+unittest {
+    auto h = 0.5f.variable;
+    auto d = h.to!DeviceStorage;
+    assert(d.to!HostStorage.data == h.data);
 }
 
 Variable!(T, dim, Dst) to(alias Dst, T, size_t dim, alias Src)(Variable!(T, dim, Src) src) {
@@ -252,27 +269,27 @@ Variable!(T, dim, Dst) to(alias Dst, T, size_t dim, alias Src)(Variable!(T, dim,
 unittest {
     import std.stdio;
     {
-    // Variable!(float, 1) x;
-    auto x = [-1f, -2f, -3f].variable;
-    auto y = x.dup;
-    x.data[0] = 1.0;
-    static assert(isVariable!(typeof(x)));
-    static assert(!isVariable!void);
-    static assert(isHost!(typeof(x)));
-    assert(y.data[0] == -1);
+        // Variable!(float, 1) x;
+        auto x = [-1f, -2f, -3f].variable;
+        auto y = x.dup;
+        x.data[0] = 1.0;
+        static assert(isVariable!(typeof(x)));
+        static assert(!isVariable!void);
+        static assert(isHost!(typeof(x)));
+        assert(y.data[0] == -1);
     }
-    version (grain_cuda) {{
+    version (grain_cuda) {
+        {
             auto x = [[1f, 3f],
                       [5f, 7f],
                       [9f, 11f]].variable;
 
             assert(x.data.length == 6);
-            writeln("sliced:", x.sliced);
-            writeln("sliced:", x.dup);
-        static assert(!isHost!(typeof(x.to!DeviceStorage)));
-        auto xx = x.dup;
-        assert(x.to!DeviceStorage.to!HostStorage.sliced == x.sliced);
-    }}
+            static assert(!isHost!(typeof(x.to!DeviceStorage)));
+            auto xx = x.dup;
+            assert(x.to!DeviceStorage.to!HostStorage.sliced == x.sliced);
+        }
+    }
 }
 
 

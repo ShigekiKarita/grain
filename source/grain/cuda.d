@@ -287,7 +287,6 @@ unittest {
     Global.kernel!sum.call(a.ptr, b.ptr, N)
         .launch(cast(uint[3]) [1U,1,1], cast(uint[3]) [1U,1,1], 0U);
     checkCudaErrors(cuCtxSynchronize());
-    writeln(b.toHost());
     assert(b.toHost()[0] == 3+4+5);
 }
 

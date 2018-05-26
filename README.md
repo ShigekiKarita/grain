@@ -45,7 +45,9 @@ sorted by higher priority for me
 - test CPU/CUDA function equality
 - practical examples (MNIST, CIFAR10, WordLM)
 - more autograd functions
-  - matmul (done by mir and cudnn)
+  - matmul (done)
+  - logsoftmax (done)
+  - nlloss
   - softmax cross entropy
   - convolution/cross correlation
   - optimizer (SGD, Adadelta, Adam)

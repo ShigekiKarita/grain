@@ -444,7 +444,6 @@ unittest {
 
 /// test (2x2) x (2x2)
 unittest {
-        // test (2x2) x (2x2)
     auto a = [[1f, 2f],
               [3f, 4f]].variable;
     auto b = [[-1f, -2f],
@@ -460,7 +459,6 @@ unittest {
     version(grain_cuda) {
         auto c = MatMul!float().forward(a.to!DeviceStorage,
                                         b.to!DeviceStorage).to!HostStorage;
-        writeln(c.sliced, expected);
         assert(c.sliced == expected);
     }
 }
@@ -492,8 +490,7 @@ unittest {
     version(grain_cuda) {
         auto c = MatMul!float().forward(a.to!DeviceStorage,
                                         b.to!DeviceStorage).to!HostStorage;
-        writeln(c.sliced, expected);
-        // assert(c.sliced == expected, "c.sliced %s != %s".format(c.sliced, expected));
+        assert(c.sliced == expected, "c.sliced %s != %s".format(c.sliced, expected));
     }
 }
 
@@ -502,6 +499,7 @@ unittest {
 unittest {
     import std.stdio;
     import mir.ndslice;
+    import numir;
 
     auto a = [[1f, 3f],
               [5f, 7f],
@@ -510,14 +508,12 @@ unittest {
               [8f, 10f, 12f]].variable;
     auto expected = [[1*2+3*8, 1*4+3*10, 1*6+3*12],
                      [5*2+7*8, 5*4+7*10, 5*6+7*12],
-                     [9*2+11*8, 9*4+11*10, 9*6+11*12]];
+                     [9*2+11*8, 9*4+11*10, 9*6+11*12]].nparray;
 
     version(grain_cuda) {{
         auto c = MatMul!(float)().forward(a.to!DeviceStorage,
                                           b.to!DeviceStorage).to!HostStorage;
-        writeln(c.data);
-        writeln(expected);
-        // FIXME assert(c.sliced == expected);
+        assert(approxEqual(c.sliced, expected));
     }}
 
 
@@ -529,26 +525,33 @@ unittest {
 }
 
 unittest {
-    import std.typecons : tuple;
-    import numir : uniform;
-    import mir.ndslice : slice;
-    import grain.testing;
-    auto a = uniform!float(2, 2).slice.variable;
-    auto b = uniform!float(2, 2).slice.variable;
-    auto gc = uniform!float(2, 2).slice.variable;
-    MatMul!float func;
-    gradCheck(func, tuple(a, b), gc);
+    foreach (i; [2]) {
+        foreach (j; [2]) {
+            import std.typecons : tuple;
+            import numir : uniform;
+            import mir.ndslice : slice;
+            import grain.testing;
 
-    version (grain_cuda) {
-        import numir.testing;
-        MatMul!float func2;
-        auto hc = func.forward(a, b);
-        auto dc = func2.forward(a.to!DeviceStorage, b.to!DeviceStorage);
-        assert(approxEqual(dc.to!HostStorage.sliced, hc.sliced));
-        auto hgab = func.backward(gc);
-        auto dgab = func2.backward(gc.to!DeviceStorage);
-        assert(approxEqual(dgab[0].to!HostStorage.sliced, hgab[0].sliced));
-        assert(approxEqual(dgab[1].to!HostStorage.sliced, hgab[1].sliced));
+            auto k = 2;
+            auto a = uniform!float(i, k).slice.variable;
+            auto b = uniform!float(k, j).slice.variable;
+            auto gc = uniform!float(i, j).slice.variable;
+            MatMul!float func;
+            gradCheck(func, tuple(a, b), gc);
+
+            version (grain_cuda) {
+                import numir.testing;
+                MatMul!float func2;
+                auto hc = func.forward(a, b);
+                auto dc = func2.forward(a.to!DeviceStorage, b.to!DeviceStorage);
+                assert(approxEqual(dc.to!HostStorage.sliced, hc.sliced));
+                auto hgab = func.backward(gc);
+                auto dgab = func2.backward(gc.to!DeviceStorage);
+                // writefln!"%s vs %s"(dgab[0].to!HostStorage.sliced, hgab[0].sliced);
+                assert(approxEqual(dgab[0].to!HostStorage.sliced, hgab[0].sliced));
+                assert(approxEqual(dgab[1].to!HostStorage.sliced, hgab[1].sliced));
+            }
+        }
     }
 }
 
@@ -586,7 +589,7 @@ See_also: https://github.com/chainer/chainer/blob/v1/chainer/functions/activatio
  +/
 struct LogSoftmax(T, size_t dim=2) {
     // TODO support custom dim to compute softmax over (now only dim=1)
-    // mixin FunctionCommon;
+     mixin FunctionCommon;
 
     Variable!(T, dim, HostStorage) hy;
 
@@ -667,9 +670,72 @@ unittest {
     }
 }
 
-struct CrossEntropy(F, I=long) {
-    Variable!(F, 0, HostStorage) forward(Variable!(F, 2, HostStorage) x, Variable!(I, 1, HostStorage) t) {
-        return;
+
+struct NegativeLogLikelihood(F, I=long) {
+    /++
+    Compute negative log-likelihood: -logP(y=t)
+    Params:
+      logP: log softmax output as prediction. shape: (nBatch, nClass)
+      targetId: target integer id of class. shape: (nBatch)
+      +/
+
+    bool sizeAverage = true;
+    int ignoreIndex = -100;
+    // TODO: bool reduce = true;
+
+    // cache for backward
+    Variable!(F, 2, HostStorage) _hlogP;
+    Variable!(I, 1, HostStorage) _htargetId;
+    F _normalize;
+
+    Variable!(F, 0, HostStorage) forward(Variable!(F, 2, HostStorage) logP, Variable!(I, 1, HostStorage) targetId) {
+        import mir.math;
+        import mir.ndslice;
+        F result = 0.0;
+        size_t count = 0;
+        foreach (i; 0 .. targetId.sliced.length) {
+            auto t = targetId.sliced[i];
+            if (t != ignoreIndex) {
+                result += logP.sliced[i, t];
+                ++count;
+            }
+        }
+        if (sizeAverage && count > 0) {
+            result /= count;
+        }
+        // TODO if train
+        this._hlogP = logP;
+        this._htargetId = targetId;
+        this._normalize = sizeAverage && count > 0 ? 1.0 / count : 1.0;
+        return result.variable;
+    }
+
+    import std.typecons;
+    Tuple!(Variable!(F, 2, HostStorage), Variable!(I, 1, HostStorage)) backward(Variable!(F, 0, HostStorage) gy) {
+        import mir.math;
+        import mir.ndslice;
+        import numir;
+        auto p = this._hlogP.sliced.map!exp;
+        auto glogP = zeros_like(p);
+        auto coeff = gy.data[0] * this._normalize;
+        foreach (i; 0 .. this._htargetId.sliced.length) {
+            auto t = this._htargetId.sliced[i];
+            if (t != this.ignoreIndex) {
+                glogP[i][] = coeff * p[i];
+                glogP[i][t] = coeff * (p[i, t] - 1.0);
+            }
+        }
+        return tuple(glogP.variable, typeof(this._htargetId)());
     }
 }
 
+unittest {
+    import std.typecons;
+    import grain.testing;
+    NegativeLogLikelihood!(float, long) func;
+    auto x = [[0.2f, 0.4f, 0.4f], [0.1f, 0.5f, 0.4f]].variable;
+    auto t = [1L, 0L].variable;
+    auto l = func.forward(x, t);
+    gradCheck(func, tuple(x, t), 1.0f.variable, 1e-4);
+    writeln(l);
+}
