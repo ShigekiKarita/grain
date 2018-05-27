@@ -257,7 +257,7 @@ unittest {
 ///
 unittest {
     import grain.testing : gradCheck;
-    foreach (inplace; [false]) {
+    foreach (inplace; [true, false]) {
         auto func = new ReLU!(float, 1);
         func.inplace = inplace;
 

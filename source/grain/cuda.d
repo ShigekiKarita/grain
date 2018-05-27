@@ -75,7 +75,7 @@ class Global {
         {
             synchronized(Global.classinfo)
             {
-                module_ = new CuModule(K.ptx);
+                module_ = new CuModule(K.cxxptx);
                 instantiated_ = true;
             }
         }
