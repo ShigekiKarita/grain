@@ -64,7 +64,7 @@ class Global {
 
     // Cache instantiation flag in thread-local bool
     // Thread local
-    private static bool instantiated_, cxxInstantiated_;
+    private static bool instantiated_ = false, cxxInstantiated_ = false;
 
     // Thread global
     private __gshared CuModule* module_, cxxModule_;
@@ -83,7 +83,7 @@ class Global {
         return module_;
     }
 
-    static cxxKernel(T...)(string name, T args)
+    static getCxx()
     {
         if (!cxxInstantiated_)
         {
@@ -93,9 +93,14 @@ class Global {
                 cxxInstantiated_ = true;
             }
         }
+        return cxxModule_;
+    }
+
+    static cxxKernel(T...)(string name, T args)
+    {
         CUfunction cuFunction;
         writeln("getFunction...");
-        checkCudaErrors(cuModuleGetFunction(&cuFunction, cxxModule_, name.toStringz));
+        checkCudaErrors(cuModuleGetFunction(&cuFunction, getCxx(), name.toStringz));
         writeln("getFunction...");
         return Launcher!T(cuFunction, args);
     }
@@ -299,7 +304,7 @@ unittest {
     assert(N == 3);
     Global.cxxKernel("sum_naive", a.ptr, b.ptr, N)
         .launch(cast(uint[3]) [1U,1,1], cast(uint[3]) [1U,1,1], 0U);
-    checkCudaErrors(cuCtxSynchronize());
+    // checkCudaErrors(cuCtxSynchronize());
     writeln(b.toHost());
     assert(b.toHost()[0] == 3+4+5);
 }

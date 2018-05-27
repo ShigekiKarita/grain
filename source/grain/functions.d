@@ -401,129 +401,7 @@ struct MatMul(T) {
     }
 }
 
-/// test (3x2) x (2x3)
-unittest {
-    import std.stdio;
-    import mir.ndslice;
-
-    auto a = [[1f, 3f],
-              [5f, 7f],
-              [9f, 11f]].variable;
-    auto b = [[2f, 4f, 6f],
-              [8f, 10f, 12f]].variable;
-    auto expected = [[1*2+3*8, 1*4+3*10, 1*6+3*12],
-                     [5*2+7*8, 5*4+7*10, 5*6+7*12],
-                     [9*2+11*8, 9*4+11*10, 9*6+11*12]];
-
-    version(grain_cuda) {{
-        import numir;
-        import grain.cublas;
-        auto ad = a.to!DeviceStorage.data;
-        auto bd = b.to!DeviceStorage.data;
-        auto z = zeros!float(3, 3).variable;
-        auto c = z.to!DeviceStorage;
-
-        float alpha = 1.0, beta = 0.0;
-        checkCublasErrors(cublasSgemm_v2(
-                              cublasHandle, CUBLAS_OP_N, CUBLAS_OP_N,
-                              3, // cast(int) b.shape[1],
-                              3, // cast(int) a.shape[0],c.
-                              2, // cast(int) a.shape[1],
-                              &alpha,
-                              cast(float*) bd.ptr, cast(int) 3,
-                              cast(float*) ad.ptr, cast(int) 2,
-                              &beta,
-                              cast(float*) c.data.ptr, cast(int) 3));
-        auto cdata = c.to!HostStorage.sliced;
-        assert(cdata == expected);
-    }}
-}
-
-
-
-
-/// test (2x2) x (2x2)
-unittest {
-    auto a = [[1f, 2f],
-              [3f, 4f]].variable;
-    auto b = [[-1f, -2f],
-              [-3f, -4f]].variable;
-    auto expected = [[1*-1+2*-3, 1*-2+2*-4],
-                     [3*-1+4*-3, 3*-2+4*-4]];
-
-    // test CPU
-    {
-        auto c = MatMul!float().forward(a, b);
-        assert(c.sliced == expected);
-    }
-    version(grain_cuda) {
-        auto c = MatMul!float().forward(a.to!DeviceStorage,
-                                        b.to!DeviceStorage).to!HostStorage;
-        assert(c.sliced == expected);
-    }
-}
-
-
-/// test (3x5) x (5x4)
-unittest {
-    import mir.ndslice : sliced;
-    import std.format : format;
-    auto a =
-        [-5.0f,  1,  7, 7, -4,
-           -1, -5,  6, 3, -3,
-         -5, -2, -3, 6,  0].sliced(3, 5).variable;
-    auto b =
-        [-5.0f, -3,  3,  1,
-            4,  3,  6,  4,
-           -4, -2, -2,  2,
-           -1,  9,  4,  8,
-            9,  8,  3, -2].sliced(5, 4).variable;
-    auto expected =
-        [[-42,  35,  -7, 77],
-         [-69, -21, -42, 21],
-         [ 23,  69,   3, 29]];
-    // C = 1 * AB + 0 * C
-    {
-        auto c = MatMul!float().forward(a, b);
-        assert(c.sliced == expected);
-    }
-    version(grain_cuda) {
-        auto c = MatMul!float().forward(a.to!DeviceStorage,
-                                        b.to!DeviceStorage).to!HostStorage;
-        assert(c.sliced == expected, "c.sliced %s != %s".format(c.sliced, expected));
-    }
-}
-
-
-/// test (3x2) x (2x3)
-unittest {
-    import std.stdio;
-    import mir.ndslice;
-    import numir;
-
-    auto a = [[1f, 3f],
-              [5f, 7f],
-              [9f, 11f]].variable;
-    auto b = [[2f, 4f, 6f],
-              [8f, 10f, 12f]].variable;
-    auto expected = [[1*2+3*8, 1*4+3*10, 1*6+3*12],
-                     [5*2+7*8, 5*4+7*10, 5*6+7*12],
-                     [9*2+11*8, 9*4+11*10, 9*6+11*12]].nparray;
-
-    version(grain_cuda) {{
-        auto c = MatMul!(float)().forward(a.to!DeviceStorage,
-                                          b.to!DeviceStorage).to!HostStorage;
-        assert(approxEqual(c.sliced, expected));
-    }}
-
-
-    // test CPU
-    {
-        auto c = MatMul!(float)().forward(a, b);
-        assert(c.sliced == expected);
-    }
-}
-
+///
 unittest {
     foreach (i; [2, 3, 4]) {
         foreach (j; [2, 3, 4]) {
@@ -537,7 +415,7 @@ unittest {
             auto b = uniform!float(k, j).slice.variable;
             auto gc = uniform!float(i, j).slice.variable;
             MatMul!float func;
-            gradCheck(func, tuple(a, b), gc);
+            gradCheck(func, tuple(a, b), gc, 1e-3, 1e-3, 1e-3);
 
             version (grain_cuda) {
                 import numir.testing;
@@ -656,7 +534,7 @@ unittest {
     auto hy = hfunc.forward(hx);
     auto hgy = uniform!float(2, 2).slice.variable;
     auto hgx = hfunc.backward(hgy);
-    gradCheck(hfunc, hx, hgy, 1e-3);
+    gradCheck(hfunc, hx, hgy, 1e-3, 1e-3, 1e-3);
 
     version (grain_cuda) {
         alias Storage = DeviceStorage;
@@ -696,7 +574,7 @@ struct NegativeLogLikelihood(F, I=long) {
         foreach (i; 0 .. targetId.sliced.length) {
             auto t = targetId.sliced[i];
             if (t != ignoreIndex) {
-                result += logP.sliced[i, t];
+                result -= logP.sliced[i, t];
                 ++count;
             }
         }
@@ -721,21 +599,32 @@ struct NegativeLogLikelihood(F, I=long) {
         foreach (i; 0 .. this._htargetId.sliced.length) {
             auto t = this._htargetId.sliced[i];
             if (t != this.ignoreIndex) {
-                glogP[i][] = coeff * p[i];
-                glogP[i][t] = coeff * (p[i, t] - 1.0);
+                glogP[i][t] = -coeff;
             }
         }
         return tuple(glogP.variable, typeof(this._htargetId)());
     }
 }
 
+///
 unittest {
+    /++ equivalent torch v0.4 code
+     x = torch.FloatTensor([[0.2, 0.4, 0.4], [0.1,0.5,0.4]])
+     x.requires_grad = True
+     t = torch.LongTensor([1, 0])
+     l = torch.nn.functional.nll_loss(x, t)
+     print(l)       # tensor(-0.2500)
+     l.backward()
+     print(x.grad)  # tensor([[0.0, -0.5, 0.0], [-0.5, 0.0, 0.0]])
+     +/
     import std.typecons;
     import grain.testing;
     NegativeLogLikelihood!(float, long) func;
     auto x = [[0.2f, 0.4f, 0.4f], [0.1f, 0.5f, 0.4f]].variable;
     auto t = [1L, 0L].variable;
     auto l = func.forward(x, t);
-    // gradCheck(func, tuple(x, t), 1.0f.variable, 1e-4);
-    // writeln(l);
+    assert(func._normalize == 0.5);
+    assert(l.sliced == [-(0.4f + 0.1f) / 2]);
+    auto gxs = func.backward(1.0f.variable);
+    gradCheck(func, tuple(x, t), 1.0f.variable);
 }

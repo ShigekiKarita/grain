@@ -1,16 +1,16 @@
 @compute(CompileFor.deviceOnly) module kernel;
 import ldc.dcompute : GlobalPointer, kernel, compute, CompileFor;
 import dcompute.std.index;
+import dcompute.std.atomic;
 import dcompute.std.sync;
 
 nothrow @nogc:
 
-pragma(LDC_intrinsic, "llvm.nvvm.read.ptx.sreg.tid.x")
-uint tid_x();
+// pragma(LDC_intrinsic, "llvm.log2")
+// float _log2(float);
 
-pragma(LDC_intrinsic, "llvm.log2")
-float _log2(float);
-
+// pragma(LDC_intrinsic, "llvm.nvvm.atomic.load.add.f32.p1f32")
+// float atomicAdd(out GlobalPointer!float, float);
 
 extern (C)
 @kernel void saxpy(GlobalPointer!(float) res,
@@ -68,4 +68,12 @@ extern (C)
         barrier(); // eq to __syncthreads();
     }
     }
+}
+
+/// 
+extern (C)
+@kernel void nll(GlobalPointer!float x, GlobalPointer!long t, out GlobalPointer!float loss, int ignoreIndex, int N) {
+    auto i = GlobalIndex.x;
+    if (i >= N) return;
+    // atomicAdd(loss, x[i]);
 }
