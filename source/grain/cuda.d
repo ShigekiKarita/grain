@@ -163,10 +163,12 @@ struct Launcher(Args...) {
 }
 
 struct Kernel(alias F) if (is(ReturnType!F == void)) {
-    enum name = __traits(identifier, F);
+    // enum name = __traits(identifier, F);
+    enum name = F.mangleof;
     CUfunction cuFunction;
 
     this(CUmodule m) {
+        // writeln("mangled: ", name);
         checkCudaErrors(cuModuleGetFunction(&cuFunction, m, name.toStringz));
     }
 
@@ -296,7 +298,7 @@ unittest
     auto devC = CuPtr!float(n);
 
     // Kernel launch
-    Global.kernel!saxpy.call(devC.ptr, devA.ptr, devB.ptr, n).launch(n);
+    Global.kernel!(saxpy).call(devC.ptr, devA.ptr, devB.ptr, n).launch(n);
 
     // Validation
     devC.toHost(hostC);

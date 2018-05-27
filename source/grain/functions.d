@@ -258,39 +258,42 @@ unittest {
 unittest {
     import grain.testing : gradCheck;
     foreach (inplace; [true, false]) {
-        auto func = new ReLU!(float, 1);
-        func.inplace = inplace;
+        foreach (useCuDNN; [true, false]) {
+            auto func = new ReLU!(float, 1);
+            func.inplace = inplace;
+            func.useCuDNN = useCuDNN;
 
-        // test CPU
-        {
-            auto x = [-1.0f, 1.0f, 0.0f].variable;
-            // fail because of non-smooth function?
-            // gradCheck(func, x, [0.1f, 0.1f, 0.1f].variable);
+            // test CPU
+            {
+                auto x = [-1.0f, 1.0f, 0.0f].variable;
+                // fail because of non-smooth function?
+                // gradCheck(func, x, [0.1f, 0.1f, 0.1f].variable);
 
-            auto y = func.forward(x);
-            assert(x.data == (inplace ? y.data : [-1.0f, 1.0f, 0.0f]));
-            assert(y.data == [0.0f, 1.0f, 0.0f]);
+                auto y = func.forward(x);
+                assert(x.data == (inplace ? y.data : [-1.0f, 1.0f, 0.0f]));
+                assert(y.data == [0.0f, 1.0f, 0.0f]);
 
-            auto gy = [1.0f, 2.0f, 3.0f].variable;
-            auto gx = func.backward(gy);
-            assert(gx.data == [0.0f, 2.0f, 3.0f]);
-        }
+                auto gy = [1.0f, 2.0f, 3.0f].variable;
+                auto gx = func.backward(gy);
+                assert(gx.data == [0.0f, 2.0f, 3.0f]);
+            }
 
-        // test CUDA
-        version(grain_cuda) {
-            auto x = [-1.0f, 1.0f, 0.0f].variable;
-            auto xd = x.to!DeviceStorage;
-            auto yd = func.forward(xd);
-            x = xd.to!HostStorage;
-            auto y = yd.to!HostStorage;
-            assert(x.data == (inplace ? y.data : [-1.0f, 1.0f, 0.0f]));
-            assert(y.data == [0.0f, 1.0f, 0.0f]);
+            // test CUDA
+            version(grain_cuda) {
+                auto x = [-1.0f, 1.0f, 0.0f].variable;
+                auto xd = x.to!DeviceStorage;
+                auto yd = func.forward(xd);
+                x = xd.to!HostStorage;
+                auto y = yd.to!HostStorage;
+                assert(x.data == (inplace ? y.data : [-1.0f, 1.0f, 0.0f]));
+                assert(y.data == [0.0f, 1.0f, 0.0f]);
 
-            x = [-1.0f, 1.0f, 0.0f].variable;
-            auto gy = [1.0f, 2.0f, 3.0f].variable;
-            auto gxd = func.backward(gy.to!DeviceStorage);
-            auto gx = gxd.to!HostStorage;
-            assert(gx.data == [0.0, 2.0, 0.0]);
+                x = [-1.0f, 1.0f, 0.0f].variable;
+                auto gy = [1.0f, 2.0f, 3.0f].variable;
+                auto gxd = func.backward(gy.to!DeviceStorage);
+                auto gx = gxd.to!HostStorage;
+                assert(gx.data == [0.0, 2.0, 0.0]);
+            }
         }
     }
 }

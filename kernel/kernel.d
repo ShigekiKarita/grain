@@ -10,7 +10,7 @@ import dcompute.std.index;
 import dcompute.std.atomic;
 import dcompute.std.sync;
 
-nothrow @nogc extern(C):
+nothrow @nogc extern(C++):
 
 // pragma(LDC_intrinsic, "llvm.log2")
 // float _log2(float);
@@ -18,9 +18,15 @@ nothrow @nogc extern(C):
 // pragma(LDC_intrinsic, "llvm.nvvm.atomic.load.add.f32.p1f32")
 // float atomicAdd(out GlobalPointer!float, float);
 
-@kernel void saxpy(GlobalPointer!(float) res,
-                   GlobalPointer!(float) x,
-                   GlobalPointer!(float) y,
+
+// @kernel void saxpy(T)(T* res,
+//                    const T* x,
+//                    const T* y,
+//                    int N);
+
+@kernel void saxpy(float* res,
+                   const float* x,
+                   const float* y,
                    int N);
 // {
 //     auto i = GlobalIndex.x;
@@ -28,15 +34,15 @@ nothrow @nogc extern(C):
 //     res[i] = x[i] + y[i];
 // }
 
-@kernel void relu(GlobalPointer!(float) x, size_t N);
+@kernel void relu(float* x, int N);
 // {
 //     auto i = GlobalIndex.x;
 //     if (i >= N) return;
 //     if (x[i] < 0) x[i] = 0;
 // }
 
-@kernel void reluGrad(GlobalPointer!float gx, GlobalPointer!float gy,
-                      GlobalPointer!float x, size_t N);
+@kernel void reluGrad(float* gx, const float* gy,
+                      const float* x, int N);
 // {
 //     auto i = GlobalIndex.x;
 //     if (i >= N) return;
@@ -45,7 +51,7 @@ nothrow @nogc extern(C):
 
 // http://www.toffee.jp/streaming/gpgpu/gpgpu_programming/2015/gpgpu_programming07.pdf
 
-@kernel void sum(GlobalPointer!float x, GlobalPointer!float result, int N);
+@kernel void sum(const float* x, float* result, int N);
 
 
 @kernel void nll(GlobalPointer!float x, GlobalPointer!long t, out GlobalPointer!float loss, int ignoreIndex, int N);
