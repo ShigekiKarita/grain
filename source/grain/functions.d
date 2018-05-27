@@ -199,7 +199,7 @@ struct ReLU(T, size_t dim) {
                 import grain.kernel : relu;
                 auto n = cast(uint) y.data.length; // FIXME use y.nElement
                 Global.kernel!relu
-                    .call(y.data.ptr, n).launch([1,1,1], [n,1,1]);
+                    .call(y.data.ptr, n).launch(n);
             }
             return y;
         }
@@ -212,7 +212,7 @@ struct ReLU(T, size_t dim) {
                 import grain.kernel : reluGrad;
                 auto n = cast(uint) gy.data.length;
                 Global.kernel!reluGrad
-                    .call(gx.data.ptr, gy.data.ptr, this.dx.data.ptr, n).launch([1,1,1], [n,1,1]);
+                    .call(gx.data.ptr, gy.data.ptr, this.dx.data.ptr, n).launch(n);
             }
             return gx;
         }
@@ -254,7 +254,7 @@ unittest {
 }
 
 
-///
+/// test relu
 unittest {
     import grain.testing : gradCheck;
     foreach (inplace; [true, false]) {
@@ -264,23 +264,16 @@ unittest {
         // test CPU
         {
             auto x = [-1.0f, 1.0f, 0.0f].variable;
+            // fail because of non-smooth function?
             // gradCheck(func, x, [0.1f, 0.1f, 0.1f].variable);
 
             auto y = func.forward(x);
             assert(x.data == (inplace ? y.data : [-1.0f, 1.0f, 0.0f]));
-            assert(y.data[0] == 0.0);
-            assert(y.data[1] == 1.0);
-            assert(y.data[2] == 0.0);
-            // Why fail?
-            // assert(y.data == [0.0f, 1.0f, 0.0f]);
+            assert(y.data == [0.0f, 1.0f, 0.0f]);
 
-            // x = [-1.0f, 1.0f, 0.0f].variable;
-            // writeln(func.hx);
             auto gy = [1.0f, 2.0f, 3.0f].variable;
             auto gx = func.backward(gy);
-            assert(gx.data[0] == 0.0);
-            assert(gx.data[1] == 2.0);
-            assert(gx.data[2] == 3.0);
+            assert(gx.data == [0.0f, 2.0f, 3.0f]);
         }
 
         // test CUDA
@@ -297,8 +290,7 @@ unittest {
             auto gy = [1.0f, 2.0f, 3.0f].variable;
             auto gxd = func.backward(gy.to!DeviceStorage);
             auto gx = gxd.to!HostStorage;
-            import std.format;
-            assert(gx.data == [0.0, 2.0, 0.0], format!"%s"(gx.data[]));
+            assert(gx.data == [0.0, 2.0, 0.0]);
         }
     }
 }
@@ -401,7 +393,7 @@ struct MatMul(T) {
     }
 }
 
-///
+/// test matmul gradcheck and cpu/cuda equality
 unittest {
     foreach (i; [2, 3, 4]) {
         foreach (j; [2, 3, 4]) {
@@ -516,7 +508,7 @@ struct LogSoftmax(T, size_t dim=2) {
     }
 }
 
-///
+/// test logsoftmax simple case, gradcheck and cpu/cuda equality
 unittest {
     import grain.testing;
     import std.typecons;
@@ -606,7 +598,7 @@ struct NegativeLogLikelihood(F, I=long) {
     }
 }
 
-///
+/// test nll simple case, gradcheck and cpu/cuda equality
 unittest {
     /++ equivalent torch v0.4 code
      x = torch.FloatTensor([[0.2, 0.4, 0.4], [0.1,0.5,0.4]])
@@ -620,11 +612,11 @@ unittest {
     import std.typecons;
     import grain.testing;
     NegativeLogLikelihood!(float, long) func;
-    auto x = [[0.2f, 0.4f, 0.4f], [0.1f, 0.5f, 0.4f]].variable;
-    auto t = [1L, 0L].variable;
+    auto x = [[0.2f, 0.4f, 0.4f], [0.1f, 0.5f, 0.4f], [0.1f, 0.5f, 0.4f]].variable;
+    auto t = [1L, 0L, func.ignoreIndex].variable;
     auto l = func.forward(x, t);
     assert(func._normalize == 0.5);
-    assert(l.sliced == [-(0.4f + 0.1f) / 2]);
+    assert(l.sliced == [-(0.4f + 0.1f + 0.0f) / 2]);
     auto gxs = func.backward(1.0f.variable);
     gradCheck(func, tuple(x, t), 1.0f.variable);
 }

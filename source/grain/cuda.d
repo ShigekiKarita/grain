@@ -116,6 +116,12 @@ auto global() {
     return Global.get();
 }
 
+// pthread error ?
+// auto CUDA_POST_KERNEL_CHECK() {
+//     checkCudaErrors(cudaPeekAtLastError());
+// }
+
+
 struct Launcher(Args...) {
     CUfunction cuFunction;
     Args args;
@@ -135,6 +141,24 @@ struct Launcher(Args...) {
                             block[0], block[1], block[2],
                             sharedMemBytes, stream,
                             kernelParams(args).ptr, null));
+        // CUDA_POST_KERNEL_CHECK();
+    }
+
+    // TODO __CUDA_ARCH__ < 200 512
+    enum CUDA_NUM_THREADS = 1024;
+
+    static getBlocks(uint n) {
+        return (n + CUDA_NUM_THREADS - 1) / CUDA_NUM_THREADS;
+    }
+
+    void launch(uint n, uint sharedMemBytes=0, CUstream stream=null) {
+        checkCudaErrors(cuLaunchKernel(
+                            cuFunction,
+                            getBlocks(n), 1, 1,
+                            CUDA_NUM_THREADS, 1, 1,
+                            sharedMemBytes, stream,
+                            kernelParams(args).ptr, null));
+        // CUDA_POST_KERNEL_CHECK();
     }
 }
 
@@ -272,7 +296,7 @@ unittest
     auto devC = CuPtr!float(n);
 
     // Kernel launch
-    Global.kernel!saxpy.call(devC.ptr, devA.ptr, devB.ptr, n).launch([1,1,1], [n,1,1]);
+    Global.kernel!saxpy.call(devC.ptr, devA.ptr, devB.ptr, n).launch(n);
 
     // Validation
     devC.toHost(hostC);
