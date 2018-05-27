@@ -2,20 +2,13 @@ module grain.testing;
 
 import std.typecons  : isTuple, tuple;
 
-import grain.utility : castArray;
+import grain.utility : castArray, toTuple;
 
 import std.traits : isIntegral;
 import grain.autograd : variable, ElementType;
 
-auto toTuple(T)(T t) {
-    static if (isTuple!T) {
-        return t;
-    } else {
-        return tuple(t);
-    }
-}
 
-auto numericGrad(F, In, Out)(F func, In inputs, Out gradOutputs, float eps) {
+auto numericGrad(F, In, Out)(ref F func, In inputs, Out gradOutputs, float eps) {
     import numir; // : zeros_like, view;
     import mir.ndslice;
     import mir.math : sum;
@@ -50,7 +43,7 @@ auto numericGrad(F, In, Out)(F func, In inputs, Out gradOutputs, float eps) {
 
 /// gradient check function to compare numeric grad and autograd
 auto gradCheck(F, In, Out, string file = __FILE__, size_t line = __LINE__)(
-    F func, In inputs, Out gradOutputs,
+    ref F func, In inputs, Out gradOutputs,
     float eps=1e-3, float rtol=1e-3, float atol=1e-5) {
     import std.format : format;
     import numir.testing : approxEqual;

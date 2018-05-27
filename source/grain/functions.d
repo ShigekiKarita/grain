@@ -2,6 +2,7 @@ module grain.functions;
 
 import grain.autograd;
 import grain.cuda;
+import grain.utility : toTuple, fromTuple;
 
 import std.stdio;
 
@@ -15,8 +16,6 @@ mixin template TypeChecker(alias forward, alias backward) {
                   "all the forward function args should be variable.");
     static assert(allSatisfy!(isVariable, Parameters!backward),
                   "all the backward function args should be variable.");
-    // static assert(arity!forward == Tuple!(ReturnType!backward).length);
-    // static assert(arity!backward == Tuple!(ReturnType!forward).length);
     static if (arity!forward == 1 && arity!backward == 1) {
         static assert(is(ReturnType!backward == Parameters!forward[0]));
         static assert(is(ReturnType!forward == Parameters!backward[0]));
@@ -37,7 +36,7 @@ mixin template FunctionCommon() {
     import std.typecons : isTuple, tuple, Tuple, RefCounted;
     import std.traits : arity, Parameters, ReturnType;
 
-    RefCounted!(UntypedVariable[]) vargs,  vrets;
+    @disable this(this); // no copyable
 
     static foreach (i, forward; __traits(getOverloads, typeof(this), "forward")) {
         static foreach (i, backward; __traits(getOverloads, typeof(this), "backward")) {
@@ -58,32 +57,25 @@ mixin template FunctionCommon() {
 
     auto applyForward(Args...)(Args args) {
         import std.algorithm : each;
-        this.vargs.length = args.length;
-        this.vrets.length = HostRets.length; // TODO: remove this line
+        RefCounted!(UntypedVariable[]) vargs;
+        vargs.length = args.length;
         foreach (i, a; args) {
-            this.vargs[i] = UntypedVariable(a);
+            vargs[i] = UntypedVariable(a);
         }
-        auto ret = this.forward(args);
-        static if (isTuple!(typeof(ret))) {
-            auto rets = ret;
-        } else {
-            auto rets = tuple(ret);
-        }
-
+        auto rets = this.forward(args).toTuple;
         enum isHost = allSatisfy!(isHost, Args);
-        auto ugradOuts = new UntypedVariable[rets.length];
         foreach (i, r; rets) {
             auto u = UntypedVariable(r);
             if (grain.autograd.backprop) {
                 RefCounted!BackProp bp = BackProp(&this.applyBackward!isHost,
-                                                  this.vargs, ugradOuts);
+                                                  vargs);
+                bp.gradOutputs.length = rets.length;
                 u.bprop = bp;
                 u.outPosition = i;
                 rets[i].bprop = bp;
             }
-            this.vrets[i] = u;
         }
-        static if (isTuple!(typeof(ret))) {
+        static if (rets.length > 1) {
             return rets;
         } else {
             return rets[0];
@@ -99,21 +91,13 @@ mixin template FunctionCommon() {
         static foreach (i; 0 .. vgradOutputs.length) {
             vgradOutputs[i] = ugradOutputs[i].to!(typeof(vgradOutputs[i]));
         }
-        static if (vgradOutputs.length == 1) {
-            auto _vgradInputs = this.backward(vgradOutputs[0]);
-        } else {
-            auto _vgradInputs = vgradOutputs.apply!(this.backward);
-        }
-        static if (isTuple!(typeof(_vgradInputs))) {
-            auto vgradInputs = _vgradInputs;
-        } else {
-            auto vgradInputs = tuple(_vgradInputs);
-        }
-        auto ugradInputs = new UntypedVariable[vgradInputs.length];
+        auto vgradInputs = this.backward(vgradOutputs.expand).toTuple;
+        assert(vgradInputs.length == uinputs.length, "invalid number of input gradients");
+        UntypedVariable[vgradInputs.length] ugradInputs; // TODO use refcounted?
         foreach (i, v; vgradInputs) {
             ugradInputs[i] = UntypedVariable(v);
         }
-        assert(vgradInputs.length == uinputs.length, "invalid number of input gradients");
+
         foreach (i, vgi; vgradInputs) {
             if (uinputs[i].requiresGrad) {
                 alias Storage = typeof(vgradInputs[i].data);
@@ -219,21 +203,53 @@ struct ReLU(T, size_t dim) {
     }
 }
 
+// forward 2-in 1-out function
+unittest {
+    import std.typecons;
+    import numir;
+    import mir.ndslice;
+    grain.autograd.backprop = true;
+    scope (exit) grain.autograd.backprop = false;
+    {
+        auto func = new MatMul!float;
+        auto a = uniform!float(3, 4).slice.variable(true);
+        auto b = uniform!float(4, 2).slice.variable(true);
+        auto c = func.applyForward(a, b);
+        auto gc = uniform!float(3, 2).slice.variable;
+        auto ugc = UntypedVariable(gc);
+        c.backward(&ugc);
+
+        auto gab = func.backward(gc);
+        assert(a.gradSlice == gab[0].sliced);
+        assert(b.gradSlice == gab[1].sliced);
+    }
+}
+
+// forward two functions parallel
 unittest {
     import std.typecons;
     grain.autograd.backprop = true;
     scope (exit) grain.autograd.backprop = false;
     {
-        auto func = new ReLU!(float, 1);
         auto x = [-1.0f, 2.0f, 3.0f].variable(true);
-        auto y = func.applyForward(x);
+        Variable!(float, 1) y, h;
+        {
+            // FIXME cannot use RefCounted instead of new here
+            auto func0 = new ReLU!(float, 1);
+            y = func0.applyForward(x);
+            // h = func0.applyForward(x);
+            //auto func1 = new ReLU!(float, 1);
+            // y = func1.applyForward(h);
+        }
         auto gy = [1.0f, 2.0f, 3.0f].variable;
         auto ugy = UntypedVariable(gy);
         y.backward(&ugy);
+        writeln(h.gradSlice);
+        writeln(x.gradSlice);
         assert(x.grad == [0, 2, 3]);
 
         auto func2 = new ReLU!(float, 1);
-        auto y2 = func.applyForward(x);
+        auto y2 = func2.applyForward(x);
         y2.backward(&ugy);
         assert(x.grad == [0, 4, 6]); // summation
     }
@@ -252,6 +268,8 @@ unittest {
         assert(x.grad.toHost() == [0, 4, 6]); // summation
     }
 }
+
+
 
 
 /// test relu

@@ -103,6 +103,12 @@ struct UntypedVariable {
     }
 }
 
+auto gradSlice(V)(V v) if (isVariable!V && isHost!V) {
+    import mir.ndslice.slice : sliced;
+    return v.grad.ptr.sliced(v.shape.castArray!size_t);
+}
+
+
 
 /// FIXME maybe singleton?
 shared bool backprop = false;
