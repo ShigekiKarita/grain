@@ -279,7 +279,7 @@ void checkCUDNN(string file = __FILE__, size_t line = __LINE__)(cudnnStatus_t er
 
 unittest
 {
-    import grain.kernel : saxpy;
+    import grain.kernel; // : saxpy;
 
     // Populate input
     uint n = 16;

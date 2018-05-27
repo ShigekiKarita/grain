@@ -23,7 +23,6 @@ GRAIN_GLOBAL void saxpy(float* res, const float* x, const float* y, int n) {
     }
 }
 
-
 GRAIN_GLOBAL void relu(float* x, int n) {
     GRAIN_PARALLEL_FOR(i, n) {
         if (x[i] < 0) x[i] = 0;
@@ -41,6 +40,16 @@ GRAIN_GLOBAL void sum(const float* x, float* result, int N) {
     result[0] = 0;
     for (int n = 0; n < N; ++n) {
         result[0] += x[n];
+    }
+}
+
+GRAIN_GLOBAL void nll(float* loss, uint* count, const float* logp, const int* targetId, int ignoreIndex, uint batchSize) {
+    GRAIN_PARALLEL_FOR(i, batchSize) {
+        auto t = targetId[i];
+        if (t != ignoreIndex) {
+            atomicAdd(loss, -logp[i * batchSize + t]);
+            atomicAdd(count, 1);
+        }
     }
 }
 

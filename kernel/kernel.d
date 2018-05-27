@@ -54,4 +54,6 @@ nothrow @nogc extern(C++):
 @kernel void sum(const float* x, float* result, int N);
 
 
-@kernel void nll(GlobalPointer!float x, GlobalPointer!long t, out GlobalPointer!float loss, int ignoreIndex, int N);
+// @kernel void nll(GlobalPointer!float x, GlobalPointer!long t, out GlobalPointer!float loss, int ignoreIndex, int N);
+@kernel void nll(float* loss, uint* count, const float* logp, const int* targetId, int ignoreIndex, uint batchSize);
+

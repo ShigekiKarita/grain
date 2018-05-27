@@ -561,7 +561,7 @@ struct NegativeLogLikelihood(F, I=long) {
     Variable!(I, 1, HostStorage) _htargetId;
     F _normalize;
 
-    Variable!(F, 0, HostStorage) forward(Variable!(F, 2, HostStorage) logP, Variable!(I, 1, HostStorage) targetId) {
+    auto forward(Variable!(F, 2, HostStorage) logP, Variable!(I, 1, HostStorage) targetId) {
         import mir.math;
         import mir.ndslice;
         F result = 0.0;
@@ -584,7 +584,7 @@ struct NegativeLogLikelihood(F, I=long) {
     }
 
     import std.typecons;
-    Tuple!(Variable!(F, 2, HostStorage), Variable!(I, 1, HostStorage)) backward(Variable!(F, 0, HostStorage) gy) {
+    auto backward(Variable!(F, 0, HostStorage) gy) {
         import mir.math;
         import mir.ndslice;
         import numir;
@@ -598,6 +598,36 @@ struct NegativeLogLikelihood(F, I=long) {
             }
         }
         return tuple(glogP.variable, typeof(this._htargetId)());
+    }
+
+    version (grain_cuda) {
+        Variable!(F, 2, DeviceStorage) _dlogP;
+        Variable!(I, 1, DeviceStorage) _dtargetId;
+
+        Variable!(F, 0, DeviceStorage) forward(Variable!(F, 2, DeviceStorage) logP, Variable!(I, 1, DeviceStorage) targetId) { // if (is(F == float) && is(I == long)) {
+            import grain.kernel : nll;
+            F result = 0.0;
+            uint count = 0;
+            auto dresult = result.variable.to!DeviceStorage;
+            auto dcount = count.variable.to!DeviceStorage;
+
+            auto batchSize = targetId.shape[0];
+            Global.kernel!nll
+                .call(dresult.data.ptr, dcount.data.ptr, logP.data.ptr,
+                      targetId.data.ptr, this.ignoreIndex, batchSize).launch(batchSize);
+
+            result = dresult.to!HostStorage.data[0];
+            count = dcount.to!HostStorage.data[0];
+            if (sizeAverage && count > 0) {
+                result /= count;
+            }
+            // TODO if train
+            this._dlogP = logP;
+            this._dtargetId = targetId;
+            this._normalize = sizeAverage && count > 0 ? 1.0 / count : 1.0;
+            return result.variable.to!DeviceStorage;
+        }
+
     }
 }
 
@@ -614,12 +644,20 @@ unittest {
      +/
     import std.typecons;
     import grain.testing;
-    NegativeLogLikelihood!(float, long) func;
-    auto x = [[0.2f, 0.4f, 0.4f], [0.1f, 0.5f, 0.4f], [0.1f, 0.5f, 0.4f]].variable;
-    auto t = [1L, 0L, func.ignoreIndex].variable;
-    auto l = func.forward(x, t);
+    NegativeLogLikelihood!(float, int) func;
+    auto hx = [[0.2f, 0.4f, 0.4f], [0.1f, 0.5f, 0.4f], [0.1f, 0.5f, 0.4f]].variable;
+    auto ht = [1, 0, func.ignoreIndex].variable;
+    auto hl = func.forward(hx, ht);
     assert(func._normalize == 0.5);
-    assert(l.sliced == [-(0.4f + 0.1f + 0.0f) / 2]);
-    auto gxs = func.backward(1.0f.variable);
-    gradCheck(func, tuple(x, t), 1.0f.variable);
+    assert(hl.sliced == [-(0.4f + 0.1f + 0.0f) / 2]);
+    auto hgx = func.backward(1.0f.variable);
+    gradCheck(func, tuple(hx, ht), 1.0f.variable);
+
+    version (grain_cuda) {
+        auto dx = hx.to!DeviceStorage;
+        auto dt = ht.to!DeviceStorage;
+        auto dl = func.forward(dx, dt);
+        assert(func._normalize == 0.5);
+        assert(dl.to!HostStorage.sliced == [-(0.4f + 0.1f + 0.0f) / 2]);
+    }
 }

@@ -18,7 +18,7 @@ test: $(CUDA_DEPS)
 kernel/kernel_lib.ptx: kernel/kernel_lib.cu
 	# clang-6.0 -c -S -emit-llvm $< --cuda-gpu-arch=sm_$(CUDA_COMPUTE_CAPABILITY)
 	# llc-6.0 -mcpu=sm_$(CUDA_COMPUTE_CAPABILITY) $(shell basename -s .cu $<)-cuda-nvptx64-nvidia-cuda-sm_$(CUDA_COMPUTE_CAPABILITY).ll -o $@
-	nvcc -ptx -arch=sm_$(CUDA_COMPUTE_CAPABILITY) $< -o $@
+	nvcc -ptx -arch=sm_$(CUDA_COMPUTE_CAPABILITY) $< -o $@ -std=c++11
 
 kernel/kernel.ptx: kernel/kernel.d kernel/kernel_lib.ptx
 	ldc2 $< --mdcompute-targets=cuda-$(CUDA_COMPUTE_CAPABILITY)0 -H -Hd kernel -mdcompute-file-prefix=$(shell basename -s .d $<) -I=source
