@@ -35,7 +35,8 @@ version(grain_cuda) {
 
 
     auto to(alias S : DeviceStorage, T)(T[] src) {
-        return DeviceStorage!T(src);
+        import std.array : empty;
+        return src.empty ? DeviceStorage!T() : DeviceStorage!T(src);
     }
 
     auto to(alias S : HostStorage, Src)(Src src) if (isDevice!Src) {
@@ -176,6 +177,9 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
         }
     }
 
+    @property
+    bool defined() { return cast(size_t) data.ptr != 0; }
+
     auto dup() {
         static if (is(Storage!T == HostStorage!T)) {
             RefCounted!(Storage!T) d = new T[data.length];
@@ -210,6 +214,26 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
         return "Variable!(%s, dim=%d, %s)(data=%s, shape=%s, strides=%s)"
             .format(T.stringof, dim, Storage.stringof,
                     data, shape, strides);
+    }
+}
+
+/// test Variable.defined
+unittest {
+    Variable!(float, 1, HostStorage) h;
+    assert(!h.defined);
+    assert(0.variable.defined);
+    assert(0.1f.variable.defined);
+    assert([0].variable.defined);
+    assert([0.1f].variable.defined);
+
+    version (grain_cuda) {
+        Variable!(float, 1, DeviceStorage) d;
+        assert(!d.defined);
+        assert(!h.to!DeviceStorage.defined);
+        assert(0.variable.to!DeviceStorage.defined);
+        assert(0.1f.variable.to!DeviceStorage.defined);
+        assert([0].variable.to!DeviceStorage.defined);
+        assert([0.1f].variable.to!DeviceStorage.defined);
     }
 }
 

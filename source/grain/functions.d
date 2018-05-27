@@ -603,8 +603,9 @@ struct NegativeLogLikelihood(F, I=long) {
     version (grain_cuda) {
         Variable!(F, 2, DeviceStorage) _dlogP;
         Variable!(I, 1, DeviceStorage) _dtargetId;
-
-        Variable!(F, 0, DeviceStorage) forward(Variable!(F, 2, DeviceStorage) logP, Variable!(I, 1, DeviceStorage) targetId) { // if (is(F == float) && is(I == long)) {
+        auto forward(Variable!(F, 2, DeviceStorage) logP, Variable!(I, 1, DeviceStorage) targetId) {
+            static assert(is(F == float), "only float is supported now");
+            static assert(is(I == int), "only int is supported now");
             import grain.kernel : nll;
             F result = 0.0;
             uint count = 0;
@@ -651,6 +652,8 @@ unittest {
     assert(func._normalize == 0.5);
     assert(hl.sliced == [-(0.4f + 0.1f + 0.0f) / 2]);
     auto hgx = func.backward(1.0f.variable);
+    assert(hgx[0].sliced == [[0.0, -0.5, 0.0], [-0.5, 0.0, 0.0], [0.0, 0.0, 0.0]]);
+    assert(!hgx[1].defined);
     gradCheck(func, tuple(hx, ht), 1.0f.variable);
 
     version (grain_cuda) {
