@@ -233,17 +233,21 @@ unittest {
     {
         auto x = [-1.0f, 2.0f, 3.0f].variable(true);
         Variable!(float, 1) y, h;
-        {
+        y.requiresGrad = true;
+        h.requiresGrad = true;
+        // {
             // FIXME cannot use RefCounted instead of new here
             auto func0 = new ReLU!(float, 1);
-            y = func0.applyForward(x);
-            // h = func0.applyForward(x);
-            //auto func1 = new ReLU!(float, 1);
-            // y = func1.applyForward(h);
-        }
+            // y = func0.applyForward(x);
+            h = func0.applyForward(x);
+            auto func1 = new ReLU!(float, 1);
+            y = func1.applyForward(h);
+        // }
         auto gy = [1.0f, 2.0f, 3.0f].variable;
         auto ugy = UntypedVariable(gy);
         y.backward(&ugy);
+        auto gh = UntypedVariable(h.gradSlice.variable);
+        h.backward(&gh);
         writeln(h.gradSlice);
         writeln(x.gradSlice);
         assert(x.grad == [0, 2, 3]);
