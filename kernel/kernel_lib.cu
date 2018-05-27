@@ -53,3 +53,12 @@ GRAIN_GLOBAL void nll(float* loss, uint* count, const float* logp, const int* ta
     }
 }
 
+GRAIN_GLOBAL void nllGrad(float* glogP, float coeff, const int* targetId, int ignoreIndex, uint batchSize) {
+    GRAIN_PARALLEL_FOR(i, batchSize) {
+        auto t = targetId[i];
+        if (t != ignoreIndex) {
+            glogP[i * batchSize + t] = coeff;
+        }
+    }
+}
+

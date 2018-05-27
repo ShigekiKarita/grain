@@ -557,9 +557,9 @@ struct NegativeLogLikelihood(F, I=long) {
     // TODO: bool reduce = true;
 
     // cache for backward
-    Variable!(F, 2, HostStorage) _hlogP;
     Variable!(I, 1, HostStorage) _htargetId;
     F _normalize;
+    int _nClass;
 
     auto forward(Variable!(F, 2, HostStorage) logP, Variable!(I, 1, HostStorage) targetId) {
         import mir.math;
@@ -577,21 +577,22 @@ struct NegativeLogLikelihood(F, I=long) {
             result /= count;
         }
         // TODO if train
-        this._hlogP = logP;
+        this._nClass = logP.shape[1];
         this._htargetId = targetId;
         this._normalize = sizeAverage && count > 0 ? 1.0 / count : 1.0;
         return result.variable;
     }
 
-    import std.typecons;
     auto backward(Variable!(F, 0, HostStorage) gy) {
+        import std.typecons;
         import mir.math;
         import mir.ndslice;
         import numir;
-        auto p = this._hlogP.sliced.map!exp;
-        auto glogP = zeros_like(p);
+
+        auto nBatch = this._htargetId.shape[0];
+        auto glogP = zeros!F(nBatch, this._nClass);
         auto coeff = gy.data[0] * this._normalize;
-        foreach (i; 0 .. this._htargetId.sliced.length) {
+        foreach (i; 0 .. nBatch) {
             auto t = this._htargetId.sliced[i];
             if (t != this.ignoreIndex) {
                 glogP[i][t] = -coeff;
@@ -601,11 +602,11 @@ struct NegativeLogLikelihood(F, I=long) {
     }
 
     version (grain_cuda) {
-        Variable!(F, 2, DeviceStorage) _dlogP;
         Variable!(I, 1, DeviceStorage) _dtargetId;
         auto forward(Variable!(F, 2, DeviceStorage) logP, Variable!(I, 1, DeviceStorage) targetId) {
             static assert(is(F == float), "only float is supported now");
             static assert(is(I == int), "only int is supported now");
+
             import grain.kernel : nll;
             F result = 0.0;
             uint count = 0;
@@ -623,10 +624,25 @@ struct NegativeLogLikelihood(F, I=long) {
                 result /= count;
             }
             // TODO if train
-            this._dlogP = logP;
             this._dtargetId = targetId;
             this._normalize = sizeAverage && count > 0 ? 1.0 / count : 1.0;
             return result.variable.to!DeviceStorage;
+        }
+
+        auto backward(Variable!(F, 0, DeviceStorage) gy) {
+            static assert(is(F == float), "only float is supported now");
+            static assert(is(I == int), "only int is supported now");
+
+            import grain.kernel;
+            import std.typecons : tuple, RefCounted;
+            auto nBatch = this._dtargetId.shape[0];
+            RefCounted!(CuPtr!F) glogP = CuPtr!F(nBatch * this._nClass);
+            glogP.zero_();
+            auto coeff = gy.to!HostStorage.data[0] * this._normalize;
+            Global.kernel!nllGrad
+                .call(glogP.ptr, -coeff, this._dtargetId.data.ptr, this.ignoreIndex, nBatch).launch(nBatch);
+            auto v = Variable!(F, 2, DeviceStorage)(false, [nBatch, this._nClass], [this._nClass, 1], glogP);
+            return tuple(v, typeof(this._dtargetId)());
         }
 
     }
@@ -662,5 +678,8 @@ unittest {
         auto dl = func.forward(dx, dt);
         assert(func._normalize == 0.5);
         assert(dl.to!HostStorage.sliced == [-(0.4f + 0.1f + 0.0f) / 2]);
+        auto dgx = func.backward(1.0f.variable.to!DeviceStorage);
+        assert(dgx[0].to!HostStorage.sliced == [[0.0, -0.5, 0.0], [-0.5, 0.0, 0.0], [0.0, 0.0, 0.0]]);
+        assert(!dgx[1].defined);
     }
 }

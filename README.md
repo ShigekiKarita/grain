@@ -47,8 +47,8 @@ sorted by higher priority for me
 - more autograd functions
   - matmul (done)
   - logsoftmax (done)
-  - nlloss
-  - softmax cross entropy
+  - negative log likelihood (done)
+  - softmax cross entropy (done)
   - convolution/cross correlation
   - optimizer (SGD, Adadelta, Adam)
   - basic ops
@@ -62,5 +62,6 @@ sorted by higher priority for me
     - tanh
     - clipped relu
 - more cuda intrinsics like exp/log
+- statically linked kernel module instead of ptx string
 - multi GPU
 
