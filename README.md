@@ -44,6 +44,7 @@ sorted by higher priority for me
 - kernel type check
 - test CPU/CUDA function equality
 - practical examples (MNIST, CIFAR10, WordLM)
+  - wip `dub --config=example-mnist`
 - more autograd functions
   - matmul (done)
   - logsoftmax (done)

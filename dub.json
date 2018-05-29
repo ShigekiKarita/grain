@@ -37,6 +37,16 @@
         }
 
     },
+    "configurations": [
+        {
+            "name": "example-mnist",
+            "targetType": "executable",
+            "mainSourceFile": "example/mnist.d",
+            "dependencies": {
+                "archive": "~>0.6.0"
+            }
+        }
+    ],
     "description": "CUDA library for D",
     "copyright": "Copyright © 2018, karita",
     "license": "BSL-1.0"
