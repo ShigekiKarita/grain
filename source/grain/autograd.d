@@ -86,13 +86,7 @@ struct UntypedVariable {
             this.requiresGrad, this.shape[0..dim], this.strides[0..dim], d);
     }
 
-    void backward(UntypedVariable* gradOutput=null) {
-        // if (bprop.refCountedStore.isInitialized) {
-            bprop.backward(gradOutput, outPosition);
-        // }
-    }
-
-    string toString() {
+    string toString() const {
         import std.format : format;
         return "UntypedVariable(%s, dim=%d, data=%s, shape=%s, strides=%s)".format(
             elem, dim, data, shape, strides);
@@ -217,7 +211,7 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
         this.bprop.backward(grad, pos);
     }
 
-    string toString() {
+    string toString() const {
         import std.format : format;
         return "Variable!(%s, dim=%d, %s)(data=%s, shape=%s, strides=%s)"
             .format(T.stringof, dim, Storage.stringof,

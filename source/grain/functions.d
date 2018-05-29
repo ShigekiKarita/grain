@@ -57,12 +57,11 @@ mixin template FunctionCommon() {
 
     auto applyForward(Args...)(Args args) {
         import std.algorithm : each;
-        // RefCounted!(
-        UntypedVariable[] vargs;
-        vargs.length = args.length;
+        RefCounted!(UntypedVariable[]) uargs;
+        uargs.length = args.length;
         foreach (i, a; args) {
-            vargs[i] = UntypedVariable(a);
-            vargs[i].bprop = a.bprop; // pass the chain to backprop
+            uargs[i] = UntypedVariable(a);
+            uargs[i].bprop = a.bprop; // pass the chain to backprop
         }
         auto rets = this.forward(args).toTuple;
         enum isHost = allSatisfy!(isHost, Args);
@@ -70,9 +69,8 @@ mixin template FunctionCommon() {
             auto u = UntypedVariable(r);
             if (grain.autograd.backprop) {
                 RefCounted!BackProp bp = BackProp(&this.applyBackward!isHost,
-                                                  vargs);
+                                                  uargs);
                 bp.gradOutputs.length = rets.length;
-                bp.inputs = vargs;
                 u.bprop = bp;
                 u.outPosition = i;
                 rets[i].bprop = bp;
@@ -114,11 +112,7 @@ mixin template FunctionCommon() {
                     axpy(vgradInputs[i].data, data);
                 }
             }
-            // uinputs[i].backward(&ugradInputs[i]);
-            // if (bprop.refCountedStore.isInitialized) {
             uinputs[i].bprop.backward(&ugradInputs[i], uinputs[i].outPosition);
-            // }
-
         }
     }
 }
