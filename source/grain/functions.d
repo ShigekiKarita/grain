@@ -57,10 +57,12 @@ mixin template FunctionCommon() {
 
     auto applyForward(Args...)(Args args) {
         import std.algorithm : each;
-        RefCounted!(UntypedVariable[]) vargs;
+        // RefCounted!(
+        UntypedVariable[] vargs;
         vargs.length = args.length;
         foreach (i, a; args) {
             vargs[i] = UntypedVariable(a);
+            vargs[i].bprop = a.bprop; // pass the chain to backprop
         }
         auto rets = this.forward(args).toTuple;
         enum isHost = allSatisfy!(isHost, Args);
@@ -70,6 +72,7 @@ mixin template FunctionCommon() {
                 RefCounted!BackProp bp = BackProp(&this.applyBackward!isHost,
                                                   vargs);
                 bp.gradOutputs.length = rets.length;
+                bp.inputs = vargs;
                 u.bprop = bp;
                 u.outPosition = i;
                 rets[i].bprop = bp;
@@ -111,10 +114,64 @@ mixin template FunctionCommon() {
                     axpy(vgradInputs[i].data, data);
                 }
             }
-            uinputs[i].backward(&ugradInputs[i]);
+            // uinputs[i].backward(&ugradInputs[i]);
+            // if (bprop.refCountedStore.isInitialized) {
+            uinputs[i].bprop.backward(&ugradInputs[i], uinputs[i].outPosition);
+            // }
+
         }
     }
 }
+
+// forward two functions parallel
+unittest {
+    import std.typecons;
+    grain.autograd.backprop = true;
+    // scope (exit) grain.autograd.backprop = false;
+    {
+        auto x = [-1.0f, 2.0f, 3.0f].variable(true);
+        x.requiresGrad = true;
+        Variable!(float, 1) y, h;
+        y.requiresGrad = true;
+        h.requiresGrad = true;
+        // bprop will survive even if deeper scope
+        {
+            // FIXME cannot use RefCounted instead of new here
+            auto func0 = new ReLU!(float, 1);
+            h = func0.applyForward(x);
+            assert(h.bprop.inputs[0].data == x.data);
+            auto func1 = new ReLU!(float, 1);
+            y = func1.applyForward(h);
+            // test the chain to backprop
+            assert(y.bprop.inputs[0].data == h.data);
+            assert(y.bprop.inputs[0].bprop.inputs[0].data == x.data);
+        }
+        auto gy = [1.0f, 2.0f, 3.0f].variable;
+        auto ugy = UntypedVariable(gy);
+        y.backward(&ugy);
+        assert(x.grad == [0, 2, 3]);
+
+        auto func2 = new ReLU!(float, 1);
+        auto y2 = func2.applyForward(x);
+        y2.backward(&ugy);
+        assert(x.grad == [0, 4, 6]); // summation
+    }
+    version (grain_cuda) {
+        auto func = new ReLU!(float, 1);
+        auto x = [-1.0f, 2.0f, 3.0f].variable(true).to!DeviceStorage;
+        auto y = func.applyForward(x);
+        auto gy = [1.0f, 2.0f, 3.0f].variable.to!DeviceStorage;
+        auto ugy = UntypedVariable(gy);
+        y.backward(&ugy);
+        assert(x.grad.toHost() == [0, 2, 3]);
+
+        auto func2 = new ReLU!(float, 1);
+        auto y2 = func.applyForward(x);
+        y2.backward(&ugy);
+        assert(x.grad.toHost() == [0, 4, 6]); // summation
+    }
+}
+
 
 /// test NG functions
 unittest {
@@ -224,55 +281,6 @@ unittest {
         assert(b.gradSlice == gab[1].sliced);
     }
 }
-
-// forward two functions parallel
-unittest {
-    import std.typecons;
-    grain.autograd.backprop = true;
-    scope (exit) grain.autograd.backprop = false;
-    {
-        auto x = [-1.0f, 2.0f, 3.0f].variable(true);
-        Variable!(float, 1) y, h;
-        y.requiresGrad = true;
-        h.requiresGrad = true;
-        // {
-            // FIXME cannot use RefCounted instead of new here
-            auto func0 = new ReLU!(float, 1);
-            // y = func0.applyForward(x);
-            h = func0.applyForward(x);
-            auto func1 = new ReLU!(float, 1);
-            y = func1.applyForward(h);
-        // }
-        auto gy = [1.0f, 2.0f, 3.0f].variable;
-        auto ugy = UntypedVariable(gy);
-        y.backward(&ugy);
-        auto gh = UntypedVariable(h.gradSlice.variable);
-        h.backward(&gh);
-        writeln(h.gradSlice);
-        writeln(x.gradSlice);
-        assert(x.grad == [0, 2, 3]);
-
-        auto func2 = new ReLU!(float, 1);
-        auto y2 = func2.applyForward(x);
-        y2.backward(&ugy);
-        assert(x.grad == [0, 4, 6]); // summation
-    }
-    version (grain_cuda) {
-        auto func = new ReLU!(float, 1);
-        auto x = [-1.0f, 2.0f, 3.0f].variable(true).to!DeviceStorage;
-        auto y = func.applyForward(x);
-        auto gy = [1.0f, 2.0f, 3.0f].variable.to!DeviceStorage;
-        auto ugy = UntypedVariable(gy);
-        y.backward(&ugy);
-        assert(x.grad.toHost() == [0, 2, 3]);
-
-        auto func2 = new ReLU!(float, 1);
-        auto y2 = func.applyForward(x);
-        y2.backward(&ugy);
-        assert(x.grad.toHost() == [0, 4, 6]); // summation
-    }
-}
-
 
 
 

@@ -63,7 +63,8 @@ struct UntypedVariable {
     TypeInfo elem;
     Variant data, grad;
     size_t outPosition = 0;
-    RefCounted!BackProp bprop;
+    // RefCounted!
+    BackProp bprop;
 
     this(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) v) {
         this.elem = typeid(T);
@@ -86,9 +87,9 @@ struct UntypedVariable {
     }
 
     void backward(UntypedVariable* gradOutput=null) {
-        if (bprop.refCountedStore.isInitialized) {
+        // if (bprop.refCountedStore.isInitialized) {
             bprop.backward(gradOutput, outPosition);
-        }
+        // }
     }
 
     string toString() {
@@ -124,7 +125,8 @@ struct BackProp {
     void backward(UntypedVariable* grad=null, size_t pos=0) {
         import std.exception : enforce;
         import std.range : empty;
-        enforce(!this.inputs.empty, "nothing to backprop");
+        // enforce(!this.inputs.empty, "nothing to backprop");
+        if (this.inputs.empty) return;
         ++this.nGrad;
         if (grad is null) {
             enforce(this.gradOutputs.length == 1, "this variable is not loss");
