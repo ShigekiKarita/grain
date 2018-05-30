@@ -278,7 +278,7 @@ auto variable(A)(A a, bool requiresGrad=false) if (isArray!A) {
 }
 
 ///
-unittest {
+version (grain_cuda) unittest {
     auto h = 0.5f.variable;
     auto d = h.to!DeviceStorage;
     assert(d.to!HostStorage.data == h.data);
