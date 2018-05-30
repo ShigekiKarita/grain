@@ -62,6 +62,44 @@ auto prepareDataset() {
     return tuple!("train", "test")(train, test);
 }
 
+import numir;
+struct Linear(T, alias Storage) {
+    import std.traits : isFloatingPoint;
+    import grain.functions : MatMul;
+    static assert(isFloatingPoint!T);
+    Variable!(T, 2, Storage) weight;
+    Variable!(T, 1, Storage) bias;
+
+    this(int ninput, int noutput) {
+        this.weight = normal!T(ninput, noutput).slice.variable.to!Storage;
+        this.bias = normal!T(noutput).slice.variable.to!Storage;
+    }
+
+    auto opCall(Variable!(T, 2, Storage) x) {
+        auto matmul = new MatMul!T;
+        return matmul.applyForward(x, this.weight);
+    }
+}
+
+struct MLP(T, alias Storage) {
+    // import grain.chain : Linear;
+    alias L = Linear!(T, Storage);
+    L fc1, fc2, fc3;
+
+    this(int nhidden = 1000) {
+        this.fc1 = L(28*28, nhidden);
+        this.fc2 = L(nhidden, nhidden);
+        this.fc3 = L(nhidden, 10);
+    }
+
+    auto opCall(Variable!(T, 2, Storage) x) {
+        auto h1 = this.fc1(x);
+        auto h2 = this.fc2(h1);
+        auto h3 = this.fc2(h2);
+        return h3;
+    }
+}
+
 
 void main() {
     auto datasets = prepareDataset();
