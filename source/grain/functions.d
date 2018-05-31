@@ -2,7 +2,7 @@ module grain.functions;
 
 import grain.autograd;
 import grain.cuda;
-import grain.utility : toTuple, fromTuple;
+import grain.utility : toTuple, fromTuple, castArray;
 
 import std.stdio;
 
@@ -706,4 +706,58 @@ unittest {
         assert(dgx[0].to!HostStorage.sliced == [[0.0, -0.5, 0.0], [-0.5, 0.0, 0.0], [0.0, 0.0, 0.0]]);
         assert(!dgx[1].defined);
     }
+}
+
+
+auto broadcastable(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) a, Variable!(T, dim, Storage) b) {
+    int[dim] resultShape;
+    bool ok = false;
+    foreach (i; 0 .. dim) {
+        ok = a.shape[i] == b.shape[i] || a.shape[i] == 1 || b.shape[i] == 1;
+        if (ok) {
+            resultShape[i] = max(a.shape[i], b.shape[i]);
+        } else break;
+    }
+    return tuple!("ok", "shape")(ok, resultShape);
+}
+
+
+/// TODO generalize to broadcastable addition
+struct AddBias(T) {
+    import mir.ndslice : map, slice;
+    auto forward(Variable!(T, 2, HostStorage) a, Variable!(T, 1, HostStorage) b) {
+        // auto r = broadcastable(a, b);
+        // assert(r.ok);
+        // auto ret = a.sliced.alongDim!0.map!(x => x + b).slice;
+        auto ret = a.dup;
+        foreach (i; 0 .. a.shape[0]) {
+            ret.sliced[i][] += b.sliced;
+        }
+        return ret;
+    }
+
+    auto backward(Variable!(T, 2, HostStorage) gy) {
+        import numir : alongDim;
+        import mir.math : sum;
+        import std.typecons : tuple;
+        auto gb = gy.sliced.alongDim!0.map!sum.slice.variable;
+        return tuple(gy, gb);
+    }
+}
+
+
+unittest {
+    import std.typecons;
+    import grain.testing;
+    import numir;
+    import mir.ndslice;
+
+    AddBias!float func;
+    auto hx = [[0f, 1f], [2f, 3f], [4f, 5f]].variable; // 3x2
+    auto hb = [-1f, 1f].variable; // 2
+    auto hy = func.forward(hx, hb);
+    assert(hy.sliced == [[-1f, 2f], [1f, 4f], [3f, 6f]]);
+
+    auto hgy = uniform!float(hy.shape.castArray!size_t).slice.variable;
+    gradCheck(func, tuple(hx, hb), hgy);
 }
