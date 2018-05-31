@@ -62,3 +62,8 @@ GRAIN_GLOBAL void nllGrad(float* glogP, float coeff, const int* targetId, int ig
     }
 }
 
+GRAIN_GLOBAL void addBias(float* y, const float* b, uint blen, uint ylen) {
+    GRAIN_PARALLEL_FOR(i, ylen) {
+        y[i] += b[i % blen];
+    }
+}

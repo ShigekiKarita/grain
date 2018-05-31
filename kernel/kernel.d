@@ -56,3 +56,6 @@ nothrow @nogc extern(C++):
 @kernel void nll(float* loss, uint* count, const float* logp, const int* targetId, int ignoreIndex, uint batchSize);
 
 @kernel void nllGrad(float* glogP, float coeff, const int* targetId, int ignoreIndex, uint batchSize);
+
+
+@kernel void addBias(float* y, const float* b, uint blen, uint ylen);

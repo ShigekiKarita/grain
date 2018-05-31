@@ -726,9 +726,7 @@ auto broadcastable(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) a, V
 struct AddBias(T) {
     import mir.ndslice : map, slice;
     auto forward(Variable!(T, 2, HostStorage) a, Variable!(T, 1, HostStorage) b) {
-        // auto r = broadcastable(a, b);
-        // assert(r.ok);
-        // auto ret = a.sliced.alongDim!0.map!(x => x + b).slice;
+        assert(a.shape[1] == b.shape[0]);
         auto ret = a.dup;
         foreach (i; 0 .. a.shape[0]) {
             ret.sliced[i][] += b.sliced;
@@ -742,6 +740,19 @@ struct AddBias(T) {
         import std.typecons : tuple;
         auto gb = gy.sliced.alongDim!0.map!sum.slice.variable;
         return tuple(gy, gb);
+    }
+
+    version (grain_cuda) {
+        auto forward(Variable!(T, 2, DeviceStorage) a, Variable!(T, 1, DeviceStorage) b) {
+            import grain.kernel : addBias;
+            assert(a.shape[1] == b.shape[0]);
+            auto y = a.dup;
+            auto n = cast(uint) y.data.length;
+            auto blen = cast(uint) b.data.length;
+            Global.kernel!addBias
+                .call(y.data.ptr, b.data.ptr, blen, n).launch(n);
+            return y;
+        }
     }
 }
 
@@ -760,4 +771,11 @@ unittest {
 
     auto hgy = uniform!float(hy.shape.castArray!size_t).slice.variable;
     gradCheck(func, tuple(hx, hb), hgy);
+
+    version (grain_cuda) {
+        auto dx = hx.to!DeviceStorage;
+        auto db = hb.to!DeviceStorage;
+        auto dy = func.forward(dx, db);
+        assert(dy.to!HostStorage.sliced == [[-1f, 2f], [1f, 4f], [3f, 6f]]);
+    }
 }
