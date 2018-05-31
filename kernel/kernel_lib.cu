@@ -1,5 +1,13 @@
 #include <cuda.h>
 
+#include <thrust/device_ptr.h>
+#include <thrust/device_vector.h>
+#include <thrust/iterator/discard_iterator.h>
+#include <thrust/generate.h>
+#include <thrust/reduce.h>
+#include <thrust/functional.h>
+#include <thrust/random.h>
+#include <thrust/system/cuda/execution_policy.h>
 
 #ifdef __CUDACC__
 #    define GRAIN_DEVICE_HOST __device__ __host__
@@ -66,4 +74,58 @@ GRAIN_GLOBAL void addBias(float* y, const float* b, uint blen, uint ylen) {
     GRAIN_PARALLEL_FOR(i, ylen) {
         y[i] += b[i % blen];
     }
+}
+
+
+// convert a linear index to a row index
+template <typename T>
+struct linear_index_to_row_index : public thrust::unary_function<T,T>
+{
+  T C; // number of columns
+  
+  __host__ __device__
+  linear_index_to_row_index(T C) : C(C) {}
+
+  __host__ __device__
+  T operator()(T i)
+  {
+    return i / C;
+  }
+};
+
+// convert a linear index to a row index
+template <typename T>
+struct linear_index_to_col_index : public thrust::unary_function<T,T>
+{
+  T C; // number of columns
+  
+  __host__ __device__
+  linear_index_to_col_index(T C) : C(C) {}
+
+  __host__ __device__
+  T operator()(T i)
+  {
+    return i % C;
+  }
+};
+
+
+GRAIN_GLOBAL void addBiasGrad(const float* gy, float* gb, uint blen, uint ylen) {
+    // compute row sums by summing values with equal row indices
+    GRAIN_PARALLEL_FOR(i, ylen) {
+        atomicAdd(gb + (i % blen), gy[i]);
+    }
+
+    // TODO use thrust
+    // using I = uint;
+    // auto key_iter = thrust::make_transform_iterator(thrust::counting_iterator<I>(0), linear_index_to_col_index<I>(blen));
+    // thrust::reduce_by_key
+    //     (thrust::cuda::par,
+    //      key_iter, // keys_first
+    //      key_iter + ylen, // keys_last
+    //      thrust::device_ptr<const float>(gy), // values_first
+    //      thrust::make_discard_iterator(), // keys_output
+    //      thrust::device_ptr<float>(gb), // values_output
+    //      thrust::equal_to<I>(), // binary_pred
+    //      thrust::plus<float>()); // binary_o
 }

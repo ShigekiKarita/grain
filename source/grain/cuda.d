@@ -151,7 +151,7 @@ struct Launcher(Args...) {
         return (n + CUDA_NUM_THREADS - 1) / CUDA_NUM_THREADS;
     }
 
-    void launch(uint n, uint sharedMemBytes=0, CUstream stream=null) {
+    void launch(uint n=1, uint sharedMemBytes=0, CUstream stream=null) {
         checkCudaErrors(cuLaunchKernel(
                             cuFunction,
                             getBlocks(n), 1, 1,

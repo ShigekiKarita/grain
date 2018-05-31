@@ -57,11 +57,13 @@ sorted by higher priority for me
     - concat
     - view
     - transpose
-  - cudnn compatible activations (done in grain.cudnn)
+  - cudnn functions (in grain.cudnn)
     - relu (done by mir, custom kernel and cudnn)
     - sigmoid
     - tanh
     - clipped relu
+    - dropout
+- curand wrappers
 - more cuda intrinsics like exp/log
 - statically linked kernel module instead of ptx string
 - multi GPU

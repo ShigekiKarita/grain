@@ -725,6 +725,7 @@ auto broadcastable(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) a, V
 /// TODO generalize to broadcastable addition
 struct AddBias(T) {
     import mir.ndslice : map, slice;
+    import std.typecons : tuple, RefCounted;
     auto forward(Variable!(T, 2, HostStorage) a, Variable!(T, 1, HostStorage) b) {
         assert(a.shape[1] == b.shape[0]);
         auto ret = a.dup;
@@ -737,14 +738,14 @@ struct AddBias(T) {
     auto backward(Variable!(T, 2, HostStorage) gy) {
         import numir : alongDim;
         import mir.math : sum;
-        import std.typecons : tuple;
         auto gb = gy.sliced.alongDim!0.map!sum.slice.variable;
         return tuple(gy, gb);
     }
 
     version (grain_cuda) {
+        import grain.kernel : addBias, addBiasGrad;
+
         auto forward(Variable!(T, 2, DeviceStorage) a, Variable!(T, 1, DeviceStorage) b) {
-            import grain.kernel : addBias;
             assert(a.shape[1] == b.shape[0]);
             auto y = a.dup;
             auto n = cast(uint) y.data.length;
@@ -752,6 +753,16 @@ struct AddBias(T) {
             Global.kernel!addBias
                 .call(y.data.ptr, b.data.ptr, blen, n).launch(n);
             return y;
+        }
+
+        auto backward(Variable!(T, 2, DeviceStorage) gy) {
+            RefCounted!(CuPtr!T) gb = CuPtr!T(gy.shape[1]);
+            gb.zero_();
+            auto n = cast(uint) gy.data.length;
+            auto blen = cast(uint) gb.length;
+            Global.kernel!addBiasGrad
+                .call(gy.data.ptr, gb.ptr, blen, n).launch(n);
+            return tuple(gy, Variable!(T, 1, DeviceStorage)(false, [cast(int) blen], [1], gb));
         }
     }
 }
@@ -770,6 +781,10 @@ unittest {
     assert(hy.sliced == [[-1f, 2f], [1f, 4f], [3f, 6f]]);
 
     auto hgy = uniform!float(hy.shape.castArray!size_t).slice.variable;
+    auto hgxb = func.backward(hgy);
+    assert(hgxb[0].sliced == hgy.sliced);
+    assert(hgxb[1].sliced == [hgy.sliced[0, 0] + hgy.sliced[1, 0] + hgy.sliced[2, 0],
+                              hgy.sliced[0, 1] + hgy.sliced[1, 1] + hgy.sliced[2, 1]]);
     gradCheck(func, tuple(hx, hb), hgy);
 
     version (grain_cuda) {
@@ -777,5 +792,9 @@ unittest {
         auto db = hb.to!DeviceStorage;
         auto dy = func.forward(dx, db);
         assert(dy.to!HostStorage.sliced == [[-1f, 2f], [1f, 4f], [3f, 6f]]);
+        auto dgy = hgy.to!DeviceStorage;
+        auto dgxb = func.backward(dgy);
+        assert(dgxb[0].to!HostStorage.sliced == hgxb[0].sliced);
+        assert(dgxb[1].to!HostStorage.sliced == hgxb[1].sliced);
     }
 }
