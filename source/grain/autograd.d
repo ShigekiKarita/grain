@@ -160,7 +160,8 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
     int[dim] strides;
     RefCounted!(Storage!T) data;
     RefCounted!(Storage!T) grad;
-    RefCounted!BackProp bprop;
+    // RefCounted!
+    BackProp bprop;
     enum isHost = is(Storage!T == HostStorage!T);
 
     this(bool requiresGrad, int[dim] shape, int[dim] strides, RefCounted!(Storage!T) data) {

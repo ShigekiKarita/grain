@@ -31,6 +31,27 @@ mixin template TypeChecker(alias forward, alias backward) {
     }
 }
 
+
+
+enum bool isFunction(T) = {
+    import std.meta : allSatisfy;
+    import std.typecons : isTuple, tuple, Tuple, RefCounted;
+    import std.traits : arity, Parameters, ReturnType;
+    static foreach (i, forward; __traits(getOverloads, T, "forward")) {
+        static foreach (i, backward; __traits(getOverloads, T, "backward")) {
+            static if (!allSatisfy!(isHost, Parameters!forward) &&
+                       !allSatisfy!(isHost, Parameters!backward)) {
+                mixin TypeChecker!(forward, backward);
+            }
+            static if (allSatisfy!(isHost, Parameters!forward) &&
+                       allSatisfy!(isHost, Parameters!backward)) {
+                mixin TypeChecker!(forward, backward);
+            }
+        }
+    }
+    return true;
+        }();
+
 mixin template FunctionCommon() {
     import std.meta : allSatisfy;
     import std.typecons : isTuple, tuple, Tuple, RefCounted;
@@ -54,6 +75,7 @@ mixin template FunctionCommon() {
             }
         }
     }
+    static assert(isFunction!(typeof(this)));
 
     auto applyForward(Args...)(Args args) {
         import std.algorithm : each;
@@ -68,8 +90,9 @@ mixin template FunctionCommon() {
         foreach (i, r; rets) {
             auto u = UntypedVariable(r);
             if (grain.autograd.backprop) {
-                RefCounted!BackProp bp = BackProp(&this.applyBackward!isHost,
-                                                  uargs);
+                // RefCounted!
+                BackProp bp = BackProp(&this.applyBackward!isHost,
+                                       uargs);
                 bp.gradOutputs.length = rets.length;
                 u.bprop = bp;
                 u.outPosition = i;
@@ -117,6 +140,7 @@ mixin template FunctionCommon() {
     }
 }
 
+
 // forward two functions parallel
 unittest {
     import std.typecons;
@@ -131,6 +155,7 @@ unittest {
         // bprop will survive even if deeper scope
         {
             // FIXME cannot use RefCounted instead of new here
+            // RefCounted!(ReLU!(float, 1)) func0 = ReLU!(float, 1)();
             auto func0 = new ReLU!(float, 1);
             h = func0.applyForward(x);
             assert(h.bprop.inputs[0].data == x.data);
