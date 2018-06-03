@@ -132,7 +132,11 @@ mixin template FunctionCommon() {
                     gs[] += vgradInputs[i].data[].sliced(gs.shape);
                 } else {
                     auto data = uinputs[i].grad.get!Storage;
-                    axpy(vgradInputs[i].data, data);
+                    import std.traits : isFloatingPoint;
+                    // TODO support integral types
+                    static if (isFloatingPoint!(ElementType!V)) {
+                        if (vgradInputs[i].requiresGrad) axpy(vgradInputs[i].data, data);
+                    }
                 }
             }
             uinputs[i].bprop.backward(&ugradInputs[i], uinputs[i].outPosition);
@@ -601,6 +605,8 @@ struct NegativeLogLikelihood(F, I=long) {
       targetId: target integer id of class. shape: (nBatch)
       +/
 
+    mixin FunctionCommon;
+
     bool sizeAverage = true;
     int ignoreIndex = -100;
     // TODO: bool reduce = true;
@@ -617,18 +623,18 @@ struct NegativeLogLikelihood(F, I=long) {
         size_t count = 0;
         foreach (i; 0 .. targetId.sliced.length) {
             auto t = targetId.sliced[i];
-            if (t != ignoreIndex) {
+            if (t != this.ignoreIndex) {
                 result -= logP.sliced[i, t];
                 ++count;
             }
         }
-        if (sizeAverage && count > 0) {
+        if (this.sizeAverage && count > 0) {
             result /= count;
         }
         // TODO if train
         this._nClass = logP.shape[1];
         this._htargetId = targetId;
-        this._normalize = sizeAverage && count > 0 ? 1.0 / count : 1.0;
+        this._normalize = this.sizeAverage && count > 0 ? 1.0 / count : 1.0;
         return result.variable;
     }
 
@@ -669,12 +675,12 @@ struct NegativeLogLikelihood(F, I=long) {
 
             result = dresult.to!HostStorage.data[0];
             count = dcount.to!HostStorage.data[0];
-            if (sizeAverage && count > 0) {
+            if (this.sizeAverage && count > 0) {
                 result /= count;
             }
             // TODO if train
             this._dtargetId = targetId;
-            this._normalize = sizeAverage && count > 0 ? 1.0 / count : 1.0;
+            this._normalize = this.sizeAverage && count > 0 ? 1.0 / count : 1.0;
             return result.variable.to!DeviceStorage;
         }
 

@@ -1,4 +1,4 @@
-.PHONY: test clean kernel
+.PHONY: test clean kernel example-mnist
 
 CUDA_COMPUTE_CAPABILITY := `tool/compute_capability.out 0`
 CUDA_BIT := $(shell getconf LONG_BIT)
@@ -49,3 +49,5 @@ clean:
 	find . -type f -name "*.di" -print -delete
 	find . -type f -name "*.out" -print -delete
 
+example-mnist:
+	dub --config=example-mnist --compiler=ldc2

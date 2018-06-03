@@ -1,3 +1,11 @@
+/++
+Chain means autograd operators in grain that is equivalent to
+- pytorch: torch.nn.Module
+- chainer: chainer.Chain or chainer.Link
+
+Users cannot apply grain.functions to Variable without new or applyForward.
+Instead of that, you can apply grain.chains to Variable with opCall.
+ +/
 module grain.chain;
 
 import numir : normal;
@@ -31,4 +39,13 @@ auto relu(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
     import grain.functions : ReLU;
     auto func = new ReLU!(T, dim);
     return func.applyForward(x);
+}
+
+
+auto crossEntropy(alias Storage)(Variable!(float, 2, Storage) x, Variable!(int, 1, Storage) t) {
+    import grain.functions : LogSoftmax, NegativeLogLikelihood;
+    auto lsmax = new LogSoftmax!(float, 2);
+    auto y = lsmax.applyForward(x);
+    auto nll = new NegativeLogLikelihood!(float, int);
+    return nll.applyForward(y, t);
 }

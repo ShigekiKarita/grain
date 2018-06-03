@@ -5,6 +5,7 @@ import mir.ndslice; // : sliced, map, slice;
 import numir;
 
 import grain.autograd;
+import grain.chain; // : Linear, relu;
 
 enum files = [
     "train-images-idx3-ubyte",
@@ -66,7 +67,6 @@ auto prepareDataset() {
 
 
 struct MLP(T, alias Storage) {
-    import grain.chain : Linear, relu;
     alias L = Linear!(T, Storage);
     L fc1, fc2, fc3;
 
@@ -79,7 +79,7 @@ struct MLP(T, alias Storage) {
     auto opCall(Variable!(T, 2, Storage) x) {
         auto h1 = relu(this.fc1(x));
         auto h2 = relu(this.fc2(h1));
-        auto h3 = relu(this.fc2(h2));
+        auto h3 = this.fc2(h2);
         return h3;
     }
 }
@@ -90,9 +90,15 @@ void main() {
     alias S = DeviceStorage;
     auto model = MLP!(float, S)(100);
     auto xs = datasets.train.inputs[0..8].view(-1, 28 * 28).variable.to!S;
+    auto ts = datasets.train.targets[0..8].variable.to!S;
     xs.shape.writeln;
     auto ys = model(xs);
     ys.shape.writeln;
-    // ys.to!HostStorage.writeln;
+    auto loss = crossEntropy(ys, ts);
+    loss.to!HostStorage.writeln;
+    auto g = new UntypedVariable(1.0f.variable.to!S);
+    loss.backward(g); // TODO test this
+    ys.grad.length.writeln;
+    model.fc1.bias.grad.length.writeln;
 }
 
