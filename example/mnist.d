@@ -65,7 +65,7 @@ auto prepareDataset() {
 import numir;
 struct Linear(T, alias Storage) {
     import std.traits : isFloatingPoint;
-    import grain.functions : MatMul;
+    import grain.functions : MatMul, AddBias;
     static assert(isFloatingPoint!T);
     Variable!(T, 2, Storage) weight;
     Variable!(T, 1, Storage) bias;
@@ -77,7 +77,9 @@ struct Linear(T, alias Storage) {
 
     auto opCall(Variable!(T, 2, Storage) x) {
         auto matmul = new MatMul!T;
-        return matmul.applyForward(x, this.weight);
+        auto wx = matmul.applyForward(x, this.weight);
+        auto addbias = new AddBias!T;
+        return addbias.applyForward(wx, this.bias);
     }
 }
 
@@ -103,5 +105,6 @@ struct MLP(T, alias Storage) {
 
 void main() {
     auto datasets = prepareDataset();
+    MLP!(float, DeviceStorage) mlp;
 }
 

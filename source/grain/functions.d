@@ -749,6 +749,8 @@ auto broadcastable(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) a, V
 
 /// TODO generalize to broadcastable addition
 struct AddBias(T) {
+    mixin FunctionCommon;
+
     import mir.ndslice : map, slice;
     import std.typecons : tuple, RefCounted;
     auto forward(Variable!(T, 2, HostStorage) a, Variable!(T, 1, HostStorage) b) {

@@ -40,6 +40,8 @@
     "configurations": [
         {
             "name": "example-mnist",
+            "versions": ["grain_cuda"],
+            "libs": ["cublas"],
             "targetType": "executable",
             "mainSourceFile": "example/mnist.d",
         }
