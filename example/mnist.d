@@ -24,7 +24,9 @@ auto prepareDataset() {
     import std.zlib : UnCompress;
     import std.net.curl : download;
 
-    Dataset train, test;
+    // Dataset train, test;
+    auto train = new Dataset;
+    auto test = new Dataset;
     if (!exists("data")) {
         mkdir("data");
     }
@@ -62,42 +64,22 @@ auto prepareDataset() {
     return tuple!("train", "test")(train, test);
 }
 
-import numir;
-struct Linear(T, alias Storage) {
-    import std.traits : isFloatingPoint;
-    import grain.functions : MatMul, AddBias;
-    static assert(isFloatingPoint!T);
-    Variable!(T, 2, Storage) weight;
-    Variable!(T, 1, Storage) bias;
-
-    this(int ninput, int noutput) {
-        this.weight = normal!T(ninput, noutput).slice.variable.to!Storage;
-        this.bias = normal!T(noutput).slice.variable.to!Storage;
-    }
-
-    auto opCall(Variable!(T, 2, Storage) x) {
-        auto matmul = new MatMul!T;
-        auto wx = matmul.applyForward(x, this.weight);
-        auto addbias = new AddBias!T;
-        return addbias.applyForward(wx, this.bias);
-    }
-}
 
 struct MLP(T, alias Storage) {
-    // import grain.chain : Linear;
+    import grain.chain : Linear, relu;
     alias L = Linear!(T, Storage);
     L fc1, fc2, fc3;
 
-    this(int nhidden = 1000) {
+    this(int nhidden) {
         this.fc1 = L(28*28, nhidden);
         this.fc2 = L(nhidden, nhidden);
         this.fc3 = L(nhidden, 10);
     }
 
     auto opCall(Variable!(T, 2, Storage) x) {
-        auto h1 = this.fc1(x);
-        auto h2 = this.fc2(h1);
-        auto h3 = this.fc2(h2);
+        auto h1 = relu(this.fc1(x));
+        auto h2 = relu(this.fc2(h1));
+        auto h3 = relu(this.fc2(h2));
         return h3;
     }
 }
@@ -105,6 +87,12 @@ struct MLP(T, alias Storage) {
 
 void main() {
     auto datasets = prepareDataset();
-    MLP!(float, DeviceStorage) mlp;
+    alias S = DeviceStorage;
+    auto model = MLP!(float, S)(100);
+    auto xs = datasets.train.inputs[0..8].view(-1, 28 * 28).variable.to!S;
+    xs.shape.writeln;
+    auto ys = model(xs);
+    ys.shape.writeln;
+    // ys.to!HostStorage.writeln;
 }
 
