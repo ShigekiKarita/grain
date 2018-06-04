@@ -126,12 +126,14 @@ mixin template FunctionCommon() {
             if (uinputs[i].requiresGrad) {
                 alias Storage = typeof(vgradInputs[i].data);
                 alias V = typeof(vgradInputs[i]);
+                auto data = uinputs[i].grad.get!Storage;
+                // TODO if (uinputs[i].requiresGrad)
                 static if (vgradInputs[i].isHost) {
                     import mir.ndslice.slice : sliced;
-                    auto gs = uinputs[i].gradSlice!V;
-                    gs[] += vgradInputs[i].data[].sliced(gs.shape);
+                    // auto gs = uinputs[i].gradSlice!V;
+                    auto shape = vgradInputs[i].shape.castArray!size_t;
+                    data[] += vgradInputs[i].data[]; // .sliced(shape); FIXME use shape
                 } else {
-                    auto data = uinputs[i].grad.get!Storage;
                     import std.traits : isFloatingPoint;
                     // TODO support integral types
                     static if (isFloatingPoint!(ElementType!V)) {
@@ -852,8 +854,7 @@ unittest {
     assert(hl.sliced == [-(0.4f + 0.1f + 0.0f) / 2]);
     auto u = UntypedVariable(1.0f.variable);
     hl.backward(&u);
-    //hl.bprop.inputs[0].writeln;
-    // hx.grad[].sliced(3, 3).writeln;
-    //assert(hx.grad[].sliced(3, 3) == [[0.0, -0.5, 0.0], [-0.5, 0.0, 0.0], [0.0, 0.0, 0.0]]);
+    // hl.bprop.inputs[0].writeln;
+    assert(hx.grad[].sliced(3, 3) == [[0.0, -0.5, 0.0], [-0.5, 0.0, 0.0], [0.0, 0.0, 0.0]]);
     // assert(!hgx[1].defined);
 }

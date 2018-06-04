@@ -170,14 +170,14 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
         this.strides = strides;
         this.data = data;
         // this.grad.isHost = is(Storage!T == HostStorage!T);
-        if (this.requiresGrad) {
+        // if (this.requiresGrad) { // TODO enable this
             static if (is(Storage!T == HostStorage!T)) {
                 this.grad = zeros!(Storage!T)(this.data.length);
             } else version (grain_cuda) {
                 // TODO why is grain.cuda. required?
                 this.grad = grain.cuda.zeros!(CuPtr!T)(this.data.length);
             }
-        }
+        // }
     }
 
     @property
