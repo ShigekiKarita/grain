@@ -135,7 +135,7 @@ mixin template FunctionCommon() {
                     import std.traits : isFloatingPoint;
                     // TODO support integral types
                     static if (isFloatingPoint!(ElementType!V)) {
-                        if (vgradInputs[i].requiresGrad) axpy(vgradInputs[i].data, data);
+                        axpy(vgradInputs[i].data, data);
                     }
                 }
             }
