@@ -42,10 +42,43 @@ auto relu(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
 }
 
 
-auto crossEntropy(alias Storage)(Variable!(float, 2, Storage) x, Variable!(int, 1, Storage) t) {
+auto crossEntropy(alias Storage)(Variable!(float, 2, Storage) x, Variable!(int, 1, Storage) t, int ignoreIndex=-100) {
     import grain.functions : LogSoftmax, NegativeLogLikelihood;
     auto lsmax = new LogSoftmax!(float, 2);
     auto y = lsmax.applyForward(x);
     auto nll = new NegativeLogLikelihood!(float, int);
+    nll.ignoreIndex = ignoreIndex;
     return nll.applyForward(y, t);
+}
+
+
+/// test variable.backward
+unittest {
+    import std.stdio;
+    import std.typecons;
+    import mir.ndslice;
+    import grain.autograd;
+    import numir;
+
+    grain.autograd.backprop = true;
+
+    auto hx = [[0.2f, 0.4f, 0.4f], [0.1f, 0.5f, 0.4f], [0.1f, 0.5f, 0.4f]].variable;
+    hx.requiresGrad = true;
+    auto ht = [1, 0, -100].variable;
+    auto hl = crossEntropy(hx, ht);
+    auto u = UntypedVariable(1.0f.variable);
+    hl.backward(&u);
+    writeln(hx.gradSlice);
+    // TODO hard code floats from pytorch
+    // assert(hx.grad[].sliced(3, 3) == [[0.0, -0.5, 0.0], [-0.5, 0.0, 0.0], [0.0, 0.0, 0.0]]);
+
+    version (grain_cuda) {
+        auto dx = hx.to!DeviceStorage;
+        auto dt = ht.to!DeviceStorage;
+        auto dl = crossEntropy(dx, dt);
+        assert(approxEqual(hl.sliced, dl.to!HostStorage.sliced));
+        auto du = UntypedVariable(1.0f.variable.to!DeviceStorage);
+        // FIXME
+        // dl.backward(&du);
+    }
 }

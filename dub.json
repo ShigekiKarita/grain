@@ -9,6 +9,7 @@
         "numir": "~>0.1.2",
         "lubeck": "~>0.0.5"
     },
+    "targetType": "library",
     "libs": ["openblas"],
     "buildTypes": {
         "cuda-unittest": {
@@ -42,6 +43,7 @@
             "name": "example-mnist",
             "versions": ["grain_cuda"],
             "libs": ["cublas"],
+            "targetName": "grain-example-mnist",
             "targetType": "executable",
             "mainSourceFile": "example/mnist.d",
         }
