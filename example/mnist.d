@@ -86,6 +86,7 @@ struct MLP(T, alias Storage) {
 
 
 void main() {
+    grain.autograd.backprop = true;
     auto datasets = prepareDataset();
     alias S = DeviceStorage;
     auto model = MLP!(float, S)(100);
@@ -98,7 +99,7 @@ void main() {
     loss.to!HostStorage.writeln;
     auto g = new UntypedVariable(1.0f.variable.to!S);
     loss.backward(g); // TODO test this
-    ys.grad.length.writeln;
-    model.fc1.bias.grad.length.writeln;
+    // ys.grad.length.writeln;
+    // model.fc1.bias.grad.length.writeln;
 }
 

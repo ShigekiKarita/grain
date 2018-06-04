@@ -196,7 +196,9 @@ struct CuPtr(T) {
 
     this(size_t n) {
         length = n;
-        checkCudaErrors(cuMemAlloc(&ptr, T.sizeof * n));
+        if (n > 0) {
+            checkCudaErrors(cuMemAlloc(&ptr, T.sizeof * n));
+        }
     }
 
     this(CUdeviceptr p, size_t l) {
@@ -223,8 +225,10 @@ struct CuPtr(T) {
 
     auto dup() {
         CUdeviceptr ret;
-        checkCudaErrors(cuMemAlloc(&ret, T.sizeof * length));
-        checkCudaErrors(cuMemcpyDtoD(ret, ptr, T.sizeof * length));
+        if (this.length > 0) {
+            checkCudaErrors(cuMemAlloc(&ret, T.sizeof * length));
+            checkCudaErrors(cuMemcpyDtoD(ret, ptr, T.sizeof * length));
+        }
         return typeof(this)(ret, length);
     }
 

@@ -831,3 +831,29 @@ unittest {
         assert(dgxb[1].to!HostStorage.sliced == hgxb[1].sliced);
     }
 }
+
+
+
+/// test variable.backward
+unittest {
+    import std.typecons;
+    import grain.testing;
+    import mir.ndslice;
+
+    grain.autograd.backprop = true;
+
+    NegativeLogLikelihood!(float, int) func;
+    auto hx = [[0.2f, 0.4f, 0.4f], [0.1f, 0.5f, 0.4f], [0.1f, 0.5f, 0.4f]].variable;
+    hx.requiresGrad = true;
+    auto ht = [1, 0, func.ignoreIndex].variable;
+    auto hl = func.applyForward(hx, ht);
+    // hl.bprop.writeln;
+    assert(func._normalize == 0.5);
+    assert(hl.sliced == [-(0.4f + 0.1f + 0.0f) / 2]);
+    auto u = UntypedVariable(1.0f.variable);
+    hl.backward(&u);
+    //hl.bprop.inputs[0].writeln;
+    // hx.grad[].sliced(3, 3).writeln;
+    //assert(hx.grad[].sliced(3, 3) == [[0.0, -0.5, 0.0], [-0.5, 0.0, 0.0], [0.0, 0.0, 0.0]]);
+    // assert(!hgx[1].defined);
+}
