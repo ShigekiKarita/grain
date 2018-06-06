@@ -78,7 +78,7 @@ unittest {
         auto dl = crossEntropy(dx, dt);
         assert(approxEqual(hl.sliced, dl.to!HostStorage.sliced));
         auto du = UntypedVariable(1.0f.variable.to!DeviceStorage);
-        // FIXME
         dl.backward(&du);
+        assert(approxEqual(dx.grad.toHost()[].sliced(3, 3), hx.grad[].sliced(3, 3)));
     }
 }
