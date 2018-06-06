@@ -68,17 +68,17 @@ unittest {
     auto hl = crossEntropy(hx, ht);
     auto u = UntypedVariable(1.0f.variable);
     hl.backward(&u);
-    writeln(hx.gradSlice);
     // TODO hard code floats from pytorch
     // assert(hx.grad[].sliced(3, 3) == [[0.0, -0.5, 0.0], [-0.5, 0.0, 0.0], [0.0, 0.0, 0.0]]);
 
     version (grain_cuda) {
         auto dx = hx.to!DeviceStorage;
+        dx.requiresGrad = true;
         auto dt = ht.to!DeviceStorage;
         auto dl = crossEntropy(dx, dt);
         assert(approxEqual(hl.sliced, dl.to!HostStorage.sliced));
         auto du = UntypedVariable(1.0f.variable.to!DeviceStorage);
         // FIXME
-        // dl.backward(&du);
+        dl.backward(&du);
     }
 }

@@ -116,7 +116,6 @@ void activationBackward(cudnnActivationMode_t A, T, size_t dim)(
 void softmaxForward(cudnnSoftmaxAlgorithm_t A, T, size_t dim)(
     Variable!(T, dim, DeviceStorage) x, Variable!(T, dim, DeviceStorage) y, T alpha=1.0, T beta=0.0) {
     static assert(dim <= 4, "cuDNN only supports <= 4 dim tensors. and pack dim is not supported yet.");
-    // init descriptors
     checkCUDNN( cudnnSoftmaxForward(cudnnHandle,
                                     A,
                                     CUDNN_SOFTMAX_MODE_CHANNEL,
@@ -133,12 +132,6 @@ void softmaxBackward(cudnnSoftmaxAlgorithm_t A, T, size_t dim)(
     Variable!(T, dim, DeviceStorage) gx, Variable!(T, dim, DeviceStorage) gy,
     Variable!(T, dim, DeviceStorage) y, T alpha=1.0, T beta=0.0) {
     static assert(dim <= 4, "cuDNN only supports <= 4 dim tensors. and pack dim is not supported yet.");
-    // init descriptors
-    import std.stdio;
-    writeln("softmax-backward");
-    writeln("gx:", gx.data.ptr);
-    writeln("gy:", gy.data.ptr);
-    writeln("y:", y.data.ptr);
     checkCUDNN( cudnnSoftmaxBackward(cudnnHandle,
                                      A,
                                      CUDNN_SOFTMAX_MODE_CHANNEL,

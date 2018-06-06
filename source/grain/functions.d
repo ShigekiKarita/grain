@@ -681,6 +681,7 @@ struct NegativeLogLikelihood(F, I=long) {
                 result /= count;
             }
             // TODO if train
+            this._nClass = logP.shape[1];
             this._dtargetId = targetId;
             this._normalize = this.sizeAverage && count > 0 ? 1.0 / count : 1.0;
             return result.variable.to!DeviceStorage;
