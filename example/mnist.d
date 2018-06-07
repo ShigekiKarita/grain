@@ -6,6 +6,7 @@ import numir;
 
 import grain.autograd;
 import grain.chain; // : Linear, relu;
+import grain.optim; //  : zeroGrad;
 
 enum files = [
     "train-images-idx3-ubyte",
@@ -93,13 +94,11 @@ void main() {
     auto xs = datasets.train.inputs[0..8].view(-1, 28 * 28).variable.to!S;
     xs.requiresGrad = true;
     auto ts = datasets.train.targets[0..8].variable.to!S;
-    xs.shape.writeln;
     auto ys = model(xs);
-    ys.shape.writeln;
-    ys.requiresGrad = true;
     auto loss = crossEntropy(ys, ts);
     loss.to!HostStorage.writeln;
     auto g = new UntypedVariable(1.0f.variable.to!S);
+    model.zeroGrad();
     loss.backward(g); // TODO test this
     ys.grad.toHost().writeln;
     model.fc3.bias.grad.toHost().writeln;

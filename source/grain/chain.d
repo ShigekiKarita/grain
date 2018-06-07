@@ -10,7 +10,16 @@ module grain.chain;
 
 import numir : normal;
 
-import grain.autograd : Variable, variable, to;
+import grain.autograd; // : Variable, variable, to;
+
+
+// enum isChain(T) = {
+//     import std.traits;
+//     import std.meta;
+//     alias R = ReturnType!(T.init);
+//     if (isVariable!R) return true;
+//     if (isTuple!() AllSatisfy!(isVariable, ReturnType!(T.init));
+// }();
 
 
 struct Linear(T, alias Storage) {
@@ -22,8 +31,8 @@ struct Linear(T, alias Storage) {
     Variable!(T, 1, Storage) bias;
 
     this(int ninput, int noutput) {
-        this.weight = normal!T(ninput, noutput).slice.variable.to!Storage;
-        this.bias = normal!T(noutput).slice.variable.to!Storage;
+        this.weight = normal!T(ninput, noutput).slice.variable(true).to!Storage;
+        this.bias = normal!T(noutput).slice.variable(true).to!Storage;
     }
 
     auto opCall(Variable!(T, 2, Storage) x) {
@@ -82,3 +91,4 @@ unittest {
         assert(approxEqual(dx.grad.toHost()[].sliced(3, 3), hx.grad[].sliced(3, 3)));
     }
 }
+

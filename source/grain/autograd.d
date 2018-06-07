@@ -43,6 +43,14 @@ version(grain_cuda) {
         return src.toHost();
     }
 
+    // auto to(alias S : HostStorage, Src)(Src src) if (!isDevice!Src) {
+    //     return src;
+    // }
+
+    // auto to(alias S : DeviceStorage, Src)(Src src) if (isDevice!Src) {
+    //     return src;
+    // }
+
     unittest {
         auto h = [[0.1f, 0.2f, 0.3f], [0.4f, 0.5f, 0.6f]].variable;
         auto d = h.to!DeviceStorage;
@@ -153,7 +161,7 @@ unittest {
 
 // TODO add SliceKind
 struct Variable(T, size_t dim, alias Storage = HostStorage) {
-    bool requiresGrad = false;
+    bool requiresGrad = true;
     // size_t[dim]
     int[dim] shape;
     // ptrdiff_t[dim]
@@ -286,9 +294,12 @@ version (grain_cuda) unittest {
 }
 
 Variable!(T, dim, Dst) to(alias Dst, T, size_t dim, alias Src)(Variable!(T, dim, Src) src) {
-    RefCounted!(Dst!T) d = src.data.to!Dst;
-    // FIXME: consider grad
-    return typeof(return)(src.requiresGrad, src.shape, src.strides, d);
+    static if (is(Dst!T == Src!T)) return src;
+    else {
+        RefCounted!(Dst!T) d = src.data.to!Dst;
+        // FIXME: consider grad
+        return typeof(return)(src.requiresGrad, src.shape, src.strides, d);
+    }
 }
 
 

@@ -123,6 +123,7 @@ mixin template FunctionCommon() {
         }
 
         foreach (i, vgi; vgradInputs) {
+            // TODO reconsider this condition
             if (uinputs[i].requiresGrad) {
                 alias Storage = typeof(vgradInputs[i].data);
                 alias V = typeof(vgradInputs[i]);
@@ -399,7 +400,7 @@ struct MatMul(T) {
             assert(a.shape[1] == b.shape[0]);
             auto cdata = RefCounted!(CuPtr!T)(a.shape[0] * b.shape[1]);
             auto c = Variable!(T, 2, DeviceStorage)(
-                false, [a.shape[0], b.shape[1]], [b.shape[1], 1], cdata);
+                a.requiresGrad || b.requiresGrad, [a.shape[0], b.shape[1]], [b.shape[1], 1], cdata);
             // C = A x B = (BT x AT)T
             // TODO support transposed (CUBLAS_OP_T)
             // see https://github.com/libmir/mir-blas/blob/master/source/mir/blas.d#L299
