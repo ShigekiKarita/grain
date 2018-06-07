@@ -211,6 +211,11 @@ struct CuPtr(T) {
         ptr = 0x0;
     }
 
+    @property
+    bool empty() {
+        return this.length == 0;
+    }
+
     ref toHost(scope ref T[] host) {
         host.length = length;
         checkCudaErrors(cuMemcpyDtoH(&host[0], ptr, T.sizeof * length));

@@ -97,11 +97,13 @@ void main() {
     auto ys = model(xs);
     auto loss = crossEntropy(ys, ts);
     loss.to!HostStorage.writeln;
-    auto g = new UntypedVariable(1.0f.variable.to!S);
     model.zeroGrad();
-    loss.backward(g); // TODO test this
-    ys.grad.toHost().writeln;
-    model.fc3.bias.grad.toHost().writeln;
+    loss.backward();
+    model.fc1.bias.data.toHost().writeln;
     model.fc1.bias.grad.toHost().writeln;
+
+    SGD opt;
+    opt.update(model);
+    model.fc1.bias.data.toHost().writeln;
 }
 

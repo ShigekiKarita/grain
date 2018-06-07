@@ -213,12 +213,29 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
                     this.strides.castArray!ptrdiff_t, data.ptr);
             }
         }
+
+        auto gradSliced() {
+            import mir.ndslice; // .slice : Slice, Universal;
+            static if (dim == 0) {
+                return [this.grad[0]].sliced.universal;
+            } else {
+                return Slice!(Universal, [dim], T*)(
+                    this.shape.castArray!size_t,
+                    this.strides.castArray!ptrdiff_t, grad.ptr);
+            }
+        }
     }
 
     // TODO pass gradOutput
-    void backward(UntypedVariable* grad=null, size_t pos=0) {
+    void backward(UntypedVariable* grad, size_t pos=0) {
         this.bprop.backward(grad, pos);
     }
+
+    void backward() {
+        auto grad = UntypedVariable(1.0f.variable.to!Storage);
+        this.bprop.backward(&grad, 0);
+    }
+
 
     string toString() const {
         import std.format : format;
@@ -296,9 +313,13 @@ version (grain_cuda) unittest {
 Variable!(T, dim, Dst) to(alias Dst, T, size_t dim, alias Src)(Variable!(T, dim, Src) src) {
     static if (is(Dst!T == Src!T)) return src;
     else {
+        import std.range :empty;
         RefCounted!(Dst!T) d = src.data.to!Dst;
+        RefCounted!(Dst!T) g = src.grad.to!Dst;
         // FIXME: consider grad
-        return typeof(return)(src.requiresGrad, src.shape, src.strides, d);
+        auto ret = typeof(return)(src.requiresGrad, src.shape, src.strides, d);
+        ret.grad = g;
+        return ret;
     }
 }
 

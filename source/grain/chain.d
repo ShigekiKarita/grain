@@ -82,12 +82,12 @@ unittest {
 
     version (grain_cuda) {
         auto dx = hx.to!DeviceStorage;
+        dx.grad.zero_();
         dx.requiresGrad = true;
         auto dt = ht.to!DeviceStorage;
         auto dl = crossEntropy(dx, dt);
         assert(approxEqual(hl.sliced, dl.to!HostStorage.sliced));
-        auto du = UntypedVariable(1.0f.variable.to!DeviceStorage);
-        dl.backward(&du);
+        dl.backward();
         assert(approxEqual(dx.grad.toHost()[].sliced(3, 3), hx.grad[].sliced(3, 3)));
     }
 }
