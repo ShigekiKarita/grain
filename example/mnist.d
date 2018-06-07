@@ -47,20 +47,11 @@ auto prepareDataset() {
             decomp = decomp[16..$];
             auto ndata = decomp.length / (28 * 28);
             auto imgs = decomp.sliced(ndata, 28, 28);
-            // debug print
-            writeln("first image:");
-            foreach (i; 0 ..  imgs.length!1) {
-                import std.format;
-                imgs[0, i].format!"%(%3s %)".writeln;
-            }
             // normalize 0 .. 255 to 0.0 .. 1.0
             dataset.inputs = imgs.map!(i => 1.0f * i / 255).slice;
         } else { // labels
-            // skip header
             decomp = decomp[8..$];
             dataset.targets = decomp.sliced.as!int.slice;
-            // debug print
-            writeln("first label: ", dataset.targets[0]);
         }
     }
     return tuple!("train", "test")(train, test);
@@ -71,10 +62,10 @@ struct MLP(T, alias Storage) {
     alias L = Linear!(T, Storage);
     L fc1, fc2, fc3;
 
-    this(int nhidden) {
-        this.fc1 = L(28*28, nhidden);
+    this(int nin, int nhidden, int nout) {
+        this.fc1 = L(nin, nhidden);
         this.fc2 = L(nhidden, nhidden);
-        this.fc3 = L(nhidden, 10);
+        this.fc3 = L(nhidden, nout);
     }
 
     auto opCall(Variable!(T, 2, Storage) x) {
@@ -85,25 +76,52 @@ struct MLP(T, alias Storage) {
     }
 }
 
+auto accuracy(Vy, Vt)(Vy y, Vt t) { // if (isVariable!Vy && isVariable!Vt) {
+    auto nbatch = t.shape[0];
+    auto hy = y.to!HostStorage.sliced;
+    auto ht = t.to!HostStorage.sliced;
+    double acc = 0.0;
+    foreach (i; 0 .. nbatch) {
+        auto maxid = hy[i].maxIndex[0];
+        if (maxid == ht[i]) {
+            ++acc;
+        }
+    }
+    return acc / nbatch;
+}
 
 void main() {
+    RNG.setSeed(0);
     grain.autograd.backprop = true;
     auto datasets = prepareDataset();
-    alias S = DeviceStorage;
-    auto model = MLP!(float, S)(10);
-    auto xs = datasets.train.inputs[0..8].view(-1, 28 * 28).variable.to!S;
-    xs.requiresGrad = true;
-    auto ts = datasets.train.targets[0..8].variable.to!S;
-    auto ys = model(xs);
-    auto loss = crossEntropy(ys, ts);
-    loss.to!HostStorage.writeln;
-    model.zeroGrad();
-    loss.backward();
-    model.fc1.bias.data.toHost().writeln;
-    model.fc1.bias.grad.toHost().writeln;
+    auto batchSize = 64;
+    auto inSize = 28 * 28;
+    auto trainBatchInputs = datasets.train.inputs.view(-1, inSize)[0..$ - ($ % batchSize)].view(-1, batchSize, inSize);
+    auto trainBatchTargets = datasets.train.targets[0..$ - ($ % batchSize)].view(-1, batchSize);
+    auto niter = trainBatchTargets.length!0;
+    auto nepoch = 10;
 
-    SGD opt;
-    opt.update(model);
-    model.fc1.bias.data.toHost().writeln;
+    alias S = DeviceStorage;
+    auto model = MLP!(float, S)(inSize, 512, 10);
+    SGD opt = {lr: 1e-2};
+    foreach (e; 0 .. nepoch) {
+        // TODO shuffle train set
+        double lossSum = 0;
+        double accSum = 0;
+        foreach (i; 0 .. niter) {
+            auto xs = trainBatchInputs[i].variable(true).to!S;
+            auto ts = trainBatchTargets[i].variable.to!S;
+            auto ys = model(xs);
+            auto loss = crossEntropy(ys, ts); // FIXME maybe GPU loss value is wrong
+            auto acc = accuracy(ys, ts);
+            lossSum += loss.to!HostStorage.data[0];
+            accSum += acc;
+            model.zeroGrad();
+            loss.backward();
+            opt.update(model);
+        }
+        writefln!"train loss: %f, acc: %f"(lossSum / niter, accSum / niter);
+        // TODO monitor valid set
+    }
 }
 

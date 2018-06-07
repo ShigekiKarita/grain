@@ -128,13 +128,11 @@ mixin template FunctionCommon() {
                 alias Storage = typeof(vgradInputs[i].data);
                 alias V = typeof(vgradInputs[i]);
                 auto data = uinputs[i].grad.get!Storage;
-                // TODO if (uinputs[i].requiresGrad)
                 static if (vgradInputs[i].isHost) {
                     import mir.ndslice.slice : sliced;
-                    // auto gs = uinputs[i].gradSlice!V;
                     auto shape = vgradInputs[i].shape.castArray!size_t;
                     data[] += vgradInputs[i].data[]; // .sliced(shape); FIXME use shape
-                } else {
+                } else version (grain_cuda) {
                     import std.traits : isFloatingPoint;
                     // TODO support integral types
                     static if (isFloatingPoint!(ElementType!V)) {
@@ -668,16 +666,16 @@ struct NegativeLogLikelihood(F, I=long) {
             import grain.kernel : nll;
             F result = 0.0;
             uint count = 0;
-            auto dresult = result.variable.to!DeviceStorage;
-            auto dcount = count.variable.to!DeviceStorage;
+            auto dresult = CuPtr!F([0]); // [result].variable.to!DeviceStorage; <- FIXME
+            auto dcount = CuPtr!uint([0]); // [count].variable.to!DeviceStorage;
 
             auto batchSize = targetId.shape[0];
             Global.kernel!nll
-                .call(dresult.data.ptr, dcount.data.ptr, logP.data.ptr,
+                .call(dresult.ptr, dcount.ptr, logP.data.ptr,
                       targetId.data.ptr, this.ignoreIndex, batchSize).launch(batchSize);
 
-            result = dresult.to!HostStorage.data[0];
-            count = dcount.to!HostStorage.data[0];
+            result = dresult.toHost()[0];
+            count = dcount.toHost()[0];
             if (this.sizeAverage && count > 0) {
                 result /= count;
             }

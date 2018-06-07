@@ -28,10 +28,10 @@ struct SGD {
             alias F = typeof(field);
             static if (isVariable!F) {
                 static if (isHost!F) {
-                    field.sliced[] += this.lr * field.gradSliced[];
+                    field.sliced[] -= this.lr * field.gradSliced[];
                 } else {
                     import grain.cuda : axpy;
-                    axpy(field.grad, field.data, this.lr);
+                    axpy(field.grad, field.data, -this.lr);
                 }
             } else static if (hasMember!(F, "tupleof")) {// static if (isChain!F) {
                 this.update(field);
@@ -74,7 +74,7 @@ unittest {
         mlp.fc1.weight.data.zero_();
         mlp.fc1.weight.grad = [[1.0f, 0.0f, 0.0f], [0.0f, 0.0f, 0.0f]].variable.data;
         sgd.update(mlp);
-        assert(mlp.fc1.weight.sliced == [[0.5, 0.0, 0.0], [0.0, 0.0, 0.0]]);
+        assert(mlp.fc1.weight.sliced == [[-0.5, 0.0, 0.0], [0.0, 0.0, 0.0]]);
     }
     version (grain_cuda) {
         auto mlp = MLP!(float, DeviceStorage)(3);
@@ -86,6 +86,6 @@ unittest {
         mlp.fc1.weight.data.zero_();
         mlp.fc1.weight.grad = [[1.0f, 0.0f, 0.0f], [0.0f, 0.0f, 0.0f]].variable.to!DeviceStorage.data;
         sgd.update(mlp);
-        assert(mlp.fc1.weight.to!HostStorage.sliced == [[0.5, 0.0, 0.0], [0.0, 0.0, 0.0]]);
+        assert(mlp.fc1.weight.to!HostStorage.sliced == [[-0.5, 0.0, 0.0], [0.0, 0.0, 0.0]]);
     }
 }

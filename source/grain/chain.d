@@ -31,8 +31,11 @@ struct Linear(T, alias Storage) {
     Variable!(T, 1, Storage) bias;
 
     this(int ninput, int noutput) {
-        this.weight = normal!T(ninput, noutput).slice.variable(true).to!Storage;
-        this.bias = normal!T(noutput).slice.variable(true).to!Storage;
+        import numir;
+        import mir.random.variable;
+        auto stdv = 1.0 / (cast(T) noutput ^^ 0.5);
+        this.weight = UniformVariable!T(-stdv, stdv).generate(ninput, noutput).slice.variable(true).to!Storage;
+        this.bias = UniformVariable!T(-stdv, stdv).generate(noutput).slice.variable(true).to!Storage;
     }
 
     auto opCall(Variable!(T, 2, Storage) x) {
