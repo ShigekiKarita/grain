@@ -672,10 +672,10 @@ struct NegativeLogLikelihood(F, I=long) {
             auto batchSize = targetId.shape[0];
             Global.kernel!nll
                 .call(dresult.ptr, dcount.ptr, logP.data.ptr,
-                      targetId.data.ptr, this.ignoreIndex, batchSize).launch(batchSize);
+                      targetId.data.ptr, this.ignoreIndex, batchSize, this._nClass).launch(batchSize);
+            dresult.toHost(&result);
+            dcount.toHost(&count);
 
-            result = dresult.toHost()[0];
-            count = dcount.toHost()[0];
             if (this.sizeAverage && count > 0) {
                 result /= count;
             }
@@ -697,7 +697,7 @@ struct NegativeLogLikelihood(F, I=long) {
             glogP.zero_();
             auto coeff = gy.to!HostStorage.data[0] * this._normalize;
             Global.kernel!nllGrad
-                .call(glogP.ptr, -coeff, this._dtargetId.data.ptr, this.ignoreIndex, nBatch).launch(nBatch);
+                .call(glogP.ptr, -coeff, this._dtargetId.data.ptr, this.ignoreIndex, nBatch, this._nClass).launch(nBatch);
             auto v = Variable!(F, 2, DeviceStorage)(false, [nBatch, this._nClass], [this._nClass, 1], glogP);
             return tuple(v, typeof(this._dtargetId)());
         }

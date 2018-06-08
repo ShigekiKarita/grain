@@ -218,13 +218,18 @@ struct CuPtr(T) {
 
     ref toHost(scope ref T[] host) {
         host.length = length;
-        checkCudaErrors(cuMemcpyDtoH(&host[0], ptr, T.sizeof * length));
+        checkCudaErrors(cuMemcpyDtoH(host.ptr, this.ptr, T.sizeof * length));
+        return host;
+    }
+
+    auto toHost(T* host) {
+        checkCudaErrors(cuMemcpyDtoH(host, this.ptr, T.sizeof * length));
         return host;
     }
 
     auto toHost() {
-        auto host = new T[length];
-        checkCudaErrors(cuMemcpyDtoH(&host[0], ptr, T.sizeof * length));
+        auto host = new T[this.length];
+        checkCudaErrors(cuMemcpyDtoH(host.ptr, this.ptr, T.sizeof * this.length));
         return host;
     }
 
@@ -253,6 +258,13 @@ struct CuPtr(T) {
 
     ref zero_() {
         return this.fill_(0);
+    }
+}
+
+unittest {
+    foreach (i; 0 .. 100) {
+        auto d = CuPtr!float([3.0]);
+        assert(d.toHost() == [3.0]);
     }
 }
 

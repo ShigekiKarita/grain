@@ -51,21 +51,21 @@ GRAIN_GLOBAL void sum(const float* x, float* result, int N) {
     }
 }
 
-GRAIN_GLOBAL void nll(float* loss, uint* count, const float* logp, const int* targetId, int ignoreIndex, uint batchSize) {
+GRAIN_GLOBAL void nll(float* loss, uint* count, const float* logp, const int* targetId, int ignoreIndex, uint batchSize, int classSize) {
     GRAIN_PARALLEL_FOR(i, batchSize) {
         auto t = targetId[i];
         if (t != ignoreIndex) {
-            atomicAdd(loss, -logp[i * batchSize + t]);
+            atomicAdd(loss, -logp[i * classSize + t]);
             atomicAdd(count, 1);
         }
     }
 }
 
-GRAIN_GLOBAL void nllGrad(float* glogP, float coeff, const int* targetId, int ignoreIndex, uint batchSize) {
+GRAIN_GLOBAL void nllGrad(float* glogP, float coeff, const int* targetId, int ignoreIndex, uint batchSize, int classSize) {
     GRAIN_PARALLEL_FOR(i, batchSize) {
         auto t = targetId[i];
         if (t != ignoreIndex) {
-            glogP[i * batchSize + t] = coeff;
+            glogP[i * classSize + t] = coeff;
         }
     }
 }
