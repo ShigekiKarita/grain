@@ -27,3 +27,11 @@ Dst[N] castArray(Dst, Src, size_t N)(Src[N] src) {
     return dst;
 }
 
+version (LDC) {
+    public import ldc.attributes : optStrategy;
+} else {
+    /// usage @optStrategy("none")
+    struct optStrategy {
+        string s;
+    }
+}

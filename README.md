@@ -9,13 +9,42 @@ differentiates native [mir](https://github.com/libmir/mir-algorithm) and CUDA fu
 - CPU (mir) and CUDA (cublas/cudnn) backend
 - extensible (i.e., user-defined) autograd function
 
+## how to run MNIST
+
+
+```d
+$ dub --config=example-mnist -b=cuda-release # with cuda
+$ dub --config=example-mnist -b=release      # without cuda
+```
+
+it results as following (may take several seconds without cuda)
+
+```
+Running ./grain-example-mnist 
+loading data/train-images-idx3-ubyte.gz
+loading data/train-labels-idx1-ubyte.gz
+loading data/t10k-images-idx3-ubyte.gz
+loading data/t10k-labels-idx1-ubyte.gz
+train loss: 0.538635, acc: 0.864311
+test loss: 0.299959, acc: 0.915264
+train loss: 0.277901, acc: 0.920858
+test loss: 0.241783, acc: 0.930589
+train loss: 0.229879, acc: 0.934999
+test loss: 0.206087, acc: 0.939704
+train loss: 0.198716, acc: 0.943937
+test loss: 0.181938, acc: 0.945613
+train loss: 0.175066, acc: 0.950957
+test loss: 0.163919, acc: 0.951022
+```
+
+
 ## how to test
 
 ```d
 $ curl -fsS https://dlang.org/install.sh | bash -s ldc-1.9.0
 $ source ~/dlang/ldc-1.9.0/activate
-$ make test # with cuda
-$ make test NO_CUDA=true # without cuda
+$ dub test -b=cuda-unittest # with cuda
+$ dub test                  # without cuda
 ```
 
 I have tested with

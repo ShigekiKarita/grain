@@ -8,6 +8,10 @@ import std.string : toStringz, fromStringz;
 import derelict.cuda;
 import derelict.cudnn7;
 import grain.cublas;
+import grain.utility;
+
+
+
 
 // TODO: support multiple GPU devices (context)
 __gshared CUcontext context;
@@ -184,8 +188,8 @@ struct Kernel(alias F) if (is(ReturnType!F == void)) {
 
 
 struct CuPtr(T) {
-    CUdeviceptr ptr;
-    const size_t length;
+    CUdeviceptr ptr = 0;
+    const size_t length = 0;
 
     this(T[] host) {
         this(host.length);
@@ -195,9 +199,9 @@ struct CuPtr(T) {
     @disable this(this); // not copyable
 
     this(size_t n) {
-        length = n;
+        this.length = n;
         if (n > 0) {
-            checkCudaErrors(cuMemAlloc(&ptr, T.sizeof * n));
+            checkCudaErrors(cuMemAlloc(&this.ptr, T.sizeof * this.length));
         }
     }
 
@@ -280,11 +284,16 @@ auto zeros(S: CuPtr!T, T)(size_t N) {
 }
 
 
-void checkCudaErrors(CUresult err) {
+void checkCudaErrors(string file = __FILE__, size_t line = __LINE__,
+                     string mod = __MODULE__, string func = __FUNCTION__)(CUresult err) {
+    import std.format;
     const(char)* name, content;
     cuGetErrorName(err, &name);
     cuGetErrorString(err, &content);
-    assert(err == CUDA_SUCCESS, name.fromStringz ~ ": " ~ content.fromStringz);
+    assert(err == CUDA_SUCCESS,
+           format!"%s: %s from %s @%s:%s"(
+               name.fromStringz,  content.fromStringz,
+               func, file, line));
 }
 
 

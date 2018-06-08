@@ -57,7 +57,18 @@ auto prepareDataset() {
     return tuple!("train", "test")(train, test);
 }
 
+auto makeBatch(Dataset* d, size_t batchSize) {
+    auto niter = d.inputs.shape[0] / batchSize; // omit last
+    auto inSize = d.inputs[0].view(-1).length!0;
+    return tuple!("niter", "inputs", "targets")(
+        niter,
+        d.inputs.view(-1, inSize)[0..$ - ($ % batchSize)].view(-1, batchSize, inSize),
+        d.targets[0..$ - ($ % batchSize)].view(-1, batchSize)
+        );
+}
 
+
+/// Multi-layer perceptron
 struct MLP(T, alias Storage) {
     alias L = Linear!(T, Storage);
     L fc1, fc2, fc3;
@@ -90,38 +101,58 @@ auto accuracy(Vy, Vt)(Vy y, Vt t) { // if (isVariable!Vy && isVariable!Vt) {
     return acc / nbatch;
 }
 
+// FIXME build with "optimize" option and DeviceStorage backend causes loss=nan (non-release or CPU is OK)
+version (grain_cuda) {
+    alias S = DeviceStorage;
+} else {
+    alias S = HostStorage;
+}
+
 void main() {
     RNG.setSeed(0);
     grain.autograd.backprop = true;
     auto datasets = prepareDataset();
     auto batchSize = 64;
     auto inSize = 28 * 28;
-    auto trainBatchInputs = datasets.train.inputs.view(-1, inSize)[0..$ - ($ % batchSize)].view(-1, batchSize, inSize);
-    auto trainBatchTargets = datasets.train.targets[0..$ - ($ % batchSize)].view(-1, batchSize);
-    auto niter = trainBatchTargets.length!0;
-    auto nepoch = 10;
-
-    alias S = DeviceStorage;
+    auto trainBatch = datasets.train.makeBatch(batchSize);
+    auto testBatch = datasets.test.makeBatch(batchSize);
     auto model = MLP!(float, S)(inSize, 512, 10);
-    SGD opt = {lr: 1e-2};
-    foreach (e; 0 .. nepoch) {
-        // TODO shuffle train set
-        double lossSum = 0;
-        double accSum = 0;
-        foreach (i; 0 .. niter) {
-            auto xs = trainBatchInputs[i].variable(true).to!S;
-            auto ts = trainBatchTargets[i].variable.to!S;
-            auto ys = model(xs);
-            auto loss = crossEntropy(ys, ts); // FIXME maybe GPU loss value is wrong
-            auto acc = accuracy(ys, ts);
-            lossSum += loss.to!HostStorage.data[0];
-            accSum += acc;
-            model.zeroGrad();
-            loss.backward();
-            opt.update(model);
+    SGD optimizer = {lr: 1e-2};
+
+    foreach (epoch; 0 .. 10) {
+        // TODO implement model.train();
+        with (trainBatch) {
+            double lossSum = 0;
+            double accSum = 0;
+            foreach (i; niter.permutation) {
+                auto xs = inputs[i].variable(true).to!S;
+                auto ts = targets[i].variable.to!S;
+                auto ys = model(xs);
+                auto loss = crossEntropy(ys, ts);
+                auto acc = accuracy(ys, ts);
+                lossSum += loss.to!HostStorage.data[0];
+                accSum += acc;
+                model.zeroGrad();
+                loss.backward();
+                optimizer.update(model);
+            }
+            writefln!"train loss: %f, acc: %f"(lossSum / niter, accSum / niter);
         }
-        writefln!"train loss: %f, acc: %f"(lossSum / niter, accSum / niter);
-        // TODO monitor valid set
+        // TODO implement model.eval(); and grain.autograd.noBackprop
+        with (testBatch) {
+            double lossSum = 0;
+            double accSum = 0;
+            foreach (i; 0 .. testBatch.niter) {
+                auto xs = inputs[i].variable.to!S;
+                auto ts = targets[i].variable.to!S;
+                auto ys = model(xs);
+                auto loss = crossEntropy(ys, ts);
+                auto acc = accuracy(ys, ts);
+                lossSum += loss.to!HostStorage.data[0];
+                accSum += acc;
+            }
+            writefln!"test loss: %f, acc: %f"(lossSum / niter, accSum / niter);
+        }
     }
 }
 

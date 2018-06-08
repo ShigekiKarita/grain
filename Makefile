@@ -1,4 +1,4 @@
-.PHONY: test clean kernel example-mnist
+.PHONY: test clean kernel example-mnist cuda-deps
 
 CUDA_COMPUTE_CAPABILITY := `tool/compute_capability.out 0`
 CUDA_BIT := $(shell getconf LONG_BIT)
@@ -12,8 +12,11 @@ else
 	DUB_OPTS = -b=cuda-$(DUB_BUILD)
 endif
 
+
 test: $(CUDA_DEPS)
 	dub test --compiler=ldc2 $(DUB_OPTS)
+
+cuda-deps: $(CUDA_DEPS)
 
 kernel/kernel_lib.ptx: kernel/kernel_lib.cu
 	# clang-6.0 -c -S -emit-llvm $< --cuda-gpu-arch=sm_$(CUDA_COMPUTE_CAPABILITY)

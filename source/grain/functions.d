@@ -664,15 +664,17 @@ struct NegativeLogLikelihood(F, I=long) {
             static assert(is(I == int), "only int is supported now");
 
             import grain.kernel : nll;
-            F result = 0.0;
-            uint count = 0;
+            this._nClass = logP.shape[1];
             auto dresult = CuPtr!F([0]); // [result].variable.to!DeviceStorage; <- FIXME
-            auto dcount = CuPtr!uint([0]); // [count].variable.to!DeviceStorage;
+            auto dcount = CuPtr!int([0]); // [count].variable.to!DeviceStorage;
 
             auto batchSize = targetId.shape[0];
             Global.kernel!nll
                 .call(dresult.ptr, dcount.ptr, logP.data.ptr,
                       targetId.data.ptr, this.ignoreIndex, batchSize, this._nClass).launch(batchSize);
+
+            F result = 0.0;
+            int count = 0;
             dresult.toHost(&result);
             dcount.toHost(&count);
 
