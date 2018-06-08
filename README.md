@@ -1,7 +1,11 @@
 # grain
 [![Build Status](https://travis-ci.org/ShigekiKarita/grain.svg?branch=master)](https://travis-ci.org/ShigekiKarita/grain)
+[![Dub version](https://img.shields.io/dub/v/grain.svg)](https://code.dlang.org/packages/grain)
 
-differentiates native [mir](https://github.com/libmir/mir-algorithm) and CUDA functions in D.
+autograd [mir](https://github.com/libmir/mir-algorithm) and CUDA library for dynamic neural networks in D.
+
+- documentaion https://grain.dpldocs.info/grain.html
+
 
 ## features
 
@@ -53,7 +57,7 @@ I have tested with
 - LDC1.9.0 (prebuilt binary)
 - CUDA9.1 (optional)
 - CUDNN7 (optional but required if you use CUDA)
-- NVidia GTX760, GTX1080 (optional)
+- NVidia GTX760, GTX1080 (https://grain.dpldocs.info/grain.htmloptional)
 
 ## links
 
