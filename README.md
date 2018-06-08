@@ -1,4 +1,5 @@
-# grain (WIP)
+# grain
+[![Build Status](https://travis-ci.org/ShigekiKarita/grain.svg?branch=master)](https://travis-ci.org/ShigekiKarita/grain)
 
 differentiates native [mir](https://github.com/libmir/mir-algorithm) and CUDA functions in D.
 
