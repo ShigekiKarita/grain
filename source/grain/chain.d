@@ -66,6 +66,18 @@ auto crossEntropy(alias Storage)(Variable!(float, 2, Storage) x, Variable!(int, 
 
 /// test variable.backward
 unittest {
+    /* pytorch equivalent
+       >>> x = torch.tensor([[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]], requires_grad=True)
+       >>> t = torch.tensor([1, 0, -100], dtype=torch.long)
+       >>> l = torch.nn.functional.cross_entropy(x, t)
+       >>> l
+       tensor(0.6944)
+       >>> l.backward()
+       >>> x.grad
+       tensor([[ 0.2375, -0.2375],
+               [-0.2625,  0.2625],
+               [ 0.0000,  0.0000]])
+     */
     import std.stdio;
     import std.typecons;
     import mir.ndslice;
@@ -74,25 +86,23 @@ unittest {
 
     grain.autograd.backprop = true;
 
-    auto hx = [[0.2f, 0.4f, 0.4f], [0.1f, 0.5f, 0.4f], [0.1f, 0.5f, 0.4f]].variable;
-    hx.requiresGrad = true;
+    auto hx = [[0.1f, 0.2f], [0.3f, 0.4f], [0.5f, 0.6f]].variable(true);
     auto ht = [1, 0, -100].variable;
     auto hl = crossEntropy(hx, ht);
-    auto u = UntypedVariable(1.0f.variable);
-    hl.backward(&u);
-    // TODO hard code floats from pytorch
-    // assert(hx.grad[].sliced(3, 3) == [[0.0, -0.5, 0.0], [-0.5, 0.0, 0.0], [0.0, 0.0, 0.0]]);
+    hl.backward();
+    assert(approxEqual(hx.gradSliced,
+                       [[ 0.2375, -0.2375],
+                        [-0.2625,  0.2625],
+                        [ 0.0000,  0.0000]].nparray));
 
     version (grain_cuda) {
         auto dx = hx.to!DeviceStorage;
         dx.grad.zero_();
-        dx.requiresGrad = true;
         auto dt = ht.to!DeviceStorage;
         auto dl = crossEntropy(dx, dt);
-        // FIXME
-        // assert(approxEqual(hl.sliced, dl.to!HostStorage.sliced));
+        assert(approxEqual(hl.sliced, dl.to!HostStorage.sliced));
         dl.backward();
-        // assert(approxEqual(dx.grad.toHost()[].sliced(3, 3), hx.grad[].sliced(3, 3)));
+        assert(approxEqual(dx.to!HostStorage.gradSliced, hx.gradSliced));
     }
 }
 
