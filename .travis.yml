@@ -1,0 +1,23 @@
+sudo: false
+
+os:
+  - linux
+
+language: d
+
+d:
+  - ldc
+  # TODO - dmd
+
+env:
+  - ARCH="x86_64"
+
+
+before_install:
+  - sudo apt-get install -qq libopenblas-dev
+
+script:
+  - dub test --arch "$ARCH" --build=unittest-cov
+
+# after_success:
+#  - bash <(curl -s https://codecov.io/bash)

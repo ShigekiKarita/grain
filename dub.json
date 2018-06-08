@@ -48,11 +48,25 @@
     },
     "configurations": [
         {
+	        "name": "library",
+	        "targetType": "library"
+	    },
+	    {
+	        "name": "sourceLibrary",
+	        "targetType": "sourceLibrary"
+        },
+        {
             "name": "example-mnist",
             "targetName": "grain-example-mnist",
             "targetType": "executable",
             "mainSourceFile": "example/mnist.d",
         }
+    ],
+    "-ddoxTool": "scod",
+    "-ddoxFilterArgs": [
+        "--ex", "mir.",
+        "--ex", "derelict.",
+        "--unittest-examples"
     ],
     "description": "CUDA library for D",
     "copyright": "Copyright © 2018, karita",
