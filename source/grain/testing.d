@@ -1,3 +1,6 @@
+/**
+   A module for testing
+ */
 module grain.testing;
 
 import std.typecons  : isTuple, tuple;
@@ -7,7 +10,7 @@ import grain.utility : castArray, toTuple;
 import std.traits : isIntegral;
 import grain.autograd : variable, ElementType;
 
-
+/// computes numeric grad that emulates analytical differential in eps range
 auto numericGrad(F, In, Out)(ref F func, In inputs, Out gradOutputs, float eps) {
     import numir; // : zeros_like, view;
     import mir.ndslice;

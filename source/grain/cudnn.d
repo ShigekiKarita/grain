@@ -1,3 +1,6 @@
+/**
+   cuDNN high level wrapper for grain.autograd.Variable
+ */
 module grain.cudnn;
 
 version (grain_cuda):
@@ -7,6 +10,7 @@ import grain.autograd; //  : Variable, DeviceStorage;
 public import derelict.cuda;
 public import derelict.cudnn7;
 
+/// convert floating point types (float, double) into cudnn enum
 auto cudnnDataType(T)() {
     // TODO support half
     static if(is(T == float)) return CUDNN_DATA_FLOAT;
@@ -27,7 +31,7 @@ private struct TensorDesc {
     }
 }
 
-
+/// convert variable to cudnn tensor discriptor object
 auto makeCudnnTensor(T, size_t dim)(Variable!(T, dim, DeviceStorage) x) {
     static assert(dim < CUDNN_DIM_MAX);
     static if (dim < 4) {
@@ -127,7 +131,7 @@ void softmaxForward(cudnnSoftmaxAlgorithm_t A, T, size_t dim)(
                                     cast(void*) y.data.ptr));
 }
 
-
+///
 void softmaxBackward(cudnnSoftmaxAlgorithm_t A, T, size_t dim)(
     Variable!(T, dim, DeviceStorage) gx, Variable!(T, dim, DeviceStorage) gy,
     Variable!(T, dim, DeviceStorage) y, T alpha=1.0, T beta=0.0) {

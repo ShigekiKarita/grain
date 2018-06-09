@@ -1,3 +1,6 @@
+/**
+   A module for a variable used as a node in autograd computation graph
+ */
 module grain.autograd;
 
 import std.traits : isArray;
@@ -8,19 +11,23 @@ import std.range : ElementType;
 import grain.cuda;
 import grain.utility : castArray;
 
+/// CPU storage (i.e., GC dynamic array)
 alias HostStorage(T) = T[];
 
+/// fill CPU array with zero
 auto zero_(T)(T[] s) {
     import std.algorithm.mutation : fill;
     fill(s, 0);
     return s;
 }
 
+/// fill CUDA array with zero
 auto zeros(T)(size_t n) if (isArray!T) {
     auto s = new ElementType!T[n];
     return s.zero_();
 }
 
+///
 unittest {
     float[] h = [1f, 2f, 3f];
     h.zero_();
@@ -33,12 +40,13 @@ version(grain_cuda) {
 
     enum bool isDevice(T) = is(typeof({T.init.toHost();}));
 
-
+    /// CUDA -> CPU memory conversion
     auto to(alias S : DeviceStorage, T)(T[] src) {
         import std.array : empty;
         return src.empty ? DeviceStorage!T() : DeviceStorage!T(src);
     }
 
+    /// CPU -> CUDA memory conversion
     auto to(alias S : HostStorage, Src)(Src src) if (isDevice!Src) {
         return src.toHost();
     }
@@ -51,6 +59,7 @@ version(grain_cuda) {
     //     return src;
     // }
 
+    ///
     unittest {
         auto h = [[0.1f, 0.2f, 0.3f], [0.4f, 0.5f, 0.6f]].variable;
         auto d = h.to!DeviceStorage;
@@ -59,7 +68,7 @@ version(grain_cuda) {
 }
 
 
-/// type-erased variable
+/// type-erased variable used in BackProp object
 struct UntypedVariable {
     import std.variant;
     bool requiresGrad;
@@ -116,7 +125,7 @@ auto gradSlice(V)(V v) if (isVariable!V && isHost!V) {
 /// FIXME maybe singleton?
 shared bool backprop = false;
 
-/// Informations for backpropagation
+/// stores information for backpropagation
 struct BackProp {
     alias Proc = void delegate(UntypedVariable[], UntypedVariable[]);
     Proc proc;
@@ -159,7 +168,11 @@ unittest {
     assert(u.get!(HostStorage!float) == [0, 1, 2, 3]);
 }
 
-// TODO add SliceKind
+/**
+   A variable has autograd ability with mir.ndslice.Slice like data
+
+   TODO: add SliceKind
+*/
 struct Variable(T, size_t dim, alias Storage = HostStorage) {
     bool requiresGrad = true;
     // size_t[dim]
@@ -226,16 +239,16 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
         }
     }
 
-    // TODO pass gradOutput
+    /// computes gradients of creator variables w.r.t. the arg grad
     void backward(UntypedVariable* grad, size_t pos=0) {
         this.bprop.backward(grad, pos);
     }
 
+    /// computes gradients of creator variables w.r.t. this variable
     void backward() {
         auto grad = UntypedVariable(1.0f.variable.to!Storage);
         this.bprop.backward(&grad, 0);
     }
-
 
     string toString() const {
         import std.format : format;
@@ -265,12 +278,19 @@ unittest {
     }
 }
 
+/// a trait to identify variable object
 enum bool isVariable(T) = is(T : Variable!(Elem, dim, Storage), Elem, size_t dim, alias Storage);
+
+/// a trait to identify variable stored in CPU memory
 enum bool isHost(V : Variable!(Elem, dim, Storage), Elem, size_t dim, alias Storage) = is(Storage!Elem == HostStorage!Elem);
+
+/// a function to get the number of dimensions of variable
 enum size_t Ndim(V : Variable!(Elem, dim, Storage), Elem, size_t dim, alias Storage) = dim;
+
+/// an alias of element type (e.g., float, double and int) of variable
 alias ElementType(V : Variable!(Elem, dim, Storage), Elem, size_t dim, alias Storage) = Elem;
 
-
+/// a helper function to create variable object from slice
 auto variable(Sl)(Sl sl, bool requiresGrad = false) if (isSlice!Sl) {
     import mir.ndslice : universal, DeepElementType;
     import std.algorithm : reduce;
@@ -293,11 +313,13 @@ auto variable(Sl)(Sl sl, bool requiresGrad = false) if (isSlice!Sl) {
 }
 
 import std.traits : isNumeric;
+/// a helper function to create variable object from CPU/CUDA array
 auto variable(alias Storage=HostStorage, bool requiresGrad=false, T)(T x) if (isNumeric!T) {
     RefCounted!(T[]) data = [x];
     return Variable!(T, 0, Storage)(requiresGrad, [], [], data);
 }
 
+/// ditto
 auto variable(A)(A a, bool requiresGrad=false) if (isArray!A) {
     import numir.core : nparray;
     return a.nparray.variable(requiresGrad);
@@ -310,6 +332,7 @@ version (grain_cuda) unittest {
     assert(d.to!HostStorage.data == h.data);
 }
 
+/// copy variable into the other device (e.g., CPU -> CUDA or CUDA -> CPU)
 Variable!(T, dim, Dst) to(alias Dst, T, size_t dim, alias Src)(Variable!(T, dim, Src) src) {
     static if (is(Dst!T == Src!T)) return src;
     else {

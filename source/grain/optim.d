@@ -1,3 +1,6 @@
+/**
+   A module for gradient descent optimizer
+ */
 module grain.optim;
 
 import grain.autograd : isVariable, zero_, isHost;
@@ -5,7 +8,7 @@ import std.traits : hasMember;
 import std.stdio;
 
 
-
+/// fill gradient arrays with zero
 void zeroGrad(C)(ref C chain) {
     foreach (ref field; chain.tupleof) {
         alias F = typeof(field);
@@ -17,6 +20,7 @@ void zeroGrad(C)(ref C chain) {
     }
 }
 
+/// stochastic gradient descent optimizer
 struct SGD {
     float lr = 1.0;
     // float momentum = 0.0;
@@ -40,6 +44,7 @@ struct SGD {
     }
 }
 
+///
 unittest {
     import std.stdio;
     import numir;

@@ -1,3 +1,6 @@
+/**
+   cuBLAS wrappers
+ */
 module grain.cublas;
 
 import derelict.cuda;
@@ -8,8 +11,8 @@ import derelict.cuda;
 
 extern (C):
 
-
 alias cublasStatus_t = int;
+///
 enum : cublasStatus_t {
     CUBLAS_STATUS_SUCCESS         =0,
     CUBLAS_STATUS_NOT_INITIALIZED =1,
@@ -23,10 +26,13 @@ enum : cublasStatus_t {
     CUBLAS_STATUS_LICENSE_ERROR   =16
 }
 
+///
 struct cublasContext;
+///
 alias cublasHandle_t = cublasContext*;
-
+///
 alias cublasOperation_t = int;
+///
 enum : cublasOperation_t {
     CUBLAS_OP_N, // the non-transpose operation is selected
     CUBLAS_OP_T, // the transpose operation is selected
@@ -35,7 +41,10 @@ enum : cublasOperation_t {
 
 
 // TODO: parse and retrieve cublas_api.h
+
+///
 cublasStatus_t cublasCreate_v2(cublasHandle_t*);
+///
 cublasStatus_t cublasDestroy_v2(cublasHandle_t handle);
 
  cublasStatus_t cublasSgemm_v2(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const float *alpha, const float *A, int lda, const float *B, int ldb, const float *beta, float *C, int ldc);
@@ -51,6 +60,7 @@ cublasStatus_t cublasSgemm_v2(cublasHandle_t handle,
                            float           *C, int ldc);
 */
 
+///
 cublasStatus_t cublasDgemm_v2(cublasHandle_t handle,
                            cublasOperation_t transa, cublasOperation_t transb,
                            int m, int n, int k,
@@ -59,18 +69,18 @@ cublasStatus_t cublasDgemm_v2(cublasHandle_t handle,
                            const double          *B, int ldb,
                            const double          *beta,
                            double          *C, int ldc);
-
+///
 cublasStatus_t cublasSaxpy_v2(cublasHandle_t handle, int n,
                               const float           *alpha,
                               const float           *x, int incx,
                               float                 *y, int incy);
-
+///
 cublasStatus_t cublasDaxpy_v2(cublasHandle_t handle, int n,
                               const double          *alpha,
                               const double          *x, int incx,
                               double                *y, int incy);
 
-
+/// emit error message string from enum
 auto cublasGetErrorEnum(cublasStatus_t error) {
     final switch (error)
     {
