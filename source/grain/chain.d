@@ -46,14 +46,14 @@ struct Linear(T, alias Storage) {
     }
 }
 
-// rectified linear unit nonlinearity
+/// rectified linear unit nonlinearity
 auto relu(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
     import grain.functions : ReLU;
     auto func = new ReLU!(T, dim);
     return func.applyForward(x);
 }
 
-// cross entropy loss (logsoftmax -> negative loglikelihood function)
+/// cross entropy loss (logsoftmax -> negative loglikelihood function)
 auto crossEntropy(alias Storage)(Variable!(float, 2, Storage) x, Variable!(int, 1, Storage) t, int ignoreIndex=-100) {
     import grain.functions : LogSoftmax, NegativeLogLikelihood;
     auto lsmax = new LogSoftmax!(float, 2);
