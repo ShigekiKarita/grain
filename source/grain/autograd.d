@@ -21,7 +21,7 @@ auto zero_(T)(T[] s) {
     return s;
 }
 
-/// fill CUDA array with zero
+/// create new CPU array filled with zero
 auto zeros(T)(size_t n) if (isArray!T) {
     auto s = new ElementType!T[n];
     return s.zero_();
