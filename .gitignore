@@ -12,7 +12,10 @@
 !dub.json
 !tmp/*.ptx
 !dcompute/*
+!style.css
+!skeleton.html
 
+generated-docs
 adrdox/
 .dub
 docs.json

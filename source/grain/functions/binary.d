@@ -1,7 +1,7 @@
 /**
    A module for binary autograd functions.
  */
-module grain.functions.linalg;
+module grain.functions.binary;
 
 import grain.functions.common; // : FunctionCommon, TypeChecker;
 import grain.autograd; //  : variable, Variable, UntypedVariable, HostStorage, DeviceStorage;

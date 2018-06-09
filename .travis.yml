@@ -23,7 +23,7 @@ after_success:
   # - bash <(curl -s https://codecov.io/bash)
   - git clone https://github.com/adamdruppe/adrdox.git
   - cd adrdox && make ldc && cd -
-  - ./adrdox/doc2 source
+  - ./adrdox/adrdox.main source
   - mv generate-docs docs
 
 deploy:
