@@ -24,7 +24,7 @@ after_success:
   - git clone https://github.com/adamdruppe/adrdox.git
   - cd adrdox && make ldc && cd -
   - ./adrdox/adrdox.main source
-  - mv generate-docs docs
+  - mv generated-docs docs
 
 deploy:
   d: ldc
