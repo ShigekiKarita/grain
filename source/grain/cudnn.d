@@ -10,6 +10,19 @@ import grain.autograd; //  : Variable, DeviceStorage;
 public import derelict.cuda;
 public import derelict.cudnn7;
 
+// TODO make shared
+__gshared bool deterministic = false;
+__gshared bool nanProp = true;
+
+auto isDeterministic() {
+    return deterministic ? CUDNN_DETERMINISTIC : CUDNN_NON_DETERMINISTIC;
+}
+
+auto isNanProp() {
+    return nanProp ? CUDNN_PROPAGATE_NAN : CUDNN_NOT_PROPAGATE_NAN;
+}
+
+
 /// convert floating point types (float, double) into cudnn enum
 auto cudnnDataType(T)() {
     // TODO support half
@@ -95,7 +108,7 @@ void activationBackward(cudnnActivationMode_t A, T, size_t dim)(
     scope(exit) checkCUDNN( cudnnCreateActivationDescriptor(&activDesc) );
     checkCUDNN( cudnnSetActivationDescriptor(activDesc,
                                              A, // CUDNN_ACTIVATION_RELU,
-                                             CUDNN_PROPAGATE_NAN,
+                                             isNanProp(), // CUDNN_PROPAGATE_NAN,
                                              coeff) );
     auto tgx = gx.makeCudnnTensor;
     auto tgy = gy.makeCudnnTensor;

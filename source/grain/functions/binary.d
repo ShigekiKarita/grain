@@ -13,6 +13,54 @@ import grain.functions.common; // : FunctionCommon, TypeChecker;
 import grain.autograd; //  : variable, Variable, UntypedVariable, HostStorage, DeviceStorage;
 import grain.cuda;
 import grain.utility;
+import std.traits : isFloatingPoint;
+
+
+/// c = op(alpha1 * a + alpha2 * b) + beta * c;
+struct OpBinary(T, size_t dim, string ops) if (isFloatingPoint!T) {
+    T alpha1 = 1, alpha2 = 1;
+
+    version (grain_cuda) {
+        import grain.cudnn;
+        import derelict.cudnn7;
+        import std.algorithm : find;
+
+        enum opBinaryDict = [
+            "+": CUDNN_OP_TENSOR_ADD,
+            "*": CUDNN_OP_TENSOR_MUL,
+            "min": CUDNN_OP_TENSOR_MIN,
+            "max": CUDNN_OP_TENSOR_MAX
+            ];
+
+        static if (["+", "*", "min", "max"].find(ops)) {
+            auto forward(Variable!(T, dim, DeviceStorage) a, Variable!(T, dim, DeviceStorage) b) {
+                // TODO assert shape is broadcastable
+                // TODO move to grain.cudnn to support beta
+                T beta = 0;
+                auto c = a.empty;
+                cudnnOpTensorDescriptor_t opDisc;
+                cudnnCreateOpTensorDescriptor(&opDisc);
+                scope(exit) cudnnDestroyOpTensorDescriptor(opDisc);
+                cudnnSetOpTensorDescriptor(opDisc, opBinaryDict[ops], cudnnDataType!T, isNanProp());
+                cudnnOpTensor(cudnnHandle, opDisc,
+                              &this.alpha1, a.makeCudnnTensor, cast(const void*) a.data.ptr,
+                              &this.alpha2, b.makeCudnnTensor, cast(const void*) b.data.ptr,
+                              &beta, c.makeCudnnTensor, cast(void*) c.data.ptr);
+                return c;
+            }
+        }
+    }
+}
+
+///
+version (grain_cuda) unittest {
+    import mir.ndslice;
+    auto a = [[1.0f, 2.0f, 3.0f], [4.0f, 5.0f, 3.0f]].variable;
+    auto b = [[-1.0f, 4.0f, 0.0f]].variable;
+    auto plus = OpBinary!(float, 2, "+")(1.0f, 2.0f);
+    auto c = plus.forward(a.to!DeviceStorage, b.to!DeviceStorage);
+    assert(c.to!HostStorage.sliced == [[-1.0f, 10.0f, 3.0f], [2.0f, 13.0f, 3.0f]]);
+}
 
 
 /++

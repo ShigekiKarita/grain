@@ -415,6 +415,13 @@ enum : cudnnNanPropagation_t
     CUDNN_PROPAGATE_NAN      = 1
 }
 
+alias cudnnDeterminism_t = int;
+enum : cudnnDeterminism_t
+{
+    CUDNN_NON_DETERMINISTIC = 0,
+    CUDNN_DETERMINISTIC = 1
+}
+
 alias cudnnTensorFormat_t = int;
 enum : cudnnTensorFormat_t
 {

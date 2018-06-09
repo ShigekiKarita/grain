@@ -46,12 +46,30 @@ struct Linear(T, alias Storage) {
     }
 }
 
+//////// Activation
+
 /// rectified linear unit nonlinearity
 auto relu(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
     import grain.functions : ReLU;
     auto func = new ReLU!(T, dim);
     return func.applyForward(x);
 }
+
+/// sigmoid nonlinearity
+auto sigmoid(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
+    import grain.functions : Sigmoid;
+    auto func = new Sigmoid!(T, dim);
+    return func.applyForward(x);
+}
+
+/// tanh nonlinearity
+auto tanh(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
+    import grain.functions : Tanh;
+    auto func = new Tanh!(T, dim);
+    return func.applyForward(x);
+}
+
+/////// Loss
 
 /// cross entropy loss (logsoftmax -> negative loglikelihood function)
 auto crossEntropy(alias Storage)(Variable!(float, 2, Storage) x, Variable!(int, 1, Storage) t, int ignoreIndex=-100) {
