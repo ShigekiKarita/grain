@@ -13,6 +13,7 @@
 !tmp/*.ptx
 !dcompute/*
 
+adrdox/
 .dub
 docs.json
 __dummy.html
