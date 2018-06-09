@@ -53,4 +53,5 @@ clean:
 	find . -type f -name "*.out" -print -delete
 
 example-mnist:
-	dub --config=example-mnist --compiler=ldc2
+	dub --config=example-mnist --compiler=ldc2 -b=cuda-release
+

@@ -1,5 +1,16 @@
 /**
    A module for unary functions
+
+   TODO: support cudnn functions (see PDF manual in .deb for detail https://developer.nvidia.com/cudnn)
+   - activation (e.g., clipped-relu, elu), cudnnActivationForward/Backward
+   - (non-log) softmax, cudnnSoftmaxForward/Backward
+   - scale, cudnnScaleTensor
+   - sqrt not, cudnnOpTensor
+   - transform (e.g., contiguous or permute strides), cudnnTransformTensor
+   - reshape (i.e., view), ...???
+   - reduce (sum, prod, min, max, amax, avg), cudnnReduceTensor
+   - pool (max, average), cudnnPoolingForward/Backward
+   - dropout, cudnnDropoutForward/Backward
  */
 module grain.functions.unary;
 
@@ -7,6 +18,148 @@ import grain.autograd;
 import grain.cuda;
 import grain.utility;
 import grain.functions.common;
+
+version (grain_cuda) {
+    import grain.cudnn;
+    // FIXME do not know why this mixin won't work
+    // mixin template CudnnActivation(T, size_t dim, cudnnActivationMode_t mode) {
+
+    ///
+    enum CUDNN_ACTIVATION_IMPL_MIXIN = q{
+        // TODO support inplace
+        Variable!(T, dim, DeviceStorage) dx, dy;
+        ///
+        auto forward(Variable!(T, dim, DeviceStorage) x) {
+            // FIXME if train
+            this.dx = x.dup;
+            auto y = x.empty; // TODO create empty_like
+            activationForward!mode(x, y);
+            this.dy = y;
+            return y;
+        }
+        ///
+        auto backward(Variable!(T, dim, DeviceStorage) gy) {
+            auto gx = gy.empty; // TODO: create empty_like
+            activationBackward!mode(gx, gy, this.dx, this.dy);
+            return gx;
+        }
+    };
+}
+
+/// sigmoid function
+struct Sigmoid(T, size_t dim) {
+    import mir.math : exp;
+    import std.math : tanh;
+    import mir.ndslice : sliced, slice, map;
+
+    mixin FunctionCommon;
+    Variable!(T, dim, HostStorage) hy;
+
+    ///
+    auto forward(Variable!(T, dim, HostStorage) x) {
+        enum z = T(0.5);
+        auto ys = x.sliced.map!(a => tanh(a * z) * z + z);
+        auto y = ys.slice.variable(x.requiresGrad);
+        this.hy = y;
+        return y;
+    }
+
+    ///
+    auto backward(Variable!(T, dim, HostStorage) gy) {
+        auto gx = gy.sliced * this.hy.sliced * (T(1.0) - this.hy.sliced);
+        return gx.slice.variable;
+    }
+
+    version (grain_cuda) {
+        // mixin CudnnActivation!(T, dim, CUDNN_ACTIVATION_TANH);
+        enum mode = CUDNN_ACTIVATION_SIGMOID;
+        mixin(CUDNN_ACTIVATION_IMPL_MIXIN);
+    }
+}
+
+///
+unittest {
+    // test CPU
+    import grain.testing;
+    import std.math : tanh;
+    import numir;
+    auto func = new Sigmoid!(float, 1);
+    auto hx = [-1.0f, 1.0f, 0.0f].variable;
+    gradCheck(func, hx, [0.1f, 0.1f, 0.1f].variable);
+
+    auto hy = func.forward(hx);
+    // assert(hy.data == [tanh(-1.0f), tanh(1.0f), tanh(0.0f)]);
+    auto hgy = [1.0f, 2.0f, 3.0f].variable;
+    auto hgx = func.backward(hgy);
+
+    // test CUDA
+    version(grain_cuda) {
+        auto dfunc = new Sigmoid!(float, 1);
+        auto dx = hx.to!DeviceStorage;
+        auto dy = dfunc.forward(dx);
+        assert(approxEqual(dy.to!HostStorage.sliced, hy.sliced));
+        auto dgx = dfunc.backward(hgy.to!DeviceStorage);
+        assert(approxEqual(dgx.to!HostStorage.sliced, hgx.sliced));
+    }
+}
+
+
+/// hyperbolic tangent
+struct Tanh(T, size_t dim) {
+    import std.math : tanh;
+    import mir.ndslice : sliced, slice, map;
+
+    mixin FunctionCommon;
+    Variable!(T, dim, HostStorage) hy;
+
+    ///
+    auto forward(Variable!(T, dim, HostStorage) x) {
+        auto ys = x.sliced.map!tanh;
+        auto y = ys.slice.variable(x.requiresGrad);
+        this.hy = y;
+        return y;
+    }
+
+    ///
+    auto backward(Variable!(T, dim, HostStorage) gy) {
+        auto gx = gy.sliced * (T(1.0) - this.hy.sliced * this.hy.sliced);
+        return gx.slice.variable;
+    }
+
+    version (grain_cuda) {
+        // mixin CudnnActivation!(T, dim, CUDNN_ACTIVATION_TANH);
+        enum mode = CUDNN_ACTIVATION_TANH;
+        mixin(CUDNN_ACTIVATION_IMPL_MIXIN);
+    }
+}
+
+///
+unittest {
+    // test CPU
+    import grain.testing;
+    import std.math : tanh;
+    import numir;
+    auto func = new Tanh!(float, 1);
+    auto hx = [-1.0f, 1.0f, 0.0f].variable;
+    gradCheck(func, hx, [0.1f, 0.1f, 0.1f].variable);
+
+    auto hy = func.forward(hx);
+    assert(hy.data == [tanh(-1.0f), tanh(1.0f), tanh(0.0f)]);
+    auto hgy = [1.0f, 2.0f, 3.0f].variable;
+    auto hgx = func.backward(hgy);
+
+    // test CUDA
+    version(grain_cuda) {
+        auto dfunc = new Tanh!(float, 1);
+        auto dx = hx.to!DeviceStorage;
+        auto dy = dfunc.forward(dx);
+        assert(approxEqual(dy.to!HostStorage.sliced, hy.sliced));
+        auto dgx = dfunc.backward(hgy.to!DeviceStorage);
+        assert(approxEqual(dgx.to!HostStorage.sliced, hgx.sliced));
+    }
+}
+
+/// TODO implement scale with cudnnScaleTensor
 
 /// rectified linear unit nonlinearity (using cuDNN)
 struct ReLU(T, size_t dim) {
@@ -43,8 +196,8 @@ struct ReLU(T, size_t dim) {
             auto y = this.inplace ? x : x.dup;
 
             if (this.useCuDNN) {
-                this.dy = y;
                 activationForward!CUDNN_ACTIVATION_RELU(x, y);
+                this.dy = y;
             } else {
                 import grain.kernel : relu;
                 auto n = cast(uint) y.data.length; // FIXME use y.nElement

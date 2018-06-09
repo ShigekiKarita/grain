@@ -74,30 +74,12 @@ I have tested with
 
 sorted by higher priority for me
 
-- kernel type check
-- test CPU/CUDA function equality
-- practical examples (MNIST, CIFAR10, WordLM)
-  - wip `dub --config=example-mnist`
-- more autograd functions
-  - matmul (done)
-  - logsoftmax (done)
-  - negative log likelihood (done)
-  - softmax cross entropy (done)
-  - convolution/cross correlation
-  - optimizer (SGD, Adadelta, Adam)
-  - basic ops
-    - add/sub/mul/div
-    - concat
-    - view
-    - transpose
-  - cudnn functions (in grain.cudnn)
-    - relu (done by mir, custom kernel and cudnn)
-    - sigmoid
-    - tanh
-    - clipped relu
-    - dropout
-- curand wrappers
-- more cuda intrinsics like exp/log
-- statically linked kernel module instead of ptx string
+- practical examples (MNIST, CIFAR10, WordLM). see example/
+  - `dub --config=example-mnist`
+  - (wip) `dub --config=example-char-rnn`
+- more autograd functions. see source/grain/functions/ TODO
 - multi GPU
+- curand wrappers
+- statically linked kernel module instead of ptx string
+
 

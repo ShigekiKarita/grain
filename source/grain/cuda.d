@@ -263,6 +263,7 @@ struct CuPtr(T) {
     }
 
     /// fill value for N elements from the first position
+    /// TODO use cudnnSetTensor
     ref fill_(T value, size_t N) {
         import std.conv : to;
         import std.traits : Parameters;

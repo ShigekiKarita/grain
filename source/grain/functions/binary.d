@@ -1,5 +1,11 @@
 /**
    A module for binary autograd functions.
+
+   TODO:
+   - support add tensor with cudnnAddTensor and mir.ndslice
+   - support opBinary(add, mul, min, max) cudnnOpTensor
+   - convolution
+   - batchnorm
  */
 module grain.functions.binary;
 
@@ -159,7 +165,7 @@ unittest {
 
 /**
    Add bias vector to matrix used inside grain.chain.Linear
-   TODO: generalize to broadcastable addition
+   TODO: generalize to broadcastable addition (use cudnnAddTensor)
 */
 struct AddBias(T) {
     mixin FunctionCommon;

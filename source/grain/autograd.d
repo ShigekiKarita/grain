@@ -1,5 +1,8 @@
 /**
    A module for a variable used as a node in autograd computation graph
+
+   TODO:
+   - support shape ops
  */
 module grain.autograd;
 
@@ -35,7 +38,21 @@ unittest {
     assert(zeros!(HostStorage!float)(3) == [0f, 0f, 0f]);
 }
 
+
+/// create new variable with uninitialized array and the same shape/strides to v on CPU
+auto empty(T, size_t dim)(Variable!(T, dim, HostStorage) v) {
+    RefCounted!(T[]) data = new T[v.length];
+    return Variable!(T, dim, HostStorage)(v.requiresGrad, v.shape, v.strides, data);
+}
+
 version(grain_cuda) {
+    /// create new variable with uninitialized array and the same shape/strides to v on CUDA
+    auto empty(T, size_t dim)(Variable!(T, dim, DeviceStorage) v) {
+        RefCounted!(CuPtr!T) data = CuPtr!T(v.length);
+        return Variable!(T, dim, DeviceStorage)(v.requiresGrad, v.shape, v.strides, data);
+    }
+
+
     alias DeviceStorage(T) = CuPtr!T;
 
     enum bool isDevice(T) = is(typeof({T.init.toHost();}));
@@ -256,6 +273,7 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
             .format(T.stringof, dim, Storage.stringof,
                     data, shape, strides);
     }
+    /// TODO implement contiguous with mir.ndslice and cudnnTransformTensor
 }
 
 /// test Variable.defined
@@ -290,11 +308,16 @@ enum size_t Ndim(V : Variable!(Elem, dim, Storage), Elem, size_t dim, alias Stor
 /// an alias of element type (e.g., float, double and int) of variable
 alias ElementType(V : Variable!(Elem, dim, Storage), Elem, size_t dim, alias Storage) = Elem;
 
+/// total number of elements in variable
+auto length(V)(V v) if (isVariable!V) {
+    import std.algorithm : reduce;
+    return v.shape.reduce!"a * b";
+}
+
 /// a helper function to create variable object from slice
 auto variable(Sl)(Sl sl, bool requiresGrad = false) if (isSlice!Sl) {
     import mir.ndslice : universal, DeepElementType;
     import std.algorithm : reduce;
-
     import numir : Ndim;
     auto s = sl.universal;
     alias S = typeof(s);
