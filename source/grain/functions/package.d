@@ -5,6 +5,6 @@
 module grain.functions;
 
 public import grain.functions.common;
-public import grain.functions.linalg;
 public import grain.functions.unary;
+public import grain.functions.binary;
 public import grain.functions.loss;
