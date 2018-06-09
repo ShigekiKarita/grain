@@ -4,8 +4,7 @@
 
 autograd [mir](https://github.com/libmir/mir-algorithm) and CUDA library for dynamic neural networks in D.
 
-- documentaion https://grain.dpldocs.info/grain.html
-
+- documentaion https://shigekikarita.github.io/grain/grain.html
 
 ## features
 
