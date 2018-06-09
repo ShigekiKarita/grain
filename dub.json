@@ -60,6 +60,12 @@
             "targetName": "grain-example-mnist",
             "targetType": "executable",
             "mainSourceFile": "example/mnist.d",
+        },
+        {
+            "name": "example-char-rnn",
+            "targetName": "grain-example-char-rnn",
+            "targetType": "executable",
+            "mainSourceFile": "example/char_rnn.d",
         }
     ],
     "-ddoxTool": "scod",
