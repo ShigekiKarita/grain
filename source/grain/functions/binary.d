@@ -20,12 +20,12 @@ import std.format : format;
 
 /// c = op(alpha1 * a + alpha2 * b) + beta * c;
 struct OpBinary(T, size_t dim, string ops) if (isFloatingPoint!T) {
+    import mir.ndslice;
     T alpha1 = 1, alpha2 = 1;
 
-    auto forward(Variable!(T, dim, HostStorage) a, Variable!(T, dim, HostStorage) b) {
-        import numir : empty;
-        import mir.ndslice;
+    int[] shape1, shape2;
 
+    auto forward(Variable!(T, dim, HostStorage) a, Variable!(T, dim, HostStorage) b) {
         auto info = broadcastable(a, b);
         assert(info.ok);
         auto abx = broadcast(a.sliced, b.sliced);
@@ -33,6 +33,9 @@ struct OpBinary(T, size_t dim, string ops) if (isFloatingPoint!T) {
         auto bx = abx[1];
         auto c = slice(this.alpha1 * ax);
 
+        // TODO if train
+        this.shape1 = a.shape;
+        this.shape2 = b.shape;
         // ops
         static if (ops == "+") {
             c[] += this.alpha2 * bx;
@@ -42,6 +45,16 @@ struct OpBinary(T, size_t dim, string ops) if (isFloatingPoint!T) {
             static assert("unknown operator: " ~ ops);
         }
         return c.variable(a.requiresGrad || b.requiresGrad);
+    }
+
+    auto backward(Variable!(T, dim, HostStorage) gc) {
+        static if (ops == "+") {
+            auto ga = this.alpha1 == 1 ? gc : slice(this.alpha1 * gc.sliced).variable;
+            auto gb = this.alpha2 == 1 ? gc : slice(this.alpha2 * gc.sliced).variable;
+            return tuple(ga, gb);
+        } else {
+            static assert("unknown operator: " ~ ops);
+        }
     }
 
     version (grain_cuda) {
@@ -59,6 +72,10 @@ struct OpBinary(T, size_t dim, string ops) if (isFloatingPoint!T) {
         static if (opBinaryDict.keys.find(ops)) {
             auto forward(Variable!(T, dim, DeviceStorage) a, Variable!(T, dim, DeviceStorage) b) {
                 assert(broadcastable(a, b).ok);
+                // TODO if train
+                this.shape1 = a.shape;
+                this.shape2 = b.shape;
+
                 // TODO move to grain.cudnn to support beta
                 T beta = 0;
                 auto c = a.empty;
@@ -75,6 +92,23 @@ struct OpBinary(T, size_t dim, string ops) if (isFloatingPoint!T) {
             }
         } else {
             static assert("unknown operator: " ~ ops);
+        }
+    }
+}
+
+unittest {
+    foreach (i; [2]) {
+        foreach (j; [2]) {
+            import std.typecons : tuple;
+            import numir : uniform;
+            import mir.ndslice : slice;
+            import grain.testing;
+
+            auto a = uniform!float(i, 2).slice.variable;
+            auto b = uniform!float(2, j).slice.variable;
+            auto gc = uniform!float(2, 2).slice.variable;
+            OpBinary!(float, 2, "+") func;
+            gradCheck(func, tuple(a, b), gc, 1e-2);
         }
     }
 }
