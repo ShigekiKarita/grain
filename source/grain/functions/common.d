@@ -6,6 +6,7 @@ module grain.functions.common;
 import grain.autograd;
 import grain.cuda;
 import grain.utility : toTuple, fromTuple, castArray;
+import mir.ndslice : isSlice;
 
 import std.stdio;
 
@@ -179,8 +180,10 @@ unittest {
 }
 
 
-
+/// check if broadcastable
 auto broadcastable(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) a, Variable!(T, dim, Storage) b) {
+    import std.typecons : tuple;
+    import std.algorithm : max;
     int[dim] resultShape;
     bool ok = false;
     foreach (i; 0 .. dim) {
@@ -190,4 +193,82 @@ auto broadcastable(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) a, V
         } else break;
     }
     return tuple!("ok", "shape")(ok, resultShape);
+}
+
+/// expand dimension i.e. repeat n time on dim
+@nogc nothrow pure @safe
+expand(size_t dim, S)(S s, size_t n) if (isSlice!S) {
+    import numir : Ndim;
+    static assert(dim < Ndim!S, format!"acessing invalid dim %d (should be < %d)"(dim, Ndim!S));
+    assert(s.length!dim == 1);
+
+    import mir.ndslice : repeat, swapped, transposed, unpack;
+    /// [a, 1, b] -> repeat [n, a, 1, b] -> swapped [1, a, n, b]
+    return s.repeat(n).unpack.swapped!(0, dim+1)[0];
+}
+
+///
+nothrow pure @safe
+unittest {
+    import mir.ndslice;
+    assert(iota(1, 1, 3).expand!1(3) ==
+           [[[0,1,2],[0,1,2],[0,1,2]]]);
+    assert(iota(1, 1, 3).expand!0(2).expand!1(3) ==
+           [[[0,1,2],[0,1,2],[0,1,2]],
+            [[0,1,2],[0,1,2],[0,1,2]]]);
+    assert(iota(1, 3, 2).expand!0(2) == [[[0,1],[2,3],[4,5]],
+                                         [[0,1],[2,3],[4,5]]]);
+}
+
+/// exapand dimension if s.length!dim == 1 else do nothing but type in the same expressions of repeat/unpack/swapped/index[0]
+@nogc nothrow pure @safe
+maybeExpand(size_t dim, S)(S s, size_t n) if (isSlice!S) {
+    import mir.ndslice;
+    import mir.ndslice : repeat, swapped, transposed, unpack;
+    return s.length!dim == 1 ? s.expand!dim(n) :
+        /// [a, c, b] -> repeat [1, a, c, b] -> swapped [1, a, c, b]
+        s.repeat(1).unpack.swapped!(dim+1, dim+1)[0];
+}
+
+///
+@nogc nothrow pure @safe
+unittest {
+    import mir.ndslice;
+    assert(iota(1, 3, 2).maybeExpand!0(2) == iota(3, 2).repeat(2));
+    assert(iota(3, 2).maybeExpand!0(2) == iota(3, 2));
+}
+
+/**
+   Returns:
+      broadcasted slice.
+      For example, when a has its shape [a, 1] and b has [1, b],
+      this function returns expanded a and b with a broadcasted shape [a, b].
+
+   See_also:
+      https://docs.scipy.org/doc/numpy-1.13.0/user/basics.broadcasting.html
+*/
+@nogc nothrow pure @safe
+broadcast(S1, S2)(S1 a0, S2 b0) if (isSlice!S1 && isSlice!S2) {
+    import std.format : format;
+    import std.typecons : tuple;
+    import numir.core : Ndim;
+    static assert(Ndim!S1 == Ndim!S2); // TODO support dim mismatched slices by unsqueezing like numpy
+    enum dim = Ndim!S1;
+    static foreach (d; 1 .. dim+1) {
+        mixin(format!q{auto a%d = a%d.maybeExpand!(d-1)(b0.length!(d-1));}(d, d-1));
+        mixin(format!q{auto b%d = b%d.maybeExpand!(d-1)(a0.length!(d-1));}(d, d-1));
+    }
+    mixin(format!q{auto ax = a%d;}(dim));
+    mixin(format!q{auto bx = b%d;}(dim));
+    return tuple(ax, bx);
+}
+
+///
+@nogc nothrow pure @safe
+unittest {
+    import mir.ndslice;
+    auto a = iota(1, 3, 1);
+    auto b = iota(1, 1, 2);
+    assert(broadcast(a, b)[0] == a.expand!2(2));
+    assert(broadcast(a, b)[1] == b.expand!1(3));
 }

@@ -14,11 +14,33 @@ import grain.autograd; //  : variable, Variable, UntypedVariable, HostStorage, D
 import grain.cuda;
 import grain.utility;
 import std.traits : isFloatingPoint;
+import mir.ndslice : isSlice;
+import std.format : format;
 
 
 /// c = op(alpha1 * a + alpha2 * b) + beta * c;
 struct OpBinary(T, size_t dim, string ops) if (isFloatingPoint!T) {
     T alpha1 = 1, alpha2 = 1;
+
+    auto forward(Variable!(T, dim, HostStorage) a, Variable!(T, dim, HostStorage) b) {
+        import numir : empty;
+        import mir.ndslice;
+
+        auto info = broadcastable(a, b);
+        assert(info.ok);
+        auto abx = broadcast(a.sliced, b.sliced);
+        auto ax = abx[0];
+        auto bx = abx[1];
+        auto c = empty!T(info.shape.castArray!size_t).variable(a.requiresGrad || b.requiresGrad);
+        static if (ops == "+") {
+            // FIXME broadcast
+            c.sliced[] = this.alpha1 * ax;
+            c.sliced[] += this.alpha2 * bx;
+            return c;
+        } else {
+            static assert("unknown operator: " ~ ops);
+        }
+    }
 
     version (grain_cuda) {
         import grain.cudnn;
@@ -34,10 +56,11 @@ struct OpBinary(T, size_t dim, string ops) if (isFloatingPoint!T) {
 
         static if (["+", "*", "min", "max"].find(ops)) {
             auto forward(Variable!(T, dim, DeviceStorage) a, Variable!(T, dim, DeviceStorage) b) {
-                // TODO assert shape is broadcastable
+                assert(broadcastable(a, b).ok);
                 // TODO move to grain.cudnn to support beta
                 T beta = 0;
                 auto c = a.empty;
+                c.requiresGrad = a.requiresGrad || b.requiresGrad;
                 cudnnOpTensorDescriptor_t opDisc;
                 cudnnCreateOpTensorDescriptor(&opDisc);
                 scope(exit) cudnnDestroyOpTensorDescriptor(opDisc);
@@ -48,18 +71,43 @@ struct OpBinary(T, size_t dim, string ops) if (isFloatingPoint!T) {
                               &beta, c.makeCudnnTensor, cast(void*) c.data.ptr);
                 return c;
             }
+        } else {
+            static assert("unknown operator: " ~ ops);
         }
     }
 }
 
-///
-version (grain_cuda) unittest {
+/// a and b have the same shape
+unittest {
     import mir.ndslice;
+
+    auto plus = OpBinary!(float, 2, "+")(1.0f, 2.0f);
+    auto a = [[1.0f, 2.0f, 3.0f], [4.0f, 5.0f, 3.0f]].variable;
+    auto b = [[-1.0f, 4.0f, 0.0f], [1.0f, 2.0f, 3.0f]].variable;
+    auto hc = plus.forward(a, b);
+    assert(hc.sliced == [[-1.0f, 10.0f, 3.0f], [6.0f, 9.0f, 9.0f]]);
+
+    version (grain_cuda) {
+        auto dc = plus.forward(a.to!DeviceStorage, b.to!DeviceStorage);
+        assert(dc.to!HostStorage.sliced == [[-1.0f, 10.0f, 3.0f], [6.0f, 9.0f, 9.0f]]);
+    }
+}
+
+
+/// a has a larger shape than b
+unittest {
+    import mir.ndslice;
+
+    auto plus = OpBinary!(float, 2, "+")(1.0f, 2.0f);
     auto a = [[1.0f, 2.0f, 3.0f], [4.0f, 5.0f, 3.0f]].variable;
     auto b = [[-1.0f, 4.0f, 0.0f]].variable;
-    auto plus = OpBinary!(float, 2, "+")(1.0f, 2.0f);
-    auto c = plus.forward(a.to!DeviceStorage, b.to!DeviceStorage);
-    assert(c.to!HostStorage.sliced == [[-1.0f, 10.0f, 3.0f], [2.0f, 13.0f, 3.0f]]);
+    // auto hc = plus.forward(a, b);
+    // assert(hc.sliced == [[-1.0f, 10.0f, 3.0f], [2.0f, 13.0f, 3.0f]]);
+
+    version (grain_cuda) {
+        auto dc = plus.forward(a.to!DeviceStorage, b.to!DeviceStorage);
+        assert(dc.to!HostStorage.sliced == [[-1.0f, 10.0f, 3.0f], [2.0f, 13.0f, 3.0f]]);
+    }
 }
 
 
