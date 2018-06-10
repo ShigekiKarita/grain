@@ -3,6 +3,7 @@ import std.typecons : tuple;
 
 import mir.ndslice; // : sliced, map, slice;
 import numir;
+import snck : snck;
 
 import grain.autograd;
 import grain.chain; // : Linear, relu;
@@ -124,7 +125,7 @@ void main() {
         with (trainBatch) {
             double lossSum = 0;
             double accSum = 0;
-            foreach (i; niter.permutation) {
+            foreach (i; niter.permutation.snck) {
                 auto xs = inputs[i].variable(true).to!S;
                 auto ts = targets[i].variable.to!S;
                 auto ys = model(xs);
@@ -155,4 +156,3 @@ void main() {
         }
     }
 }
-

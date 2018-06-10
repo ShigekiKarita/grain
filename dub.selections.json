@@ -15,6 +15,7 @@
 		"mir-linux-kernel": "1.0.0",
 		"mir-random": "0.4.5",
 		"numir": "0.1.2",
+		"snck": "0.0.4",
 		"taggedalgebraic": "0.10.11"
 	}
 }
