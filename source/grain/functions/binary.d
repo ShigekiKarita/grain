@@ -31,15 +31,17 @@ struct OpBinary(T, size_t dim, string ops) if (isFloatingPoint!T) {
         auto abx = broadcast(a.sliced, b.sliced);
         auto ax = abx[0];
         auto bx = abx[1];
-        auto c = empty!T(info.shape.castArray!size_t).variable(a.requiresGrad || b.requiresGrad);
+        auto c = slice(this.alpha1 * ax);
+
+        // ops
         static if (ops == "+") {
-            // FIXME broadcast
-            c.sliced[] = this.alpha1 * ax;
-            c.sliced[] += this.alpha2 * bx;
-            return c;
+            c[] += this.alpha2 * bx;
+        } else static if (ops == "*") {
+            c[] *= this.alpha2 * bx;
         } else {
             static assert("unknown operator: " ~ ops);
         }
+        return c.variable(a.requiresGrad || b.requiresGrad);
     }
 
     version (grain_cuda) {
@@ -54,7 +56,7 @@ struct OpBinary(T, size_t dim, string ops) if (isFloatingPoint!T) {
             "max": CUDNN_OP_TENSOR_MAX
             ];
 
-        static if (["+", "*", "min", "max"].find(ops)) {
+        static if (opBinaryDict.keys.find(ops)) {
             auto forward(Variable!(T, dim, DeviceStorage) a, Variable!(T, dim, DeviceStorage) b) {
                 assert(broadcastable(a, b).ok);
                 // TODO move to grain.cudnn to support beta
@@ -94,19 +96,35 @@ unittest {
 }
 
 
-/// a has a larger shape than b
+/// a and b have different shapes
 unittest {
     import mir.ndslice;
 
     auto plus = OpBinary!(float, 2, "+")(1.0f, 2.0f);
     auto a = [[1.0f, 2.0f, 3.0f], [4.0f, 5.0f, 3.0f]].variable;
     auto b = [[-1.0f, 4.0f, 0.0f]].variable;
-    // auto hc = plus.forward(a, b);
-    // assert(hc.sliced == [[-1.0f, 10.0f, 3.0f], [2.0f, 13.0f, 3.0f]]);
+    auto hc = plus.forward(a, b);
+    assert(hc.sliced == [[-1.0f, 10.0f, 3.0f], [2.0f, 13.0f, 3.0f]]);
 
     version (grain_cuda) {
         auto dc = plus.forward(a.to!DeviceStorage, b.to!DeviceStorage);
         assert(dc.to!HostStorage.sliced == [[-1.0f, 10.0f, 3.0f], [2.0f, 13.0f, 3.0f]]);
+    }
+}
+
+/// a and b have different shapes
+unittest {
+    import mir.ndslice;
+
+    auto plus = OpBinary!(float, 2, "*")(1.0f, 2.0f);
+    auto a = [[1.0f, 2.0f, 3.0f], [4.0f, 5.0f, 3.0f]].variable;
+    auto b = [[-1.0f, 4.0f, 0.0f]].variable;
+    auto hc = plus.forward(a, b);
+    assert(hc.sliced == [[1*2*-1, 2*2*4, 0], [4*2*-1, 5*2*4, 0]]);
+
+    version (grain_cuda) {
+        auto dc = plus.forward(a.to!DeviceStorage, b.to!DeviceStorage);
+        assert(dc.to!HostStorage.sliced ==[[1*2*-1, 2*2*4, 0], [4*2*-1, 5*2*4, 0]]);
     }
 }
 

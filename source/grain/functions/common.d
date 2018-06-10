@@ -269,6 +269,7 @@ unittest {
     import mir.ndslice;
     auto a = iota(1, 3, 1);
     auto b = iota(1, 1, 2);
+    auto x = broadcast(a, b);
     assert(broadcast(a, b)[0] == a.expand!2(2));
     assert(broadcast(a, b)[1] == b.expand!1(3));
 }
