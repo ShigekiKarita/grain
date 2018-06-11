@@ -505,8 +505,76 @@ version (grain_cuda) unittest {
 
 /// y = 1 / x
 struct Reciprocal(T, size_t dim) {
+    import mir.ndslice;
+
+    Variable!(T, dim, HostStorage) hy;
+
+    auto forward(Variable!(T, dim, HostStorage) x) {
+        auto y = x.sliced.map!(a => T(1) / a).slice.variable(x.requiresGrad);
+        this.hy = y; // TODO if train
+        return y;
+    }
+
+    auto backward(Variable!(T, dim, HostStorage) gy) {
+        auto gx = this.hy.dup;
+        gx.sliced[] *= gx.sliced;
+        gx.sliced[] *= -gy.sliced;
+        return gx;
+    }
+
+    version (grain_cuda) {
+        import grain.cudnn;
+        import grain.kernel;
+
+        Variable!(T, dim, DeviceStorage) dy;
+
+        auto forward(Variable!(T, dim, DeviceStorage) x) {
+            auto y = x.dup;
+            unaryFunc!reciprocal(y);
+            this.dy = y; // TODO if train
+            return y;
+        }
+
+        auto backward(Variable!(T, dim, DeviceStorage) gy) {
+            auto gx = this.dy.dup;
+            grain.cudnn.tensorOp!CUDNN_OP_TENSOR_MUL(gx, gx, this.dy, T(-1));
+            grain.cudnn.tensorOp!CUDNN_OP_TENSOR_MUL(gx, gx, gy);
+            return gx;
+        }
+    }
 
 }
+
+/// test reciprocal simple case, gradcheck and cpu/cuda equality
+unittest {
+    import grain.testing;
+    import std.typecons;
+    import numir;
+    import mir.ndslice;
+
+    // simple case
+    auto e = [[-1.0f,1f/2f,1f/3f], [1f, 10f,1f/3f]].nparray;
+    auto xs = [[-1.0f, 2.0f, 3.0f], [1.0f, 0.1f, 3.0f]].nparray;
+    Reciprocal!(float, 2) hfunc;
+    auto _hx = xs.variable;
+    auto _hy = hfunc.forward(_hx);
+    assert(approxEqual(_hy.sliced, e));
+
+    auto hx = uniform!float(2, 2).slice.variable;
+    auto hy = hfunc.forward(hx);
+    auto hgy = uniform!float(2, 2).slice.variable;
+    auto hgx = hfunc.backward(hgy);
+    gradCheck(hfunc, hx, hgy); // , 1e-3, 1e-3, 1e-3);
+
+    version (grain_cuda) {
+        Reciprocal!(float, 2) dfunc;
+        auto dy = dfunc.forward(hx.to!DeviceStorage);
+        assert(approxEqual(dy.to!HostStorage.sliced, hy.sliced));
+        auto dgx = dfunc.backward(hgy.to!DeviceStorage);
+        assert(approxEqual(dgx.to!HostStorage.sliced, hgx.sliced));
+    }
+}
+
 
 // struct Log
 // struct Log2
