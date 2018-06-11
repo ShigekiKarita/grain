@@ -51,7 +51,7 @@ GRAIN_GLOBAL void sum(const float* x, float* result, int N) {
     }
 }
 
-GRAIN_GLOBAL void nll(float* loss, int* count, const float* logp, const int* targetId, int ignoreIndex, uint batchSize, int classSize) {
+GRAIN_GLOBAL void nll(float* loss, uint* count, const float* logp, const int* targetId, int ignoreIndex, uint batchSize, int classSize) {
     GRAIN_PARALLEL_FOR(i, batchSize) {
         auto t = targetId[i];
         if (t != ignoreIndex) {

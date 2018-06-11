@@ -5,7 +5,7 @@ module grain.cudnn;
 
 version (grain_cuda):
 
-public import grain.cuda : cudnnHandle, checkCUDNN;
+public import grain.cuda : cudnnHandle, checkCUDNN, CuPtr;
 import grain.autograd; //  : Variable, DeviceStorage;
 public import derelict.cuda;
 public import derelict.cudnn7;
@@ -31,13 +31,14 @@ auto cudnnDataType(T)() {
     else static assert(false, "unsupported type");
 }
 
-
-private struct TensorDesc {
+///
+struct TensorDesc {
     cudnnTensorDescriptor_t desc;
     CUdeviceptr ptr;
     alias desc this;
 
     @disable this(this); // no copy
+    @disable new(size_t); // no allocation on heap
 
     ~this() {
         checkCUDNN( cudnnDestroyTensorDescriptor(desc) );
@@ -49,10 +50,15 @@ auto makeCudnnTensor(T, size_t dim)(Variable!(T, dim, DeviceStorage) x) {
     static assert(dim < CUDNN_DIM_MAX);
     static if (dim < 4) {
         enum int ddim = 4;
-        int[ddim] shape, strides;
+        int[ddim] shape;
+        int[ddim] strides;
         shape[] = 1;
         strides[] = 1;
-        shape[0..dim] = x.shape;
+        foreach (d; 0 .. dim) {
+            assert(x.shape[d] < int.max);
+            shape[d] = cast(int) x.shape[d];
+        }
+        // shape[0..dim] = x.shape;
         strides[0..dim] = x.strides;
     } else {
         enum int ddim = cast(int) dim;
@@ -161,4 +167,91 @@ void softmaxBackward(cudnnSoftmaxAlgorithm_t A, T, size_t dim)(
                                      gx.makeCudnnTensor,
                                      cast(void*) gx.data.ptr
                     ));
+}
+
+/**
+   Tensor operation : C = op( alpha1 * A, alpha2 * B ) + beta * C
+
+   - list of ops
+    CUDNN_OP_TENSOR_ADD  = 0,
+    CUDNN_OP_TENSOR_MUL  = 1,
+    CUDNN_OP_TENSOR_MIN  = 2,
+    CUDNN_OP_TENSOR_MAX  = 3,
+    CUDNN_OP_TENSOR_SQRT = 4,
+    CUDNN_OP_TENSOR_NOT  = 5,
+
+   B tensor is ignored for CUDNN_OP_TENSOR_SQRT, CUDNN_OP_TENSOR_NOT.
+*/
+void tensorOp(cudnnOpTensorOp_t op, T, size_t dim)(
+    Variable!(T, dim, DeviceStorage) c, Variable!(T, dim, DeviceStorage) a, Variable!(T, dim, DeviceStorage) b,
+    T alpha1 = 1, T alpha2 = 1, T beta = 0
+) {
+    import grain.functions.common : broadcastable;
+    assert(broadcastable(a, b).ok);
+    cudnnOpTensorDescriptor_t opDisc;
+    checkCUDNN( cudnnCreateOpTensorDescriptor(&opDisc) );
+    scope(exit) cudnnDestroyOpTensorDescriptor(opDisc);
+    checkCUDNN( cudnnSetOpTensorDescriptor(opDisc, op, cudnnDataType!T, isNanProp()) );
+    checkCUDNN( cudnnOpTensor(cudnnHandle, opDisc,
+                              &alpha1, a.makeCudnnTensor, cast(const void*) a.data.ptr,
+                              &alpha2, b.makeCudnnTensor, cast(const void*) b.data.ptr,
+                              &beta, c.makeCudnnTensor, cast(void*) c.data.ptr) );
+}
+
+void scale(T, size_t dim)(Variable!(T, dim, DeviceStorage) x, T alpha) {
+    checkCUDNN( cudnnScaleTensor(cudnnHandle, x.makeCudnnTensor, cast(void*) x.data.ptr, &alpha) );
+}
+
+/**
+   Tensor operation : C = reduce op( alpha * A ) + beta * C
+
+   - list of op
+    CUDNN_REDUCE_TENSOR_ADD          = 0,
+    CUDNN_REDUCE_TENSOR_MUL          = 1,
+    CUDNN_REDUCE_TENSOR_MIN          = 2,
+    CUDNN_REDUCE_TENSOR_MAX          = 3,
+    CUDNN_REDUCE_TENSOR_AMAX         = 4,
+    CUDNN_REDUCE_TENSOR_AVG          = 5,
+    CUDNN_REDUCE_TENSOR_NORM1        = 6,
+    CUDNN_REDUCE_TENSOR_NORM2        = 7,
+    CUDNN_REDUCE_TENSOR_MUL_NO_ZEROS = 8,
+
+   The NaN propagation enum applies to only the min and max reduce ops;
+   the other reduce ops propagate NaN as usual.
+   The indices space is ignored for reduce ops other than min or max.
+*/
+void reduce(cudnnReduceTensorOp_t op, T, size_t dim)(
+    Variable!(T, dim, DeviceStorage) src, Variable!(T, dim, DeviceStorage) dst, T alpha=1, T beta=0)
+{
+    // create tensor
+    auto srcDesc = src.makeCudnnTensor;
+    auto dstDesc = dst.makeCudnnTensor;
+
+    // create descriptor
+    cudnnReduceTensorDescriptor_t opDesc;
+    checkCUDNN( cudnnCreateReduceTensorDescriptor(&opDesc) );
+    scope(exit) cudnnDestroyReduceTensorDescriptor(opDesc);
+    checkCUDNN( cudnnSetReduceTensorDescriptor(
+                    opDesc, op, cudnnDataType!T, isNanProp(),
+                    CUDNN_REDUCE_TENSOR_NO_INDICES, // CUDNN_REDUCE_TENSOR_FLATTENED_INDICES for backprop?
+                    CUDNN_32BIT_INDICES // only uint is supported in cudnn7
+                    ) );
+
+    // create indices (for backprop???)
+    size_t indicesBytes;
+    checkCUDNN( cudnnGetReductionIndicesSize(cudnnHandle, opDesc, srcDesc, dstDesc, &indicesBytes) );
+    auto indices = CuPtr!uint(indicesBytes / uint.sizeof);
+
+    // create workspace
+    size_t workspaceBytes;
+    checkCUDNN( cudnnGetReductionWorkspaceSize(cudnnHandle, opDesc, srcDesc, dstDesc, &workspaceBytes) );
+    auto workspace = CuPtr!byte(workspaceBytes);
+
+    checkCUDNN( cudnnReduceTensor(
+                    cudnnHandle, opDesc,
+                    cast(void*) indices.ptr, indicesBytes,
+                    cast(void*) workspace.ptr, workspaceBytes,
+                    cast(const void*) &alpha, srcDesc, cast(const void*) srcDesc.ptr,
+                    cast(const void*) &beta, dstDesc, cast(void*) dstDesc.ptr
+                    ) );
 }

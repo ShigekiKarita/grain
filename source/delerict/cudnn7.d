@@ -73,7 +73,53 @@ private
             "const void *", "const void *", "const cudnnTensorDescriptor_t", "void *"],
         ["cudnnSetTensor", "cudnnHandle_t", "const cudnnTensorDescriptor_t", "void *", "const void *"],
         ["cudnnScaleTensor", "cudnnHandle_t", "const cudnnTensorDescriptor_t", "void *", "const void *"],
-        
+
+        ["cudnnCreateReduceTensorDescriptor",
+         "cudnnReduceTensorDescriptor_t *"],
+        ["cudnnSetReduceTensorDescriptor",
+         "cudnnReduceTensorDescriptor_t", "cudnnReduceTensorOp_t",
+         "cudnnDataType_t", "cudnnNanPropagation_t", "cudnnReduceTensorIndices_t", "cudnnIndicesType_t"],
+        ["cudnnGetReduceTensorDescriptor",
+         "const cudnnReduceTensorDescriptor_t",
+         "cudnnReduceTensorOp_t *",
+         "cudnnDataType_t *",
+         "cudnnNanPropagation_t *",
+         "cudnnReduceTensorIndices_t *",
+         "cudnnIndicesType_t *"],
+        ["cudnnDestroyReduceTensorDescriptor",
+         "cudnnReduceTensorDescriptor_t"],
+        /* Helper function to return the minimum size of the index space to be passed to the reduction given the input and output tensors */
+        ["cudnnGetReductionIndicesSize",
+         "cudnnHandle_t",
+         "cudnnReduceTensorDescriptor_t",
+         "cudnnTensorDescriptor_t",
+         "cudnnTensorDescriptor_t",
+         "size_t *"],
+        /* Helper function to return the minimum size of the workspace to be passed to the reduction given the input and output tensors */
+        ["cudnnGetReductionWorkspaceSize",
+         "cudnnHandle_t",
+         "const cudnnReduceTensorDescriptor_t",
+         "const cudnnTensorDescriptor_t",
+         "const cudnnTensorDescriptor_t",
+         "size_t *"],
+        /* Tensor operation : C = reduce op( alpha * A ) + beta * C */
+        /* The NaN propagation enum applies to only the min and max reduce ops; the other reduce ops propagate NaN as usual. */
+        /* The indices space is ignored for reduce ops other than min or max. */
+        ["cudnnReduceTensor",
+         "cudnnHandle_t",
+         "const cudnnReduceTensorDescriptor_t",
+         "void *",                             //  indices,
+         "size_t",                             //  indicesSizeInBytes,
+         "void *",                             //  workspace,
+         "size_t",                             //  workspaceSizeInBytes,
+         "const void *",                       //  alpha,
+         "const cudnnTensorDescriptor_t",      //  aDesc,
+         "const void *",                       //  A,
+         "const void *",                       //  beta,
+         "const cudnnTensorDescriptor_t",      //  cDesc,
+         "void  *"                             //  C
+            ],
+
 
         ["cudnnCreateFilterDescriptor", "cudnnFilterDescriptor_t *"],
         ["cudnnSetFilter4dDescriptor", "cudnnFilterDescriptor_t", "cudnnDataType_t", "cudnnTensorFormat_t", "int",
@@ -400,6 +446,9 @@ alias cudnnSpatialTransformerDescriptor_t = cudnnSpatialTransformerStruct*;
 struct cudnnOpTensorStruct;
 alias cudnnOpTensorDescriptor_t = cudnnOpTensorStruct*;
 
+struct cudnnReduceTensorStruct;
+alias cudnnReduceTensorDescriptor_t = cudnnReduceTensorStruct*;
+
 alias cudnnDataType_t = int;
 enum : cudnnDataType_t
 {
@@ -437,6 +486,47 @@ enum : cudnnOpTensorOp_t
     CUDNN_OP_TENSOR_MIN = 2,
     CUDNN_OP_TENSOR_MAX = 3
 }
+
+/**
+   CUDNN ReduceTensor op type
+*/
+alias cudnnReduceTensorOp_t = int;
+enum : cudnnReduceTensorOp_t
+{
+    CUDNN_REDUCE_TENSOR_ADD          = 0,
+    CUDNN_REDUCE_TENSOR_MUL          = 1,
+    CUDNN_REDUCE_TENSOR_MIN          = 2,
+    CUDNN_REDUCE_TENSOR_MAX          = 3,
+    CUDNN_REDUCE_TENSOR_AMAX         = 4,
+    CUDNN_REDUCE_TENSOR_AVG          = 5,
+    CUDNN_REDUCE_TENSOR_NORM1        = 6,
+    CUDNN_REDUCE_TENSOR_NORM2        = 7,
+    CUDNN_REDUCE_TENSOR_MUL_NO_ZEROS = 8,
+}
+
+/**
+   CUDNN ReduceTensor indices type
+*/
+alias cudnnReduceTensorIndices_t = int;
+enum : cudnnReduceTensorIndices_t
+{
+    CUDNN_REDUCE_TENSOR_NO_INDICES        = 0,
+    CUDNN_REDUCE_TENSOR_FLATTENED_INDICES = 1,
+}
+
+/**
+   CUDNN tensor indices type size (all unsigned)
+   Currently not supported, default is 32 bit unsigned.
+*/
+alias cudnnIndicesType_t = int;
+enum : cudnnIndicesType_t
+{
+    CUDNN_32BIT_INDICES = 0,
+    CUDNN_64BIT_INDICES = 1,
+    CUDNN_16BIT_INDICES = 2,
+    CUDNN_8BIT_INDICES  = 3,
+};
+
 
 alias cudnnConvolutionMode_t = int;
 enum : cudnnConvolutionMode_t

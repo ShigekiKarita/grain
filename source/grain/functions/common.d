@@ -196,8 +196,7 @@ auto broadcastable(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) a, V
 }
 
 /// expand dimension i.e. repeat n time on dim
-@nogc nothrow pure @safe
-expand(size_t dim, S)(S s, size_t n) if (isSlice!S) {
+auto expand(size_t dim, S)(S s, size_t n) if (isSlice!S) {
     import numir : Ndim;
     static assert(dim < Ndim!S, format!"acessing invalid dim %d (should be < %d)"(dim, Ndim!S));
     assert(s.length!dim == 1);
@@ -221,8 +220,7 @@ unittest {
 }
 
 /// exapand dimension if s.length!dim == 1 else do nothing but type in the same expressions of repeat/unpack/swapped/index[0]
-@nogc nothrow pure @safe
-maybeExpand(size_t dim, S)(S s, size_t n) if (isSlice!S) {
+auto maybeExpand(size_t dim, S)(S s, size_t n) if (isSlice!S) {
     import mir.ndslice;
     import mir.ndslice : repeat, swapped, transposed, unpack;
     return s.length!dim == 1 ? s.expand!dim(n) :
@@ -247,8 +245,7 @@ unittest {
    See_also:
       https://docs.scipy.org/doc/numpy-1.13.0/user/basics.broadcasting.html
 */
-@nogc nothrow pure @safe
-broadcast(S1, S2)(S1 a0, S2 b0) if (isSlice!S1 && isSlice!S2) {
+auto broadcast(S1, S2)(S1 a0, S2 b0) if (isSlice!S1 && isSlice!S2) {
     import std.format : format;
     import std.typecons : tuple;
     import numir.core : Ndim;
@@ -272,4 +269,32 @@ unittest {
     auto x = broadcast(a, b);
     assert(broadcast(a, b)[0] == a.expand!2(2));
     assert(broadcast(a, b)[1] == b.expand!1(3));
+}
+
+/// reduce slice into targetShape, TODO @nogc
+auto reduceShape(alias fun, S, size_t N)(S s0, size_t[N] targetShape) {
+    import numir;
+    import mir.ndslice;
+    import mir.math : sum;
+    import std.format : format;
+    import std.exception : assumeWontThrow; // TODO unsqueeze can be assumeWontThrow
+    auto rec(size_t n, T)(T t) {
+        static if (n == N) return t;
+        else {
+            return
+                rec!(n+1)(
+                    targetShape[n] == 1
+                    ? assumeWontThrow(t.alongDim!n.map!fun.slice.unsqueeze!n).slice
+                    : t.slice);
+        }
+    }
+    return rec!0(s0);
+}
+
+nothrow pure @safe unittest {
+    import mir.ndslice;
+    import mir.math;
+    import numir;
+    import std.exception : assumeWontThrow; // TODO unsqueeze can be assumeWontThrow
+    assert(iota(2, 3).reduceShape!sum([2, 1]) == assumeWontThrow(iota(2, 3).alongDim!1.map!sum.slice.unsqueeze!1));
 }

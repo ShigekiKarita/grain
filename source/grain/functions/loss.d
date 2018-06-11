@@ -83,7 +83,7 @@ struct NegativeLogLikelihood(F, I=long) {
             auto batchSize = targetId.shape[0];
             Global.kernel!nll
                 .call(dresult.ptr, dcount.ptr, logP.data.ptr,
-                      targetId.data.ptr, this.ignoreIndex, batchSize, this._nClass).launch(batchSize);
+                      targetId.data.ptr, this.ignoreIndex, batchSize, logP.strides[0]).launch(batchSize);
 
             F result = 0.0;
             int count = 0;

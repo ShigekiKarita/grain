@@ -14,6 +14,7 @@ import grain.autograd; //  : variable, Variable, UntypedVariable, HostStorage, D
 import grain.cuda;
 import grain.utility;
 import std.traits : isFloatingPoint;
+import std.typecons : tuple;
 import mir.ndslice : isSlice;
 import std.format : format;
 
@@ -23,7 +24,8 @@ struct OpBinary(T, size_t dim, string ops) if (isFloatingPoint!T) {
     import mir.ndslice;
     T alpha1 = 1, alpha2 = 1;
 
-    int[] shape1, shape2;
+    uint[dim] shape1, shape2;
+    Variable!(T, dim, HostStorage) ha, hb;
 
     auto forward(Variable!(T, dim, HostStorage) a, Variable!(T, dim, HostStorage) b) {
         auto info = broadcastable(a, b);
@@ -40,6 +42,8 @@ struct OpBinary(T, size_t dim, string ops) if (isFloatingPoint!T) {
         static if (ops == "+") {
             c[] += this.alpha2 * bx;
         } else static if (ops == "*") {
+            this.ha = ax.variable;
+            this.hb = bx.variable;
             c[] *= this.alpha2 * bx;
         } else {
             static assert("unknown operator: " ~ ops);
@@ -48,10 +52,33 @@ struct OpBinary(T, size_t dim, string ops) if (isFloatingPoint!T) {
     }
 
     auto backward(Variable!(T, dim, HostStorage) gc) {
+        import numir;
+        import mir.math : sum;
+        import mir.ndslice;
         static if (ops == "+") {
-            auto ga = this.alpha1 == 1 ? gc : slice(this.alpha1 * gc.sliced).variable;
-            auto gb = this.alpha2 == 1 ? gc : slice(this.alpha2 * gc.sliced).variable;
-            return tuple(ga, gb);
+            auto ga = this.alpha1 == 1 ? gc.sliced.slice.universal : slice(this.alpha1 * gc.sliced).universal;
+            if (ga.shape != this.shape1) {
+                ga = reduceShape!(sum!"fast")(ga, this.shape1.castArray!size_t).universal;
+            }
+            auto gb = this.alpha2 == 1 ? gc.sliced.slice.universal : slice(this.alpha2 * gc.sliced).universal;
+            if (gb.shape != this.shape2) {
+                gb = reduceShape!(sum!"fast")(gb, this.shape2.castArray!size_t).universal;
+            }
+            return tuple(ga.variable, gb.variable);
+        } else static if (ops == "*") {
+            assert(this.ha.defined);
+            assert(this.hb.defined);
+            auto ga = gc.sliced.slice.universal;
+            ga[] *= this.alpha1 * this.alpha2 * this.hb.sliced;
+            if (ga.shape != this.shape1) {
+                ga = reduceShape!(sum!"fast")(ga, this.shape1.castArray!size_t).universal;
+            }
+            auto gb = gc.sliced.slice.universal;
+            gb[] *= this.alpha1 * this.alpha2 * this.ha.sliced;
+            if (gb.shape != this.shape2) {
+                gb = reduceShape!(sum!"fast")(gb, this.shape2.castArray!size_t).universal;
+            }
+            return tuple(ga.variable, gb.variable);
         } else {
             static assert("unknown operator: " ~ ops);
         }
@@ -70,35 +97,115 @@ struct OpBinary(T, size_t dim, string ops) if (isFloatingPoint!T) {
             ];
 
         static if (opBinaryDict.keys.find(ops)) {
+            static if (ops == "*") {
+                Variable!(T, dim, DeviceStorage) da, db;
+            }
+
             auto forward(Variable!(T, dim, DeviceStorage) a, Variable!(T, dim, DeviceStorage) b) {
-                assert(broadcastable(a, b).ok);
+                // TODO implement non-cudnn case
+                foreach (d; 0 .. dim) {
+                    assert(a.shape[d] == b.shape[d] || b.shape[d] == 1,
+                           "cuDNN does not support complete broadcasting");
+                }
                 // TODO if train
                 this.shape1 = a.shape;
                 this.shape2 = b.shape;
+                static if (ops == "*") {
+                    this.da = a;
+                    this.db = b;
+                }
 
-                // TODO move to grain.cudnn to support beta
-                T beta = 0;
-                auto c = a.empty;
+                auto c = a.uninit;
                 c.requiresGrad = a.requiresGrad || b.requiresGrad;
-                cudnnOpTensorDescriptor_t opDisc;
-                cudnnCreateOpTensorDescriptor(&opDisc);
-                scope(exit) cudnnDestroyOpTensorDescriptor(opDisc);
-                cudnnSetOpTensorDescriptor(opDisc, opBinaryDict[ops], cudnnDataType!T, isNanProp());
-                cudnnOpTensor(cudnnHandle, opDisc,
-                              &this.alpha1, a.makeCudnnTensor, cast(const void*) a.data.ptr,
-                              &this.alpha2, b.makeCudnnTensor, cast(const void*) b.data.ptr,
-                              &beta, c.makeCudnnTensor, cast(void*) c.data.ptr);
+                import grain.cudnn;
+                tensorOp!(opBinaryDict[ops], T, dim)(c, a, b, this.alpha1, this.alpha2);
                 return c;
             }
         } else {
             static assert("unknown operator: " ~ ops);
         }
+
+        static if (ops == "+") {
+            auto backward(Variable!(T, dim, DeviceStorage) gc) {
+                Variable!(T, dim, DeviceStorage) ga, gb;
+                if (this.shape1 == gc.shape) {
+                    ga = gc.dup;
+                    if (this.alpha1 != 1.0) grain.cudnn.scale(ga, this.alpha1);
+                } else {
+                    ga = uninitVariable!(T, DeviceStorage)(this.shape1);
+                    grain.cudnn.reduce!CUDNN_REDUCE_TENSOR_ADD(gc, ga, this.alpha1);
+                }
+
+                if (this.shape2 == gc.shape) {
+                    gb = gc.dup;
+                    if (this.alpha2 != 1.0) grain.cudnn.scale(gb, this.alpha2);
+                } else {
+                    gb = uninitVariable!(T, DeviceStorage)(this.shape2);
+                    grain.cudnn.reduce!CUDNN_REDUCE_TENSOR_ADD(gc, gb, this.alpha2);
+                }
+                return tuple(ga, gb);
+            }
+        } else static if (ops == "*") {
+            auto backward(Variable!(T, dim, DeviceStorage) gc) {
+                auto gax = uninitVariable!(T, DeviceStorage)(gc.shape);
+                auto gbx = uninitVariable!(T, DeviceStorage)(gc.shape);
+                auto alpha = this.alpha1 * this.alpha2;
+                grain.cudnn.tensorOp!CUDNN_OP_TENSOR_MUL(gax, gc, this.db, alpha);
+                grain.cudnn.tensorOp!CUDNN_OP_TENSOR_MUL(gbx, gc, this.da, alpha);
+
+                Variable!(T, dim, DeviceStorage) ga, gb;
+                if (this.shape1 == gc.shape) {
+                    ga = gax;
+                } else {
+                    ga = uninitVariable!(T, DeviceStorage)(this.shape1);
+                    grain.cudnn.reduce!CUDNN_REDUCE_TENSOR_ADD(gax, ga);
+                }
+
+                if (this.shape2 == gc.shape) {
+                    gb = gbx;
+                } else {
+                    gb = uninitVariable!(T, DeviceStorage)(this.shape2);
+                    grain.cudnn.reduce!CUDNN_REDUCE_TENSOR_ADD(gbx, gb);
+                }
+                return tuple(ga, gb);
+            }
+        }
     }
 }
 
+///
 unittest {
-    foreach (i; [2]) {
-        foreach (j; [2]) {
+    static foreach (op; ["+", "*"]) {
+        foreach (j; [1, 2]) {
+            import std.typecons : tuple;
+            import numir : uniform, approxEqual;
+            import mir.ndslice : slice;
+            import grain.testing;
+
+            auto a = uniform!float(3, 2).slice.variable;
+            auto b = uniform!float(3, j).slice.variable;
+            auto gc = uniform!float(3, 2).slice.variable;
+            auto func = OpBinary!(float, 2, op)(1, 2);
+            gradCheck(func, tuple(a, b), gc);
+
+            auto c = func.forward(a, b);
+            auto gab = func.backward(gc);
+            version (grain_cuda) {
+                auto dfunc = OpBinary!(float, 2, op)(1, 2);
+                auto dc = dfunc.forward(a.to!DeviceStorage, b.to!DeviceStorage);
+                assert(approxEqual(dc.to!HostStorage.sliced, c.sliced));
+                auto dgab = dfunc.backward(gc.to!DeviceStorage);
+                assert(approxEqual(dgab[0].to!HostStorage.sliced, gab[0].sliced));
+                assert(approxEqual(dgab[1].to!HostStorage.sliced, gab[1].sliced));
+            }
+        }
+    }
+}
+
+///
+unittest {
+    foreach (i; [1, 2]) {
+        foreach (j; [1, 2]) {
             import std.typecons : tuple;
             import numir : uniform;
             import mir.ndslice : slice;
@@ -107,11 +214,12 @@ unittest {
             auto a = uniform!float(i, 2).slice.variable;
             auto b = uniform!float(2, j).slice.variable;
             auto gc = uniform!float(2, 2).slice.variable;
-            OpBinary!(float, 2, "+") func;
-            gradCheck(func, tuple(a, b), gc, 1e-2);
+            auto func = OpBinary!(float, 2, "*")(1, 2);
+            gradCheck(func, tuple(a, b), gc);
         }
     }
 }
+
 
 /// a and b have the same shape
 unittest {
@@ -124,7 +232,8 @@ unittest {
     assert(hc.sliced == [[-1.0f, 10.0f, 3.0f], [6.0f, 9.0f, 9.0f]]);
 
     version (grain_cuda) {
-        auto dc = plus.forward(a.to!DeviceStorage, b.to!DeviceStorage);
+        auto dplus = OpBinary!(float, 2, "+")(1.0f, 2.0f);
+        auto dc = dplus.forward(a.to!DeviceStorage, b.to!DeviceStorage);
         assert(dc.to!HostStorage.sliced == [[-1.0f, 10.0f, 3.0f], [6.0f, 9.0f, 9.0f]]);
     }
 }

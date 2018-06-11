@@ -32,14 +32,14 @@ version (grain_cuda) {
         auto forward(Variable!(T, dim, DeviceStorage) x) {
             // FIXME if train
             this.dx = x.dup;
-            auto y = x.empty; // TODO create empty_like
+            auto y = x.uninit;
             activationForward!mode(x, y);
             this.dy = y;
             return y;
         }
         ///
         auto backward(Variable!(T, dim, DeviceStorage) gy) {
-            auto gx = gy.empty; // TODO: create empty_like
+            auto gx = gy.uninit;
             activationBackward!mode(gx, gy, this.dx, this.dy);
             return gx;
         }
@@ -208,7 +208,7 @@ struct ReLU(T, size_t dim) {
         }
 
         auto backward(Variable!(T, dim, DeviceStorage) gy) {
-            auto gx = gy.dup; // TODO: create empty
+            auto gx = gy.uninit;
             if (this.useCuDNN) {
                 activationBackward!CUDNN_ACTIVATION_RELU(gx, gy, dx, dy);
             } else {

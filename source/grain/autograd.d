@@ -40,14 +40,36 @@ unittest {
 
 
 /// create new variable with uninitialized array and the same shape/strides to v on CPU
-auto empty(T, size_t dim)(Variable!(T, dim, HostStorage) v) {
+auto uninit(T, size_t dim)(Variable!(T, dim, HostStorage) v) {
     RefCounted!(T[]) data = new T[v.length];
     return Variable!(T, dim, HostStorage)(v.requiresGrad, v.shape, v.strides, data);
 }
 
+/// create new variable with uninitialized array of shape on CPU/CUDA
+auto uninitVariable(T, alias S = HostStorage, size_t dim)(uint[dim] shape, bool requiresGrad = false) {
+    import std.algorithm :reduce;
+    const length = shape.reduce!"a * b";
+    static if (is(S!T == HostStorage!T)) {
+        RefCounted!(T[]) data = new T[length];
+    }
+    version(grain_cuda) {
+        static if (is(S!T == DeviceStorage!T)) {
+            RefCounted!(CuPtr!T) data = CuPtr!T(length);
+        }
+    }
+    int[dim] strides;
+    foreach (i; 0 .. dim-1) {
+        assert(shape[i+1] < int.max);
+        strides[i] = cast(int) shape[i+1];
+    }
+    strides[dim-1] = 1;
+    return Variable!(T, dim, S)(requiresGrad, shape, strides, data);
+}
+
+
 version(grain_cuda) {
     /// create new variable with uninitialized array and the same shape/strides to v on CUDA
-    auto empty(T, size_t dim)(Variable!(T, dim, DeviceStorage) v) {
+    auto uninit(T, size_t dim)(Variable!(T, dim, DeviceStorage) v) {
         RefCounted!(CuPtr!T) data = CuPtr!T(v.length);
         return Variable!(T, dim, DeviceStorage)(v.requiresGrad, v.shape, v.strides, data);
     }
@@ -91,7 +113,7 @@ struct UntypedVariable {
     bool requiresGrad;
     size_t dim;
     // size_t[]
-    int[] shape;
+    uint[] shape;
     // ptrdiff_t[]
     int[] strides;
     TypeInfo elem;
@@ -193,7 +215,7 @@ unittest {
 struct Variable(T, size_t dim, alias Storage = HostStorage) {
     bool requiresGrad = true;
     // size_t[dim]
-    int[dim] shape;
+    uint[dim] shape;
     // ptrdiff_t[dim]
     int[dim] strides;
     RefCounted!(Storage!T) data;
@@ -202,7 +224,7 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
     BackProp bprop;
     enum isHost = is(Storage!T == HostStorage!T);
 
-    this(bool requiresGrad, int[dim] shape, int[dim] strides, RefCounted!(Storage!T) data) {
+    this(bool requiresGrad, uint[dim] shape, int[dim] strides, RefCounted!(Storage!T) data) {
         this.requiresGrad = requiresGrad;
         this.shape = shape;
         this.strides = strides;
@@ -324,11 +346,12 @@ auto variable(Sl)(Sl sl, bool requiresGrad = false) if (isSlice!Sl) {
     alias E = DeepElementType!S;
     auto size = s._lengths.reduce!"a * b";
     RefCounted!(E[]) data = s._iterator[0..size];
-    int[Ndim!S] shape, strides;
+    uint[Ndim!S] shape;
+    int[Ndim!S] strides;
     static foreach (i; 0 .. Ndim!S) {
         assert(s._lengths[i] < int.max);
         assert(s._strides[i] < int.max);
-        shape[i] = cast(int) s.length!i;
+        shape[i] = cast(uint) s.length!i;
         strides[i] = cast(int) s._strides[i];
     }
     return Variable!(E, Ndim!S, HostStorage)(
