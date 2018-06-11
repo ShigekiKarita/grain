@@ -434,6 +434,7 @@ unittest {
     }
 }
 
+
 /// wrapper of CUDA kernel unary functions
 void unaryFunc(alias K, size_t dim)(Variable!(float, dim, DeviceStorage) x) {
     auto shape = CuPtr!uint(x.shape[0..$]);
@@ -575,8 +576,15 @@ unittest {
     }
 }
 
-
+// TODO implement these autograd fast-math functions
 // struct Log
 // struct Log2
 // struct Log10
-// exp
+
+// struct Exp
+// struct Exp2
+// struct Exp10
+
+// struct Sin
+// struct Cos
+// struct Tan

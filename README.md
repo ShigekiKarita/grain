@@ -24,7 +24,7 @@ $ dub --config=example-mnist -b=release      # without cuda
 it results as following (may take several seconds without cuda)
 
 ```
-Running ./grain-example-mnist 
+Running ./grain-example-mnist
 loading data/train-images-idx3-ubyte.gz
 loading data/train-labels-idx1-ubyte.gz
 loading data/t10k-images-idx3-ubyte.gz
@@ -81,5 +81,4 @@ sorted by higher priority for me
 - multi GPU
 - curand wrappers
 - statically linked kernel module instead of ptx string
-
-
+- double backward (implement Function.backward with Chain)
