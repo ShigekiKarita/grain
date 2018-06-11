@@ -61,3 +61,6 @@ nothrow @nogc extern(C++):
 @kernel void addBias(float* y, const float* b, uint blen, uint ylen);
 
 @kernel void addBiasGrad(const float* gy, float* gb, uint blen, uint ylen);
+
+
+@kernel void reciprocal(float* x, uint len, uint ndim, const uint* shape, const uint* strides);

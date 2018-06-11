@@ -82,7 +82,7 @@ template <typename T>
 struct linear_index_to_row_index : public thrust::unary_function<T,T>
 {
   T C; // number of columns
-  
+
   __host__ __device__
   linear_index_to_row_index(T C) : C(C) {}
 
@@ -98,7 +98,7 @@ template <typename T>
 struct linear_index_to_col_index : public thrust::unary_function<T,T>
 {
   T C; // number of columns
-  
+
   __host__ __device__
   linear_index_to_col_index(T C) : C(C) {}
 
@@ -128,4 +128,23 @@ GRAIN_GLOBAL void addBiasGrad(const float* gy, float* gb, uint blen, uint ylen) 
     //      thrust::device_ptr<float>(gb), // values_output
     //      thrust::equal_to<I>(), // binary_pred
     //      thrust::plus<float>()); // binary_o
+}
+
+// x[i0, i1, ..., iN-1] = x[i0 * strides[N-1] + i1 * strides[N-2] + ... + iN-1 * strides[0]]
+__device__ uint indexof(uint i, uint ndim, const uint* shape, const uint* strides) {
+    uint idx = i;
+    uint pos = 0;
+    for (int d = ndim - 1; d >= 0; --d) {
+        pos += (idx % shape[d]) * strides[d];
+        idx /= shape[d];
+    }
+    return pos;
+}
+
+GRAIN_GLOBAL void reciprocal(float* x, uint len, uint ndim, const uint* shape, const uint* strides) {
+    uint pos;
+    GRAIN_PARALLEL_FOR(i, len) {
+        pos = indexof(i, ndim, shape, strides);
+        x[pos] = 1.0f / x[pos];
+    }
 }
