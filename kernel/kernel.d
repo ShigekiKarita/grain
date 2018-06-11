@@ -70,6 +70,7 @@ nothrow @nogc extern(C++):
 @kernel void log10(float* x, uint len, uint ndim, const uint* shape, const uint* strides);
 
 @kernel void exp(float* x, uint len, uint ndim, const uint* shape, const uint* strides);
+@kernel void exp2(float* x, uint len, uint ndim, const uint* shape, const uint* strides);
 @kernel void exp10(float* x, uint len, uint ndim, const uint* shape, const uint* strides);
 
 @kernel void sin(float* x, uint len, uint ndim, const uint* shape, const uint* strides);

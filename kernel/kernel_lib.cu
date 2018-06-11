@@ -169,6 +169,7 @@ GRAIN_ND_EACH(log2, log2f)
 GRAIN_ND_EACH(log10, log10f)
 
 GRAIN_ND_EACH(exp, expf)
+GRAIN_ND_EACH(exp2, exp2f)
 GRAIN_ND_EACH(exp10, exp10f)
 
 GRAIN_ND_EACH(cos, cosf)

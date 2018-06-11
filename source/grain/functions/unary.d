@@ -453,15 +453,22 @@ version (grain_cuda) unittest {
     assert(x.to!HostStorage.sliced == [[1f,1f/2f,1f/3f], [1f/4f,1f/5f,1f/6f]]);
 }
 
-/// test log kernel
+/**
+   test math function kernels. these functions are available in mir.math (as LDC intrinsic) or CUDA fast math
+
+   See_also:
+   - http://mir.dlang.io/mir_math_common.html
+   - https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#intrinsic-functions
+*/
 version (grain_cuda) unittest {
     // FIXME mir.math.log will exit 1
-    import std.math : log, log2, log10, exp, cos, sin, tan;
-    import grain.kernel : log, log2, log10, exp, cos, sin, tan;
+    import std.math : log, tan; // , log2, log10, exp, exp2, cos, sin, tan;
+    import mir.math : log2, log10, exp, exp2, cos, sin;
+    import grain.kernel : log, log2, log10, exp, exp2, cos, sin, tan;
     import std.format : format;
     import numir : approxEqual;
     import mir.ndslice : iota, as, slice, map;
-    static foreach (name; ["log", "log2", "log10", "exp", "cos", "sin", "tan"]) {
+    static foreach (name; ["log", "log2", "log10", "exp", "exp2", "cos", "sin", "tan"]) {
         {
             auto x = iota([2, 3], 1).as!float.slice.variable.to!DeviceStorage;
             mixin(format!q{  unaryFunc!(grain.kernel.%s)(x);  }(name));
@@ -494,3 +501,14 @@ version (grain_cuda) unittest {
     assert(approxEqual(x.to!HostStorage.sliced,
                        iota([2, 3], 1).as!float.map!(x => pow(x, 2))));
 }
+
+
+/// y = 1 / x
+struct Reciprocal(T, size_t dim) {
+
+}
+
+// struct Log
+// struct Log2
+// struct Log10
+// exp
