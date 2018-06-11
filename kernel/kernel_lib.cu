@@ -141,29 +141,44 @@ __device__ uint indexof(uint i, uint ndim, const uint* shape, const uint* stride
     return pos;
 }
 
-/// TODO generalize this nd map function
+/// TODO generalize this nd map function with template
+/// TODO define all math functions in CUDA
+/// https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#mathematical-functions-appendix
 
+#define GRAIN_ND_EACH(name, func)                                       \
+    GRAIN_GLOBAL void name(float* x, uint len, uint ndim, const uint* shape, const uint* strides) { \
+        uint idx;                                                       \
+        GRAIN_PARALLEL_FOR(i, len) {                                    \
+            idx = indexof(i, ndim, shape, strides);                     \
+            x[idx] = func(x[idx]);                                      \
+        }                                                               \
+    }
+
+
+// fast-math functions https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#intrinsic-functions
 GRAIN_GLOBAL void reciprocal(float* x, uint len, uint ndim, const uint* shape, const uint* strides) {
-    uint pos;
+    uint idx;
     GRAIN_PARALLEL_FOR(i, len) {
-        pos = indexof(i, ndim, shape, strides);
-        x[pos] = 1.0f / x[pos];
+        idx = indexof(i, ndim, shape, strides);
+        x[idx] = 1.0f / x[idx];
     }
 }
 
+GRAIN_ND_EACH(log, logf)
+GRAIN_ND_EACH(log2, log2f)
+GRAIN_ND_EACH(log10, log10f)
 
-GRAIN_GLOBAL void log(float* x, uint len, uint ndim, const uint* shape, const uint* strides) {
-    uint pos;
-    GRAIN_PARALLEL_FOR(i, len) {
-        pos = indexof(i, ndim, shape, strides);
-        x[pos] = log(x[pos]);
-    }
-}
+GRAIN_ND_EACH(exp, expf)
+GRAIN_ND_EACH(exp10, exp10f)
 
-GRAIN_GLOBAL void exp(float* x, uint len, uint ndim, const uint* shape, const uint* strides) {
-    uint pos;
+GRAIN_ND_EACH(cos, cosf)
+GRAIN_ND_EACH(sin, sinf)
+GRAIN_ND_EACH(tan, tanf)
+
+GRAIN_GLOBAL void pow(float power, float* x, uint len, uint ndim, const uint* shape, const uint* strides) {
+    uint idx;
     GRAIN_PARALLEL_FOR(i, len) {
-        pos = indexof(i, ndim, shape, strides);
-        x[pos] = exp(x[pos]);
+        idx = indexof(i, ndim, shape, strides);
+        x[idx] = powf(x[idx], power);
     }
 }

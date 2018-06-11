@@ -66,5 +66,14 @@ nothrow @nogc extern(C++):
 @kernel void reciprocal(float* x, uint len, uint ndim, const uint* shape, const uint* strides);
 
 @kernel void log(float* x, uint len, uint ndim, const uint* shape, const uint* strides);
+@kernel void log2(float* x, uint len, uint ndim, const uint* shape, const uint* strides);
+@kernel void log10(float* x, uint len, uint ndim, const uint* shape, const uint* strides);
 
 @kernel void exp(float* x, uint len, uint ndim, const uint* shape, const uint* strides);
+@kernel void exp10(float* x, uint len, uint ndim, const uint* shape, const uint* strides);
+
+@kernel void sin(float* x, uint len, uint ndim, const uint* shape, const uint* strides);
+@kernel void cos(float* x, uint len, uint ndim, const uint* shape, const uint* strides);
+@kernel void tan(float* x, uint len, uint ndim, const uint* shape, const uint* strides);
+
+@kernel void pow(float power, float* x, uint len, uint ndim, const uint* shape, const uint* strides);

@@ -434,48 +434,63 @@ unittest {
     }
 }
 
+/// wrapper of CUDA kernel unary functions
+void unaryFunc(alias K, size_t dim)(Variable!(float, dim, DeviceStorage) x) {
+    auto shape = CuPtr!uint(x.shape[0..$]);
+    auto strides = CuPtr!int(x.strides[0..$]);
+    auto ndim = cast(uint) dim;
+    auto len = cast(uint) x.data.length;
+    Global.kernel!K
+        .call(x.data.ptr, len, ndim, shape.ptr, strides.ptr)
+        .launch(len);
+}
+
 /// test reciprocal kernel
 version (grain_cuda) unittest {
     import grain.kernel;
     auto x = [[1f, 2f, 3f], [4f, 5f, 6f]].variable.to!DeviceStorage;
-    auto shape = CuPtr!uint(x.shape[0..$]);
-    auto strides = CuPtr!int(x.strides[0..$]);
-    auto ndim = 2;
-    auto len = cast(uint) x.data.length;
-    Global.kernel!reciprocal
-        .call(x.data.ptr, len, ndim, shape.ptr, strides.ptr)
-        .launch(len);
+    unaryFunc!reciprocal(x);
     assert(x.to!HostStorage.sliced == [[1f,1f/2f,1f/3f], [1f/4f,1f/5f,1f/6f]]);
 }
 
-
 /// test log kernel
 version (grain_cuda) unittest {
-    import grain.kernel;
-    auto x = [[1f, 2f, 3f], [4f, 5f, 6f]].variable.to!DeviceStorage;
-    auto shape = CuPtr!uint(x.shape[0..$]);
-    auto strides = CuPtr!int(x.strides[0..$]);
-    auto ndim = 2;
-    auto len = cast(uint) x.data.length;
-    Global.kernel!log
-        .call(x.data.ptr, len, ndim, shape.ptr, strides.ptr)
-        .launch(len);
-    import mir.math;
-    assert(x.to!HostStorage.sliced == [[log(1f),log(2f),log(3f)], [log(4f),log(5f),log(6f)]]);
+    // FIXME mir.math.log will exit 1
+    import std.math : log, log2, log10, exp, cos, sin, tan;
+    import grain.kernel : log, log2, log10, exp, cos, sin, tan;
+    import std.format : format;
+    import numir : approxEqual;
+    import mir.ndslice : iota, as, slice, map;
+    static foreach (name; ["log", "log2", "log10", "exp", "cos", "sin", "tan"]) {
+        {
+            auto x = iota([2, 3], 1).as!float.slice.variable.to!DeviceStorage;
+            mixin(format!q{  unaryFunc!(grain.kernel.%s)(x);  }(name));
+            mixin(format!q{  alias func = %s;  }(name));
+            assert(approxEqual(x.to!HostStorage.sliced, iota([2, 3], 1).as!float.map!func));
+        }
+    }
 }
 
-
-/// test exp kernel
-version (grain_cuda) unittest {
-    import grain.kernel;
-    auto x = [[1f, 2f, 3f], [4f, 5f, 6f]].variable.to!DeviceStorage;
+/// wrapper of CUDA kernel pow function
+void unaryPow(size_t dim)(Variable!(float, dim, DeviceStorage) x, float power) {
+    import grain.kernel : pow;
     auto shape = CuPtr!uint(x.shape[0..$]);
     auto strides = CuPtr!int(x.strides[0..$]);
-    auto ndim = 2;
+    auto ndim = cast(uint) dim;
     auto len = cast(uint) x.data.length;
-    Global.kernel!exp
-        .call(x.data.ptr, len, ndim, shape.ptr, strides.ptr)
+    Global.kernel!pow
+        .call(power, x.data.ptr, len, ndim, shape.ptr, strides.ptr)
         .launch(len);
-    import mir.math;
-    assert(x.to!HostStorage.sliced == [[exp(1f),exp(2f),exp(3f)], [exp(4f),exp(5f),exp(6f)]]);
+}
+
+/// test pow kernel
+version (grain_cuda) unittest {
+    import numir;
+    import mir.ndslice;
+    import grain.kernel;
+    import mir.math : pow;
+    auto x = iota([2, 3], 1).as!float.slice.variable.to!DeviceStorage;
+    unaryPow(x, 2f);
+    assert(approxEqual(x.to!HostStorage.sliced,
+                       iota([2, 3], 1).as!float.map!(x => pow(x, 2))));
 }
