@@ -64,3 +64,7 @@ nothrow @nogc extern(C++):
 
 
 @kernel void reciprocal(float* x, uint len, uint ndim, const uint* shape, const uint* strides);
+
+@kernel void log(float* x, uint len, uint ndim, const uint* shape, const uint* strides);
+
+@kernel void exp(float* x, uint len, uint ndim, const uint* shape, const uint* strides);

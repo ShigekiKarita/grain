@@ -141,10 +141,29 @@ __device__ uint indexof(uint i, uint ndim, const uint* shape, const uint* stride
     return pos;
 }
 
+/// TODO generalize this nd map function
+
 GRAIN_GLOBAL void reciprocal(float* x, uint len, uint ndim, const uint* shape, const uint* strides) {
     uint pos;
     GRAIN_PARALLEL_FOR(i, len) {
         pos = indexof(i, ndim, shape, strides);
         x[pos] = 1.0f / x[pos];
+    }
+}
+
+
+GRAIN_GLOBAL void log(float* x, uint len, uint ndim, const uint* shape, const uint* strides) {
+    uint pos;
+    GRAIN_PARALLEL_FOR(i, len) {
+        pos = indexof(i, ndim, shape, strides);
+        x[pos] = log(x[pos]);
+    }
+}
+
+GRAIN_GLOBAL void exp(float* x, uint len, uint ndim, const uint* shape, const uint* strides) {
+    uint pos;
+    GRAIN_PARALLEL_FOR(i, len) {
+        pos = indexof(i, ndim, shape, strides);
+        x[pos] = exp(x[pos]);
     }
 }

@@ -434,7 +434,7 @@ unittest {
     }
 }
 
-
+/// test reciprocal kernel
 version (grain_cuda) unittest {
     import grain.kernel;
     auto x = [[1f, 2f, 3f], [4f, 5f, 6f]].variable.to!DeviceStorage;
@@ -446,4 +446,36 @@ version (grain_cuda) unittest {
         .call(x.data.ptr, len, ndim, shape.ptr, strides.ptr)
         .launch(len);
     assert(x.to!HostStorage.sliced == [[1f,1f/2f,1f/3f], [1f/4f,1f/5f,1f/6f]]);
+}
+
+
+/// test log kernel
+version (grain_cuda) unittest {
+    import grain.kernel;
+    auto x = [[1f, 2f, 3f], [4f, 5f, 6f]].variable.to!DeviceStorage;
+    auto shape = CuPtr!uint(x.shape[0..$]);
+    auto strides = CuPtr!int(x.strides[0..$]);
+    auto ndim = 2;
+    auto len = cast(uint) x.data.length;
+    Global.kernel!log
+        .call(x.data.ptr, len, ndim, shape.ptr, strides.ptr)
+        .launch(len);
+    import mir.math;
+    assert(x.to!HostStorage.sliced == [[log(1f),log(2f),log(3f)], [log(4f),log(5f),log(6f)]]);
+}
+
+
+/// test exp kernel
+version (grain_cuda) unittest {
+    import grain.kernel;
+    auto x = [[1f, 2f, 3f], [4f, 5f, 6f]].variable.to!DeviceStorage;
+    auto shape = CuPtr!uint(x.shape[0..$]);
+    auto strides = CuPtr!int(x.strides[0..$]);
+    auto ndim = 2;
+    auto len = cast(uint) x.data.length;
+    Global.kernel!exp
+        .call(x.data.ptr, len, ndim, shape.ptr, strides.ptr)
+        .launch(len);
+    import mir.math;
+    assert(x.to!HostStorage.sliced == [[exp(1f),exp(2f),exp(3f)], [exp(4f),exp(5f),exp(6f)]]);
 }
