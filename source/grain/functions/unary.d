@@ -863,8 +863,75 @@ unittest {
     }
 }
 
+/// y = tan x
+struct Tan(T, size_t dim) {
+    import mir.ndslice : slice, map, as;
 
-// struct Tan
+    mixin FunctionCommon;
+
+    Variable!(T, dim, HostStorage) hx;
+
+    auto forward(Variable!(T, dim, HostStorage) x) {
+        import std.math : tan;
+        auto y = slice(x.sliced.map!tan.as!T).variable(x.requiresGrad);
+        this.hx = x; // TODO if train
+        return y;
+    }
+
+    auto backward(Variable!(T, dim, HostStorage) gy) {
+        import mir.math.common : cos;
+        auto gx = gy.dup;
+        auto c = this.hx.sliced.map!cos.map!"a * a";
+        gx.sliced[] /= c;
+        return gx;
+    }
+
+    version (grain_cuda) {
+        Variable!(T, dim, DeviceStorage) dx;
+
+        auto forward(Variable!(T, dim, DeviceStorage) x) {
+            import grain.kernel : tan;
+            auto y = x.dup;
+            unaryFunc!tan(y);
+            this.dx = x;
+            return y;
+        }
+
+        auto backward(Variable!(T, dim, DeviceStorage) gy) {
+            import grain.cudnn;
+            import grain.kernel : cos;
+            auto gx = this.dx.dup;
+            unaryFunc!cos(gx);
+            tensorOp!CUDNN_OP_TENSOR_MUL(gx, gx, gx); // cos^2 x
+            return gy / gx;
+        }
+    }
+}
+
+///
+unittest {
+    import grain.testing;
+    import std.typecons;
+    import numir;
+    import mir.ndslice;
+    import std.math : tan;
+
+    Tan!(float, 2) hfunc;
+    auto hx = uniform!float(2, 3).slice.variable;
+    auto hy = hfunc.forward(hx);
+    auto hgy = uniform!float(2, 3).slice.variable;
+    auto hgx = hfunc.backward(hgy);
+    gradCheck(hfunc, hx, hgy);
+    assert(approxEqual(hy.sliced, hx.sliced.map!tan));
+
+    version (grain_cuda) {
+        Tan!(float, 2) dfunc;
+        auto dy = dfunc.forward(hx.to!DeviceStorage);
+        assert(approxEqual(dy.to!HostStorage.sliced, hy.sliced));
+        auto dgx = dfunc.backward(hgy.to!DeviceStorage);
+        assert(approxEqual(dgx.to!HostStorage.sliced, hgx.sliced));
+    }
+}
 
 
 /// y = alpha * x

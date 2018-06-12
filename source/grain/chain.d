@@ -116,6 +116,13 @@ auto cos(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
     return func.applyForward(x);
 }
 
+/// tan x
+auto tan(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
+    import grain.functions.unary : Tan;
+    auto func = new Tan!(T, dim);
+    return func.applyForward(x);
+}
+
 
 /// test fast math functions
 unittest {
@@ -123,7 +130,7 @@ unittest {
     import numir;
     import mir.ndslice;
     import std.meta;
-    foreach (f; AliasSeq!(sigmoid, tanh, reciprocal, neg, exp, log, sin, cos)) {
+    foreach (f; AliasSeq!(sigmoid, tanh, reciprocal, neg, exp, log, sin, cos, tan)) {
         auto hx = uniform!float(2, 3).slice.variable(true);
         auto hgy = uniform!float(2, 3).slice.variable;
         gradCheckChain!f(hx, hgy, 1e-3, 1e-2, 1e-2);
