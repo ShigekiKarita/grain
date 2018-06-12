@@ -81,4 +81,5 @@ sorted by higher priority for me
 - multi GPU
 - curand wrappers
 - statically linked kernel module instead of ptx string
+- dmd support
 - double backward (implement Function.backward with Chain)

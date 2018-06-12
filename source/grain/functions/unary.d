@@ -66,8 +66,10 @@ struct Sigmoid(T, size_t dim) {
 
     ///
     auto backward(Variable!(T, dim, HostStorage) gy) {
-        auto gx = gy.sliced * this.hy.sliced * (T(1.0) - this.hy.sliced);
-        return gx.slice.variable;
+        auto gx = this.hy.dup;
+        gx.sliced[] *= T(1) - this.hy.sliced;
+        gx.sliced[] *= gy.sliced;
+        return gx;
     }
 
     version (grain_cuda) {
@@ -122,8 +124,11 @@ struct Tanh(T, size_t dim) {
 
     ///
     auto backward(Variable!(T, dim, HostStorage) gy) {
-        auto gx = gy.sliced * (T(1.0) - this.hy.sliced * this.hy.sliced);
-        return gx.slice.variable;
+        auto gx = this.hy.dup;
+        gx.sliced[] *= gx.sliced; // hy ^^ 2
+        gx.sliced[] = T(1.0) - gx.sliced;
+        gx.sliced[] *= gy.sliced;
+        return gx; // .slice.variable;
     }
 
     version (grain_cuda) {
@@ -585,8 +590,70 @@ unittest {
     }
 }
 
+/// y = exp x
+struct Exp(T, size_t dim) {
+    import mir.ndslice : slice, map;
+
+    mixin FunctionCommon;
+
+    Variable!(T, dim, HostStorage) hy;
+
+    auto forward(Variable!(T, dim, HostStorage) x) {
+        import mir.math.common : exp;
+        auto y = slice(x.sliced.map!exp).variable(x.requiresGrad);
+        this.hy = y; // TODO if train
+        return y;
+    }
+
+    auto backward(Variable!(T, dim, HostStorage) gy) {
+        auto gx = gy.dup;
+        gx.sliced[] *= this.hy.sliced;
+        return gx;
+    }
+
+    version (grain_cuda) {
+        Variable!(T, dim, DeviceStorage) dy;
+
+        auto forward(Variable!(T, dim, DeviceStorage) x) {
+            import grain.kernel : exp;
+            auto y = x.dup;
+            unaryFunc!exp(y);
+            this.dy = y;
+            return y;
+        }
+
+        auto backward(Variable!(T, dim, DeviceStorage) gy) {
+            return this.dy * gy;
+        }
+    }
+}
+
+/// test fast math functions
+unittest {
+    import grain.testing;
+    import std.typecons;
+    import numir;
+    import mir.ndslice;
+    import mir.math : exp;
+
+    Exp!(float, 2) hfunc;
+    auto hx = uniform!float(2, 3).slice.variable;
+    auto hy = hfunc.forward(hx);
+    auto hgy = uniform!float(2, 3).slice.variable;
+    auto hgx = hfunc.backward(hgy);
+    gradCheck(hfunc, hx, hgy);
+    assert(approxEqual(hy.sliced, hx.sliced.map!exp));
+
+    version (grain_cuda) {
+        Exp!(float, 2) dfunc;
+        auto dy = dfunc.forward(hx.to!DeviceStorage);
+        assert(approxEqual(dy.to!HostStorage.sliced, hy.sliced));
+        auto dgx = dfunc.backward(hgy.to!DeviceStorage);
+        assert(approxEqual(dgx.to!HostStorage.sliced, hgx.sliced));
+    }
+}
+
 // TODO implement these autograd fast-math functions
-// struct Log
 // struct Log2
 // struct Log10
 
@@ -633,7 +700,7 @@ struct Scale(T, size_t dim) {
 }
 
 
-/// test reciprocal simple case, gradcheck and cpu/cuda equality
+/// test scale in simple case, gradcheck and cpu/cuda equality
 unittest {
     import grain.testing;
     import std.typecons;

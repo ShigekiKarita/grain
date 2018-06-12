@@ -9,6 +9,7 @@ import grain.utility : toTuple, fromTuple, castArray;
 import mir.ndslice : isSlice;
 
 import std.stdio;
+import std.traits : hasMember;
 
 version (grain_cuda) {
     import cudnn = derelict.cudnn7;
@@ -36,24 +37,26 @@ mixin template TypeChecker(alias forward, alias backward) {
 }
 
 /// a trait to identify autograd functions
-enum bool isFunction(T) = {
-    import std.meta : allSatisfy;
-    import std.typecons : isTuple, tuple, Tuple, RefCounted;
-    import std.traits : arity, Parameters, ReturnType;
-    static foreach (i, forward; __traits(getOverloads, T, "forward")) {
-        static foreach (i, backward; __traits(getOverloads, T, "backward")) {
-            static if (!allSatisfy!(isHost, Parameters!forward) &&
-                       !allSatisfy!(isHost, Parameters!backward)) {
-                mixin TypeChecker!(forward, backward);
-            }
-            static if (allSatisfy!(isHost, Parameters!forward) &&
-                       allSatisfy!(isHost, Parameters!backward)) {
-                mixin TypeChecker!(forward, backward);
-            }
-        }
-    }
-    return true;
-}();
+enum bool isFunction(T) = hasMember!(T, "forward") && hasMember!(T, "backward");
+
+// {
+//     import std.meta : allSatisfy;
+//     import std.typecons : isTuple, tuple, Tuple, RefCounted;
+//     import std.traits : arity, Parameters, ReturnType;
+//     static foreach (i, forward; __traits(getOverloads, T, "forward")) {
+//         static foreach (i, backward; __traits(getOverloads, T, "backward")) {
+//             static if (!allSatisfy!(isHost, Parameters!forward) &&
+//                        !allSatisfy!(isHost, Parameters!backward)) {
+//                 mixin TypeChecker!(forward, backward);
+//             }
+//             static if (allSatisfy!(isHost, Parameters!forward) &&
+//                        allSatisfy!(isHost, Parameters!backward)) {
+//                 mixin TypeChecker!(forward, backward);
+//             }
+//         }
+//     }
+//     return true;
+// }();
 
 /// common components (typecheck and backprop wrappers) for autograd functions
 mixin template FunctionCommon() {
