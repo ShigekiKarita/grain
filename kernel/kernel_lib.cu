@@ -184,11 +184,37 @@ GRAIN_GLOBAL void pow(float power, float* x, uint len, uint ndim, const uint* sh
     }
 }
 
+GRAIN_GLOBAL void powGrad(float power, float* x, uint len, uint ndim, const uint* shape, const uint* strides) {
+    uint idx;
+    GRAIN_PARALLEL_FOR(i, len) {
+        idx = indexof(i, ndim, shape, strides);
+        x[idx] = power * powf(x[idx], power-1);
+    }
+}
+
+
 
 GRAIN_GLOBAL void neg(float* x, uint len, uint ndim, const uint* shape, const uint* strides) {
     uint idx;
     GRAIN_PARALLEL_FOR(i, len) {
         idx = indexof(i, ndim, shape, strides);
         x[idx] = -x[idx];
+    }
+}
+
+
+GRAIN_ND_EACH(abs, fabsf)
+
+GRAIN_GLOBAL void absGrad(float* x, uint len, uint ndim, const uint* shape, const uint* strides) {
+    uint idx;
+    GRAIN_PARALLEL_FOR(i, len) {
+        idx = indexof(i, ndim, shape, strides);
+        if (x[idx] > 0) {
+            x[idx] = 1.0f;
+            return;
+        }
+        if (x[idx] < 0) {
+            x[idx] = -1.0;
+        }
     }
 }

@@ -78,5 +78,9 @@ nothrow @nogc extern(C++):
 @kernel void tan(float* x, uint len, uint ndim, const uint* shape, const uint* strides);
 
 @kernel void pow(float power, float* x, uint len, uint ndim, const uint* shape, const uint* strides);
+@kernel void powGrad(float power, float* x, uint len, uint ndim, const uint* shape, const uint* strides);
 
 @kernel void neg(float* x, uint len, uint ndim, const uint* shape, const uint* strides);
+
+@kernel void abs(float* x, uint len, uint ndim, const uint* shape, const uint* strides);
+@kernel void absGrad(float* x, uint len, uint ndim, const uint* shape, const uint* strides);

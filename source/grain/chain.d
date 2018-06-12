@@ -123,6 +123,20 @@ auto tan(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
     return func.applyForward(x);
 }
 
+/// abs
+auto abs(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
+    import grain.functions.unary : Abs;
+    auto func = new Abs!(T, dim);
+    return func.applyForward(x);
+}
+
+/// pow
+auto pow(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x, T power) {
+    import grain.functions.unary : Pow;
+    auto func = new Pow!(T, dim)(power);
+    return func.applyForward(x);
+}
+
 
 /// test fast math functions
 unittest {
@@ -130,10 +144,10 @@ unittest {
     import numir;
     import mir.ndslice;
     import std.meta;
-    foreach (f; AliasSeq!(sigmoid, tanh, reciprocal, neg, exp, log, sin, cos, tan)) {
+    foreach (f; AliasSeq!(sigmoid, tanh, reciprocal, neg, exp, log, sin, cos, tan, x => pow(x, 2.0f))) {
         auto hx = uniform!float(2, 3).slice.variable(true);
         auto hgy = uniform!float(2, 3).slice.variable;
-        gradCheckChain!f(hx, hgy, 1e-3, 1e-2, 1e-2);
+        gradCheckChain!f(hx, hgy, 1e-3, 1e-2, 5e-2);
     }
 }
 

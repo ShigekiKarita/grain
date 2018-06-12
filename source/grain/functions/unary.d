@@ -4,7 +4,6 @@
    TODO: support cudnn functions (see PDF manual in .deb for detail https://developer.nvidia.com/cudnn)
    - activation (e.g., clipped-relu, elu), cudnnActivationForward/Backward
    - (non-log) softmax, cudnnSoftmaxForward/Backward
-   - scale, cudnnScaleTensor
    - sqrt not, cudnnOpTensor
    - transform (e.g., contiguous or permute strides), cudnnTransformTensor
    - reshape (i.e., view), ...???
@@ -579,7 +578,7 @@ unittest {
     auto hy = hfunc.forward(hx);
     auto hgy = uniform!float(2, 2).slice.variable;
     auto hgx = hfunc.backward(hgy);
-    gradCheck(hfunc, hx, hgy, 1e-3, 1e-3, 1e-3);
+    gradCheck(hfunc, hx, hgy, 1e-3, 1e-2, 1e-2);
 
     version (grain_cuda) {
         Reciprocal!(float, 2) dfunc;
@@ -704,7 +703,7 @@ unittest {
     auto hy = hfunc.forward(hx);
     auto hgy = uniform!float(2, 3).slice.variable;
     auto hgx = hfunc.backward(hgy);
-    gradCheck(hfunc, hx, hgy);
+    gradCheck(hfunc, hx, hgy, 1e-3, 1e-3, 1e-2);
     assert(approxEqual(hy.sliced, hx.sliced.map!log));
 
     version (grain_cuda) {
@@ -851,7 +850,7 @@ unittest {
     auto hy = hfunc.forward(hx);
     auto hgy = uniform!float(2, 3).slice.variable;
     auto hgx = hfunc.backward(hgy);
-    gradCheck(hfunc, hx, hgy);
+    gradCheck(hfunc, hx, hgy, 1e-3, 1e-3, 1e-3);
     assert(approxEqual(hy.sliced, hx.sliced.map!cos));
 
     version (grain_cuda) {
@@ -1053,6 +1052,163 @@ unittest {
 
     version (grain_cuda) {
         auto dfunc = Neg!(float, 2)();
+        auto dy = dfunc.forward(hx.to!DeviceStorage);
+        assert(approxEqual(dy.to!HostStorage.sliced, hy.sliced));
+        auto dgx = dfunc.backward(hgy.to!DeviceStorage);
+        assert(approxEqual(dgx.to!HostStorage.sliced, hgx.sliced));
+    }
+}
+
+
+/// y = abs x
+struct Abs(T, size_t dim) {
+    import mir.ndslice : slice, map;
+
+    mixin FunctionCommon;
+    Variable!(T, dim, HostStorage) hx;
+
+    auto forward(Variable!(T, dim, HostStorage) x) {
+        import mir.math : fabs;
+        this.hx = x; // if train
+        return slice(x.sliced.map!fabs).variable(x.requiresGrad);
+    }
+
+    auto backward(Variable!(T, dim, HostStorage) gy) {
+        auto gx = gy.dup;
+        gx.sliced[] *= this.hx.sliced.map!(a => a == 0f ? 0f : (a > 0f ? 1f : -1f));
+        return gx;
+    }
+
+    version (grain_cuda) {
+        Variable!(T, dim, DeviceStorage) dx;
+
+        auto forward(Variable!(T, dim, DeviceStorage) x) {
+            import grain.kernel : abs;
+            auto y = x.dup;
+            unaryFunc!abs(y);
+            this.dx = x; // if train
+            return y;
+        }
+
+        auto backward(Variable!(T, dim, DeviceStorage) gy) {
+            import grain.kernel : absGrad;
+            auto gx = this.dx.dup;
+            unaryFunc!absGrad(gx);
+            return gy * gx;
+        }
+    }
+}
+
+/// test abs simple case, gradcheck and cpu/cuda equality
+unittest {
+    import grain.testing;
+    import std.typecons;
+    import numir;
+    import mir.ndslice;
+
+    auto xs = [[-1.0f, 2.0f, -3.0f], [1.0f, 0.0f, 0.0f]].nparray;
+    auto ys = [[1.0f, 2.0f, 3.0f], [1.0f, 0.0f, 0.0f]].nparray;
+    auto hfunc = Abs!(float, 2)();
+    auto hx = xs.variable;
+    auto hy = hfunc.forward(hx);
+    assert(approxEqual(hy.sliced, ys));
+
+    auto gxs = [[-0.1f, 0.2f, -0.3f], [0.5f, 0.0f, 0.0f]].nparray;
+    auto gys = [[0.1f, 0.2f, 0.3f], [0.5f, 0.6f, 0.7f]].nparray;
+    auto hgy = gys.variable;
+    auto hgx = hfunc.backward(hgy);
+    assert(approxEqual(hgx.sliced, gxs));
+
+    version (grain_cuda) {
+        auto dfunc = Abs!(float, 2)();
+        auto dy = dfunc.forward(hx.to!DeviceStorage);
+        assert(approxEqual(dy.to!HostStorage.sliced, hy.sliced));
+        auto dgx = dfunc.backward(hgy.to!DeviceStorage);
+        assert(approxEqual(dgx.to!HostStorage.sliced, hgx.sliced));
+    }
+}
+
+
+/// y = pow x
+struct Pow(T, size_t dim) {
+    import mir.ndslice : slice, map;
+
+    mixin FunctionCommon;
+
+    T power;
+    Variable!(T, dim, HostStorage) hx;
+
+    this(T power) {
+        this.power = power;
+    }
+
+    auto forward(Variable!(T, dim, HostStorage) x) {
+        import mir.math.common : pow;
+        auto y = slice(x.sliced.map!(a => pow(a, this.power))).variable(x.requiresGrad);
+        this.hx = x; // TODO if train
+        return y;
+    }
+
+    auto backward(Variable!(T, dim, HostStorage) gy) {
+        import mir.math.common : pow;
+        auto gx = gy.dup;
+        gx.sliced[] *= this.hx.sliced.map!(a => this.power * pow(a, this.power - 1));
+        return gx;
+    }
+
+    version (grain_cuda) {
+        Variable!(T, dim, DeviceStorage) dx;
+
+        auto forward(Variable!(T, dim, DeviceStorage) _x) {
+            this.dx = _x;
+            auto x = _x.dup;
+            import grain.kernel : pow;
+            auto shape = CuPtr!uint(x.shape[0..$]);
+            auto strides = CuPtr!int(x.strides[0..$]);
+            auto ndim = cast(uint) dim;
+            auto len = cast(uint) x.data.length;
+
+            Global.kernel!pow
+                .call(this.power, x.data.ptr, len, ndim, shape.ptr, strides.ptr)
+                .launch(len);
+            return x;
+        }
+
+        auto backward(Variable!(T, dim, DeviceStorage) gy) {
+            auto x = this.dx.dup;
+            import grain.kernel : powGrad;
+            auto shape = CuPtr!uint(x.shape[0..$]);
+            auto strides = CuPtr!int(x.strides[0..$]);
+            auto ndim = cast(uint) dim;
+            auto len = cast(uint) x.data.length;
+
+            Global.kernel!powGrad
+                .call(this.power, x.data.ptr, len, ndim, shape.ptr, strides.ptr)
+                .launch(len);
+            return gy * x;
+        }
+    }
+}
+
+///
+unittest {
+    import grain.testing;
+    import std.typecons;
+    import numir;
+    import mir.ndslice;
+    import mir.math : pow;
+
+    auto p = 2.0f;
+    auto hfunc = Pow!(float, 2)(p);
+    auto hx = uniform!float(2, 3).slice.variable;
+    auto hy = hfunc.forward(hx);
+    auto hgy = uniform!float(2, 3).slice.variable;
+    auto hgx = hfunc.backward(hgy);
+    gradCheck(hfunc, hx, hgy, 1e-3, 1e-3, 1e-3);
+    assert(approxEqual(hy.sliced, hx.sliced.map!(a => pow(a, p))));
+
+    version (grain_cuda) {
+        auto dfunc = Pow!(float, 2)(p);
         auto dy = dfunc.forward(hx.to!DeviceStorage);
         assert(approxEqual(dy.to!HostStorage.sliced, hy.sliced));
         auto dgx = dfunc.backward(hgy.to!DeviceStorage);
