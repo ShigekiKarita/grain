@@ -6,7 +6,7 @@
  */
 module grain.autograd;
 
-import std.traits : isArray;
+import std.traits : isArray, isBasicType;
 import std.typecons : RefCounted, RefCountedAutoInitialize;
 import mir.ndslice : isSlice;
 import std.range : ElementType;
@@ -18,7 +18,7 @@ import grain.utility : castArray;
 alias HostStorage(T) = T[];
 
 /// fill CPU array with zero
-auto zero_(T)(T[] s) {
+auto zero_(T)(T[] s) { // if (!isBasicType!T) {
     import std.algorithm.mutation : fill;
     fill(s, 0);
     return s;
@@ -77,7 +77,9 @@ version(grain_cuda) {
 
     alias DeviceStorage(T) = CuPtr!T;
 
-    enum bool isDevice(T) = is(typeof({T.init.toHost();}));
+    // enum bool isDevice(T) = isDeviceMemory(typeof(T.data)); // is(typeof({T.init.toHost();}));
+    alias isDevice = isDeviceMemory;
+
 
     /// CUDA -> CPU memory conversion
     auto to(alias S : DeviceStorage, T)(T[] src) {
@@ -89,6 +91,18 @@ version(grain_cuda) {
     auto to(alias S : HostStorage, Src)(Src src) if (isDevice!Src) {
         return src.toHost();
     }
+
+    // /// CUDA -> CPU memory conversion
+    // auto to(alias S : DeviceStorage, T)(T[] src) {
+    //     import std.array : empty;
+    //     return src.empty ? DeviceStorage!T() : DeviceStorage!T(src);
+    // }
+
+    // /// CPU -> CUDA memory conversion
+    // auto to(alias S : HostStorage, Src)(Src src) if (is(S!T == HostStorage!T)) {
+    //     return src.toHost();
+    // }
+
 
     // auto to(alias S : HostStorage, Src)(Src src) if (!isDevice!Src) {
     //     return src;
@@ -223,6 +237,7 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
     // RefCounted!
     BackProp bprop;
     enum isHost = is(Storage!T == HostStorage!T);
+    uint offset = 0;
 
     this(bool requiresGrad, uint[dim] shape, int[dim] strides, RefCounted!(Storage!T) data) {
         this.requiresGrad = requiresGrad;
@@ -238,6 +253,11 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
                 this.grad = grain.cuda.zeros!(CuPtr!T)(this.data.length);
             }
         // }
+    }
+
+    @property
+    auto ptr() {
+        return this.data.ptr + offset;
     }
 
     @property
@@ -284,7 +304,7 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
     }
 
     /// computes gradients of creator variables w.r.t. this variable
-    void backward() {
+    static if (dim == 0) void backward() {
         auto grad = UntypedVariable(1.0f.variable.to!Storage);
         this.bprop.backward(&grad, 0);
     }
@@ -296,7 +316,57 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
                     data, shape, strides);
     }
     /// TODO implement contiguous with mir.ndslice and cudnnTransformTensor
+
+    auto opBinary(string op)(Variable!(T, dim, Storage) b) {
+        import grain.chain : opBinaryFunc, reciprocal;
+        static if (op == "+" || op == "*") {
+            return opBinaryFunc!op(this, b);
+        } else static if (op == "-") {
+            return opBinaryFunc!"+"(this, b, 1, -1);
+        } else static if (op == "/") {
+            return opBinaryFunc!"*"(this, reciprocal(b));
+        } else {
+            static assert(false, "unsupported op: " ~ op);
+        }
+    }
 }
+
+/// test opBinary(string op)(Variable ...)
+unittest {
+    import mir.ndslice;
+    import numir;
+    import std.stdio;
+    static foreach (op; ["+", "*", "-", "/"]) {
+        {
+            auto a = uniform!float(3, 2).slice.variable(true);
+            auto b = uniform!float(3, 2).slice.variable(true);
+            // this is equivalent to `a + b` if op == "+"
+            auto c = a.opBinary!op(b);
+            // this is equivalent to `a.sliced.slice + b.sliced.slice` if op == "+"
+            auto e = a.sliced.slice.opBinary!op(b.sliced.slice);
+            assert(approxEqual(c.sliced, e));
+
+            auto gc = uniform!float(3, 2).slice.variable(true);
+            auto ugc = UntypedVariable(gc);
+            c.backward(&ugc);
+
+            version (grain_cuda) {
+                auto da = a.to!DeviceStorage;
+                auto db = b.to!DeviceStorage;
+                auto dc = da.opBinary!op(db);
+                assert(approxEqual(dc.to!HostStorage.sliced, c.sliced));
+
+                import grain.cuda : zero_;
+                da.grad.zero_();
+                db.grad.zero_();
+                auto dugc = UntypedVariable(gc.to!DeviceStorage);
+                dc.backward(&dugc);
+                assert(approxEqual(da.to!HostStorage.gradSliced, a.gradSliced));
+            }
+        }
+    }
+}
+
 
 /// test Variable.defined
 unittest {

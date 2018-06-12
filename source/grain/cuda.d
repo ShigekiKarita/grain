@@ -2,6 +2,7 @@ module grain.cuda;
 version(grain_cuda):
 
 import std.traits : ReturnType, arity;
+import std.typecons : RefCounted;
 import std.stdio : writeln, writefln;
 import std.string : toStringz, fromStringz;
 
@@ -172,6 +173,7 @@ struct Launcher(Args...) {
     }
 }
 
+
 /// cuda function object called by mangled name of C++/D device function F
 struct Kernel(alias F) if (is(ReturnType!F == void)) {
     // enum name = __traits(identifier, F);
@@ -192,6 +194,58 @@ struct Kernel(alias F) if (is(ReturnType!F == void)) {
         return Launcher!T(cuFunction, args);
     }
 }
+
+
+alias CudaElementType(M : CuPtr!T, T) = T;
+alias CudaElementType(M : CuArray!T, T) = T;
+alias CudaElementType(M : RefCounted!(CuPtr!T), T) = T;
+alias CudaElementType(M : RefCounted!(CuArray!T), T) = T;
+
+
+enum bool isDeviceMemory(T) = is(typeof({
+            static assert(is(typeof(T.init.ptr) == CUdeviceptr));
+            static assert(is(typeof(T.init.length) == const(size_t)));
+        }));
+
+unittest {
+    static assert(is(typeof(CuArray!float.init.ptr) == CUdeviceptr));
+    static assert(is(typeof(CuArray!float.init.length) == const(size_t)));
+    static assert(isDeviceMemory!(CuPtr!float));
+    static assert(isDeviceMemory!(CuArray!float));
+    static assert(isDeviceMemory!(RefCounted!(CuPtr!float)));
+    static assert(isDeviceMemory!(RefCounted!(CuArray!float)));
+    static assert(is(CudaElementType!(CuPtr!float) == float));
+    static assert(is(CudaElementType!(CuArray!float) == float));
+    static assert(is(CudaElementType!(RefCounted!(CuPtr!float)) == float));
+    static assert(is(CudaElementType!(RefCounted!(CuArray!float)) == float));
+}
+
+/// true if length == 0
+bool empty(M)(M m) if (isDeviceMemory!M) {
+    return m.length == 0;
+}
+
+/// copy device memory to host (maybe reallocate in host)
+ref toHost(M, T)(ref M m, scope ref T[] host) if (isDeviceMemory!M) {
+    host.length = m.length;
+    checkCudaErrors(cuMemcpyDtoH(host.ptr, m.ptr, CudaElementType!M.sizeof * m.length));
+    return host;
+}
+
+/// copy device memory to host (CAUTION: no reallocation here)
+auto toHost(M, T)(ref M m, T* host) if (isDeviceMemory!M) {
+    checkCudaErrors(cuMemcpyDtoH(host, m.ptr, CudaElementType!M.sizeof * m.length));
+    return host;
+}
+
+/// allocate host memory and copy device memory content
+auto toHost(M)(ref M m) if (isDeviceMemory!M) {
+    alias T = CudaElementType!M;
+    auto host = new T[m.length];
+    checkCudaErrors(cuMemcpyDtoH(host.ptr, m.ptr, T.sizeof * m.length));
+    return host;
+}
+
 
 /// fat pointer in CUDA
 struct CuPtr(T) {
@@ -226,31 +280,27 @@ struct CuPtr(T) {
         ptr = 0x0;
     }
 
-    /// true if length == 0
-    @property
-    bool empty() {
-        return this.length == 0;
-    }
 
     /// copy device memory to host (maybe reallocate in host)
-    ref toHost(scope ref T[] host) {
-        host.length = length;
-        checkCudaErrors(cuMemcpyDtoH(host.ptr, this.ptr, T.sizeof * length));
-        return host;
-    }
+    // ref toHost(scope ref T[] host) {
+    //     host.length = length;
+    //     checkCudaErrors(cuMemcpyDtoH(host.ptr, this.ptr, T.sizeof * length));
+    //     return host;
+    // }
 
-    /// copy device memory to host (CAUTION: no reallocation here)
-    auto toHost(T* host) {
-        checkCudaErrors(cuMemcpyDtoH(host, this.ptr, T.sizeof * length));
-        return host;
-    }
+    // /// copy device memory to host (CAUTION: no reallocation here)
+    // auto toHost(T* host) {
+    //     checkCudaErrors(cuMemcpyDtoH(host, this.ptr, T.sizeof * length));
+    //     return host;
+    // }
 
-    /// allocate host memory and copy device memory content
-    auto toHost() {
-        auto host = new T[this.length];
-        checkCudaErrors(cuMemcpyDtoH(host.ptr, this.ptr, T.sizeof * this.length));
-        return host;
-    }
+    // /// allocate host memory and copy device memory content
+    // auto toHost() {
+    //     auto host = new T[this.length];
+    //     checkCudaErrors(cuMemcpyDtoH(host.ptr, this.ptr, T.sizeof * this.length));
+    //     return host;
+    // }
+
 
     /// duplicate cuda memory (deep copy)
     auto dup() {
@@ -260,28 +310,6 @@ struct CuPtr(T) {
             checkCudaErrors(cuMemcpyDtoD(ret, ptr, T.sizeof * length));
         }
         return typeof(this)(ret, length);
-    }
-
-    /// fill value for N elements from the first position
-    /// TODO use cudnnSetTensor
-    ref fill_(T value, size_t N) {
-        import std.conv : to;
-        import std.traits : Parameters;
-        mixin("alias _memset = cuMemsetD" ~  to!string(T.sizeof * 8) ~ ";");
-        alias Bytes = Parameters!(_memset)[1];
-        static assert(Bytes.sizeof == T.sizeof);
-        _memset(this.ptr, *(cast(Bytes*) &value), N);
-        return this;
-    }
-
-    /// fill value for all the element in device array
-    ref fill_(T value) {
-        return this.fill_(value, this.length);
-    }
-
-    /// fill zero for all the element in device array
-    ref zero_() {
-        return this.fill_(0);
     }
 }
 
@@ -294,6 +322,27 @@ unittest {
 }
 
 
+/// sub-region on CuPtr!T
+struct CuArray(T) {
+    import std.typecons : RefCounted;
+    const RefCounted!(CuPtr!T) storage;
+    const size_t offset = 0;
+
+    @property
+    const CUdeviceptr ptr() {
+        return this.storage.ptr + this.offset;
+    }
+
+    @property
+    const length() {
+        assert(this.storage.length >= this.offset);
+        return this.storage.length - this.offset;
+    }
+}
+
+
+
+
 /// deep copy inter device memory without allocation
 void copy(T)(ref CuPtr!T src, ref CuPtr!T dst)
     in { assert(src.length == dst.length); }
@@ -301,11 +350,47 @@ do {
     checkCudaErrors(cuMemcpyDtoD(dst.ptr, src.ptr, T.sizeof * src.length));
 }
 
-/// create zero filled N elements array
-auto zeros(S: CuPtr!T, T)(size_t N) {
-    import std.algorithm : move;
-    return move(CuPtr!T(N).zero_());
+/// fill value for N elements from the first position
+/// TODO use cudnnSetTensor
+ref fill_(S, V)(ref S storage, V v, size_t N) if (isDeviceMemory!S) {
+    alias T = CudaElementType!S;
+    auto value = T(v);
+    import std.traits : isFloatingPoint;
+    // static if (isFloatingPoint!T) {
+    //     import derelict.cudnn7;
+    //     import grain.cudnn : fill, makeCudnnTensor;
+    //     auto a = S(N);
+    //     checkCUDNN( cudnnSetTensor(cudnnHandle, a.makeCudnnTensor, cast(void*) a.ptr, cast(const void*) &value) );
+    // } else {
+    import std.conv : to;
+    import std.traits : Parameters;
+    mixin("alias _memset = cuMemsetD" ~  to!string(T.sizeof * 8) ~ ";");
+    alias Bytes = Parameters!(_memset)[1];
+    static assert(Bytes.sizeof == T.sizeof);
+    _memset(storage.ptr, *(cast(Bytes*) &value), N);
+    //}
+    return storage;
 }
+
+/// fill value for all the element in device array
+ref fill_(S, V)(ref S storage, V value) if (isDeviceMemory!S) {
+    return fill_(storage, value, storage.length);
+}
+
+/// fill zero for all the element in device array
+ref zero_(S)(ref S storage) if (isDeviceMemory!S) {
+    return fill_(storage, CudaElementType!S(0));
+}
+
+
+/// create zero filled N elements array
+auto zeros(S)(size_t N) if (isDeviceMemory!S) {
+    import std.algorithm : move;
+    auto a = CuPtr!(CudaElementType!S)(N);
+    a.zero_();
+    return move(a);
+}
+
 
 /// cuda error checker
 void checkCudaErrors(string file = __FILE__, size_t line = __LINE__,
@@ -398,7 +483,7 @@ unittest {
     d.zero_();
     auto h = d.toHost();
     assert(h == [0, 0, 0]);
-    assert(zeros!(CuPtr!float)(3).toHost() == [0, 0, 0]);
+    // assert(zeros!(CuPtr!float)(3).toHost() == [0, 0, 0]);
     assert(d.fill_(3).toHost() == [3, 3, 3]);
 }
 

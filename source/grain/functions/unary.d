@@ -446,6 +446,16 @@ void unaryFunc(alias K, size_t dim)(Variable!(float, dim, DeviceStorage) x) {
         .launch(len);
 }
 
+/// test neg kernel
+version (grain_cuda) unittest {
+    import numir;
+    import grain.kernel;
+    auto x = [[1f, 2f, 3f], [4f, 5f, 6f]].variable.to!DeviceStorage;
+    unaryFunc!neg(x);
+    assert(x.to!HostStorage.sliced == -  [[1f, 2f, 3f], [4f, 5f, 6f]].nparray);
+}
+
+
 /// test reciprocal kernel
 version (grain_cuda) unittest {
     import grain.kernel;
@@ -564,7 +574,7 @@ unittest {
     auto hy = hfunc.forward(hx);
     auto hgy = uniform!float(2, 2).slice.variable;
     auto hgx = hfunc.backward(hgy);
-    gradCheck(hfunc, hx, hgy); // , 1e-3, 1e-3, 1e-3);
+    gradCheck(hfunc, hx, hgy, 1e-3, 1e-3, 1e-3);
 
     version (grain_cuda) {
         Reciprocal!(float, 2) dfunc;
@@ -646,6 +656,68 @@ unittest {
 
     version (grain_cuda) {
         auto dfunc = Scale!(float, 2)(2f);
+        auto dy = dfunc.forward(hx.to!DeviceStorage);
+        assert(approxEqual(dy.to!HostStorage.sliced, hy.sliced));
+        auto dgx = dfunc.backward(hgy.to!DeviceStorage);
+        assert(approxEqual(dgx.to!HostStorage.sliced, hgx.sliced));
+    }
+}
+
+
+/// y = -x
+struct Neg(T, size_t dim) {
+    import mir.ndslice : slice;
+
+    mixin FunctionCommon;
+
+    auto forward(Variable!(T, dim, HostStorage) x) {
+        return slice(-x.sliced).variable(x.requiresGrad);
+    }
+
+    auto backward(Variable!(T, dim, HostStorage) gy) {
+        return slice(-gy.sliced).variable(gy.requiresGrad);
+    }
+
+    version (grain_cuda) {
+        import grain.kernel : neg;
+
+        auto forward(Variable!(T, dim, DeviceStorage) x) {
+            auto y = x.dup;
+            unaryFunc!neg(y);
+            return y;
+        }
+
+        auto backward(Variable!(T, dim, DeviceStorage) gy) {
+            auto gx = gy.dup;
+            unaryFunc!neg(gx);
+            return gx;
+        }
+    }
+}
+
+
+/// test neg simple case, gradcheck and cpu/cuda equality
+unittest {
+    import grain.testing;
+    import std.typecons;
+    import numir;
+    import mir.ndslice;
+
+    // simple case: 2.0 * x
+    auto xs = [[-1.0f, 2.0f, 3.0f], [1.0f, 0.1f, 0.0f]].nparray;
+    auto hfunc = Neg!(float, 2)();
+    auto _hx = xs.variable;
+    auto _hy = hfunc.forward(_hx);
+    assert(approxEqual(_hy.sliced, -xs));
+
+    auto hx = uniform!float(2, 2).slice.variable;
+    auto hy = hfunc.forward(hx);
+    auto hgy = uniform!float(2, 2).slice.variable;
+    auto hgx = hfunc.backward(hgy);
+    gradCheck(hfunc, hx, hgy); // , 1e-3, 1e-3, 1e-3);
+
+    version (grain_cuda) {
+        auto dfunc = Neg!(float, 2)();
         auto dy = dfunc.forward(hx.to!DeviceStorage);
         assert(approxEqual(dy.to!HostStorage.sliced, hy.sliced));
         auto dgx = dfunc.backward(hgy.to!DeviceStorage);

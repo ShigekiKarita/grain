@@ -5,7 +5,7 @@ module grain.cudnn;
 
 version (grain_cuda):
 
-public import grain.cuda : cudnnHandle, checkCUDNN, CuPtr;
+public import grain.cuda : cudnnHandle, checkCUDNN, CuPtr, isDeviceMemory;
 import grain.autograd; //  : Variable, DeviceStorage;
 public import derelict.cuda;
 public import derelict.cudnn7;
@@ -76,6 +76,25 @@ auto makeCudnnTensor(T, size_t dim)(Variable!(T, dim, DeviceStorage) x) {
                                           strides.ptr));
     return tdesc;
 }
+
+/// convert contiguous cuda storage to 1-D tensor disc
+auto makeCudnnTensor(T)(ref T storage) if (isDeviceMemory!T) {
+    import grain.cuda : CudaElementType;
+    assert(storage.length <= int.max);
+    int[1] shape = [cast(int) storage.length];
+    int[1] strides = [1];
+    int ddim = 1;
+    TensorDesc tdesc;
+    tdesc.ptr = storage.ptr;
+    checkCUDNN(cudnnCreateTensorDescriptor(&tdesc.desc));
+    checkCUDNN(cudnnSetTensorNdDescriptor(tdesc.desc,
+                                          cudnnDataType!(CudaElementType!T),
+                                          ddim,
+                                          shape.ptr,
+                                          strides.ptr));
+    return tdesc;
+}
+
 
 /// y = alpha * f(x) + beta * y
 void activationForward(cudnnActivationMode_t A, T, size_t dim)(
@@ -254,4 +273,8 @@ void reduce(cudnnReduceTensorOp_t op, T, size_t dim)(
                     cast(const void*) &alpha, srcDesc, cast(const void*) srcDesc.ptr,
                     cast(const void*) &beta, dstDesc, cast(void*) dstDesc.ptr
                     ) );
+}
+
+auto fill(T, size_t dim)(Variable!(T, dim, DeviceStorage) x, T value) {
+    checkCUDNN( cudnnSetTensor(cudnnHandle, x.makeCudnnTensor, cast(void*) x.data.ptr, cast(const void*) &value) );
 }

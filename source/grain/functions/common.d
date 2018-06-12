@@ -112,8 +112,15 @@ mixin template FunctionCommon() {
     }
 
     /// type-erased version of backward function used in grain.autograd.BackProp object
-    void applyBackward(bool isHost)(UntypedVariable[] ugradOutputs, UntypedVariable[] uinputs) {
-        static if (isHost) {
+    void applyBackward(bool isHost_)(UntypedVariable[] ugradOutputs, UntypedVariable[] uinputs) {
+        // static foreach (backward; __traits(getOverloads, this, "backward")) {
+        //     static if (isHost_ &&  allSatisfy!(isHost, Parameters!backward))  {
+        //         Parameters!backward vgradOutputs;
+        //     } else {
+        //         Parameters!backward vgradOutputs;
+        //     }
+        // }
+        static if (isHost_) {
             HostRets vgradOutputs;
         } else {
             DeviceRets vgradOutputs;
@@ -278,17 +285,22 @@ auto reduceShape(alias fun, S, size_t N)(S s0, size_t[N] targetShape) {
     import mir.math : sum;
     import std.format : format;
     import std.exception : assumeWontThrow; // TODO unsqueeze can be assumeWontThrow
-    auto rec(size_t n, T)(T t) {
-        static if (n == N) return t;
-        else {
-            return
-                rec!(n+1)(
-                    targetShape[n] == 1
-                    ? assumeWontThrow(t.alongDim!n.map!fun.slice.unsqueeze!n).slice
-                    : t.slice);
+
+    static if (N == 1) {
+        return s0;
+    } else {
+        auto rec(size_t n, T)(T t) {
+            static if (n == N) return t;
+            else {
+                return
+                    rec!(n+1)(
+                        targetShape[n] == 1
+                        ? assumeWontThrow(t.alongDim!n.map!fun.slice.unsqueeze!n).slice
+                        : t.slice);
+            }
         }
+        return rec!0(s0);
     }
-    return rec!0(s0);
 }
 
 nothrow pure @safe unittest {

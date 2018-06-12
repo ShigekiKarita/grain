@@ -183,3 +183,12 @@ GRAIN_GLOBAL void pow(float power, float* x, uint len, uint ndim, const uint* sh
         x[idx] = powf(x[idx], power);
     }
 }
+
+
+GRAIN_GLOBAL void neg(float* x, uint len, uint ndim, const uint* shape, const uint* strides) {
+    uint idx;
+    GRAIN_PARALLEL_FOR(i, len) {
+        idx = indexof(i, ndim, shape, strides);
+        x[idx] = -x[idx];
+    }
+}

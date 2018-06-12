@@ -6,6 +6,9 @@ module grain.optim;
 import grain.autograd : isVariable, zero_, isHost;
 import std.traits : hasMember;
 import std.stdio;
+version (grain_cuda) {
+    import grain.cuda : zero_;
+}
 
 
 /// fill gradient arrays with zero

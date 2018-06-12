@@ -5,12 +5,17 @@ Chain means autograd operators in grain that is equivalent to
 
 Users cannot apply grain.functions to Variable without new or applyForward.
 Instead of that, you can apply grain.chains to Variable with opCall.
+
+TODO test chains as functions
  +/
 module grain.chain;
 
 import numir : normal;
 
 import grain.autograd; // : Variable, variable, to;
+version (grain_cuda) {
+    import grain.cuda : zero_;
+}
 
 
 // enum isChain(T) = {
@@ -46,7 +51,7 @@ struct Linear(T, alias Storage) {
     }
 }
 
-//////// Activation
+//////// Unary functions
 
 /// rectified linear unit nonlinearity
 auto relu(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
@@ -68,6 +73,21 @@ auto tanh(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
     auto func = new Tanh!(T, dim);
     return func.applyForward(x);
 }
+
+/// 1 / x
+auto reciprocal(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
+    import grain.functions : Reciprocal;
+    auto func = new Reciprocal!(T, dim);
+    return func.applyForward(x);
+}
+
+/// -x
+auto neg(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
+    import grain.functions : Neg;
+    auto func = new Neg!(T, dim);
+    return func.applyForward(x);
+}
+
 
 /////// Loss
 
@@ -124,3 +144,17 @@ unittest {
     }
 }
 
+/// Binary functions
+
+/**
+  op(alpha1 * a, alpha2 * b)
+
+  this function is tested under grain.autograd.Variable.opBinary
+*/
+auto opBinaryFunc(string op, T, size_t dim, alias Storage)(
+    Variable!(T, dim, Storage) a, Variable!(T, dim, Storage) b, T alpha1=1, T alpha2=1)
+{
+    import grain.functions : OpBinary;
+    auto func = new OpBinary!(T, dim, op)(alpha1, alpha2);
+    return func.applyForward(a, b);
+}

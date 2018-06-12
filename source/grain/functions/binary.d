@@ -22,6 +22,7 @@ import std.format : format;
 /// c = op(alpha1 * a + alpha2 * b) + beta * c;
 struct OpBinary(T, size_t dim, string ops) if (isFloatingPoint!T) {
     import mir.ndslice;
+
     T alpha1 = 1, alpha2 = 1;
 
     uint[dim] shape1, shape2;
@@ -171,6 +172,8 @@ struct OpBinary(T, size_t dim, string ops) if (isFloatingPoint!T) {
             }
         }
     }
+
+    mixin FunctionCommon;
 }
 
 ///
