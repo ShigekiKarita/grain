@@ -628,7 +628,7 @@ struct Exp(T, size_t dim) {
     }
 }
 
-/// test fast math functions
+///
 unittest {
     import grain.testing;
     import std.typecons;
@@ -653,16 +653,217 @@ unittest {
     }
 }
 
+/// y = exp x
+struct Log(T, size_t dim) {
+    import mir.ndslice : slice, map;
+
+    mixin FunctionCommon;
+
+    Variable!(T, dim, HostStorage) hx;
+
+    auto forward(Variable!(T, dim, HostStorage) x) {
+        import mir.math.common : log;
+        auto y = slice(x.sliced.map!log).variable(x.requiresGrad);
+        this.hx = x; // TODO if train
+        return y;
+    }
+
+    auto backward(Variable!(T, dim, HostStorage) gy) {
+        auto gx = gy.dup;
+        gx.sliced[] /= this.hx.sliced;
+        return gx;
+    }
+
+    version (grain_cuda) {
+        Variable!(T, dim, DeviceStorage) dx;
+
+        auto forward(Variable!(T, dim, DeviceStorage) x) {
+            import grain.kernel : log;
+            auto y = x.dup;
+            unaryFunc!log(y);
+            this.dx = x;
+            return y;
+        }
+
+        auto backward(Variable!(T, dim, DeviceStorage) gy) {
+            return gy / this.dx;
+        }
+    }
+}
+
+///
+unittest {
+    import grain.testing;
+    import std.typecons;
+    import numir;
+    import mir.ndslice;
+    import mir.math : log;
+
+    Log!(float, 2) hfunc;
+    auto hx = uniform!float(2, 3).slice.variable;
+    auto hy = hfunc.forward(hx);
+    auto hgy = uniform!float(2, 3).slice.variable;
+    auto hgx = hfunc.backward(hgy);
+    gradCheck(hfunc, hx, hgy);
+    assert(approxEqual(hy.sliced, hx.sliced.map!log));
+
+    version (grain_cuda) {
+        Log!(float, 2) dfunc;
+        auto dy = dfunc.forward(hx.to!DeviceStorage);
+        assert(approxEqual(dy.to!HostStorage.sliced, hy.sliced));
+        auto dgx = dfunc.backward(hgy.to!DeviceStorage);
+        assert(approxEqual(dgx.to!HostStorage.sliced, hgx.sliced));
+    }
+}
+
+
 // TODO implement these autograd fast-math functions
 // struct Log2
 // struct Log10
 
-// struct Exp
 // struct Exp2
 // struct Exp10
 
-// struct Sin
-// struct Cos
+/// y = sin x
+struct Sin(T, size_t dim) {
+    import mir.ndslice : slice, map;
+
+    mixin FunctionCommon;
+
+    Variable!(T, dim, HostStorage) hx;
+
+    auto forward(Variable!(T, dim, HostStorage) x) {
+        import mir.math.common : sin;
+        auto y = slice(x.sliced.map!sin).variable(x.requiresGrad);
+        this.hx = x; // TODO if train
+        return y;
+    }
+
+    auto backward(Variable!(T, dim, HostStorage) gy) {
+        import mir.math.common : cos;
+        auto gx = gy.dup;
+        gx.sliced[] *= this.hx.sliced.map!cos;
+        return gx;
+    }
+
+    version (grain_cuda) {
+        Variable!(T, dim, DeviceStorage) dx;
+
+        auto forward(Variable!(T, dim, DeviceStorage) x) {
+            import grain.kernel : sin;
+            auto y = x.dup;
+            unaryFunc!sin(y);
+            this.dx = x;
+            return y;
+        }
+
+        auto backward(Variable!(T, dim, DeviceStorage) gy) {
+            import grain.cudnn;
+            import grain.kernel : cos;
+            auto gx = this.dx.dup;
+            unaryFunc!cos(gx);
+            tensorOp!CUDNN_OP_TENSOR_MUL(gx, gx, gy);
+            return gx;
+        }
+    }
+}
+
+///
+unittest {
+    import grain.testing;
+    import std.typecons;
+    import numir;
+    import mir.ndslice;
+    import mir.math : sin;
+
+    Sin!(float, 2) hfunc;
+    auto hx = uniform!float(2, 3).slice.variable;
+    auto hy = hfunc.forward(hx);
+    auto hgy = uniform!float(2, 3).slice.variable;
+    auto hgx = hfunc.backward(hgy);
+    gradCheck(hfunc, hx, hgy);
+    assert(approxEqual(hy.sliced, hx.sliced.map!sin));
+
+    version (grain_cuda) {
+        Sin!(float, 2) dfunc;
+        auto dy = dfunc.forward(hx.to!DeviceStorage);
+        assert(approxEqual(dy.to!HostStorage.sliced, hy.sliced));
+        auto dgx = dfunc.backward(hgy.to!DeviceStorage);
+        assert(approxEqual(dgx.to!HostStorage.sliced, hgx.sliced));
+    }
+}
+
+
+/// y = cos x
+struct Cos(T, size_t dim) {
+    import mir.ndslice : slice, map;
+
+    mixin FunctionCommon;
+
+    Variable!(T, dim, HostStorage) hx;
+
+    auto forward(Variable!(T, dim, HostStorage) x) {
+        import mir.math.common : cos;
+        auto y = slice(x.sliced.map!cos).variable(x.requiresGrad);
+        this.hx = x; // TODO if train
+        return y;
+    }
+
+    auto backward(Variable!(T, dim, HostStorage) gy) {
+        import mir.math.common : sin;
+        auto gx = gy.dup;
+        gx.sliced[] *= -this.hx.sliced.map!sin;
+        return gx;
+    }
+
+    version (grain_cuda) {
+        Variable!(T, dim, DeviceStorage) dx;
+
+        auto forward(Variable!(T, dim, DeviceStorage) x) {
+            import grain.kernel : cos;
+            auto y = x.dup;
+            unaryFunc!cos(y);
+            this.dx = x;
+            return y;
+        }
+
+        auto backward(Variable!(T, dim, DeviceStorage) gy) {
+            import grain.cudnn;
+            import grain.kernel : sin;
+            auto gx = this.dx.dup;
+            unaryFunc!sin(gx);
+            tensorOp!CUDNN_OP_TENSOR_MUL(gx, gx, gy, -1);
+            return gx;
+        }
+    }
+}
+
+///
+unittest {
+    import grain.testing;
+    import std.typecons;
+    import numir;
+    import mir.ndslice;
+    import mir.math : cos;
+
+    Cos!(float, 2) hfunc;
+    auto hx = uniform!float(2, 3).slice.variable;
+    auto hy = hfunc.forward(hx);
+    auto hgy = uniform!float(2, 3).slice.variable;
+    auto hgx = hfunc.backward(hgy);
+    gradCheck(hfunc, hx, hgy);
+    assert(approxEqual(hy.sliced, hx.sliced.map!cos));
+
+    version (grain_cuda) {
+        Cos!(float, 2) dfunc;
+        auto dy = dfunc.forward(hx.to!DeviceStorage);
+        assert(approxEqual(dy.to!HostStorage.sliced, hy.sliced));
+        auto dgx = dfunc.backward(hgy.to!DeviceStorage);
+        assert(approxEqual(dgx.to!HostStorage.sliced, hgx.sliced));
+    }
+}
+
+
 // struct Tan
 
 

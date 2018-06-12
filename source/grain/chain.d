@@ -95,16 +95,38 @@ auto exp(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
     return func.applyForward(x);
 }
 
+/// log x
+auto log(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
+    import grain.functions.unary : Log;
+    auto func = new Log!(T, dim);
+    return func.applyForward(x);
+}
+
+/// sin x
+auto sin(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
+    import grain.functions.unary : Sin;
+    auto func = new Sin!(T, dim);
+    return func.applyForward(x);
+}
+
+/// cos x
+auto cos(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
+    import grain.functions.unary : Cos;
+    auto func = new Cos!(T, dim);
+    return func.applyForward(x);
+}
+
+
 /// test fast math functions
 unittest {
     import grain.testing;
     import numir;
     import mir.ndslice;
     import std.meta;
-    foreach (f; AliasSeq!(sigmoid, tanh, reciprocal, neg, exp)) {
+    foreach (f; AliasSeq!(sigmoid, tanh, reciprocal, neg, exp, log, sin, cos)) {
         auto hx = uniform!float(2, 3).slice.variable(true);
         auto hgy = uniform!float(2, 3).slice.variable;
-        gradCheckChain!f(hx, hgy, 1e-3, 1e-3, 1e-3);
+        gradCheckChain!f(hx, hgy, 1e-3, 1e-2, 1e-2);
     }
 }
 
