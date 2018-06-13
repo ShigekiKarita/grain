@@ -518,7 +518,7 @@ struct Embedding(T) {
         this.wshape = weight.shape; // TODO if train
         auto ys = empty!T(ids.shape[0], weight.shape[1]);
         foreach (i, id; ids.sliced.enumerate) {
-            ys[i, 0..$] = weight.sliced[id];
+            ys[i, 0..$] = weight.sliced[id, 0..$];
         }
         return ys.variable(weight.requiresGrad);
     }
@@ -553,8 +553,9 @@ struct Embedding(T) {
                 .launch(this.wshape[1] * this.dx.shape[0]);
             return tuple(gw, typeof(this.dx)());
         }
-
     }
+
+    mixin FunctionCommon;
 }
 
 ///

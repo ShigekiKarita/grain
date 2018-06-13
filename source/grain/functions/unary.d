@@ -51,7 +51,6 @@ struct Sigmoid(T, size_t dim) {
     import std.math : tanh;
     import mir.ndslice : sliced, slice, map;
 
-    mixin FunctionCommon;
     Variable!(T, dim, HostStorage) hy;
 
     ///
@@ -76,6 +75,8 @@ struct Sigmoid(T, size_t dim) {
         enum mode = CUDNN_ACTIVATION_SIGMOID;
         mixin(CUDNN_ACTIVATION_IMPL_MIXIN);
     }
+
+    mixin FunctionCommon;
 }
 
 ///
@@ -110,7 +111,6 @@ struct Tanh(T, size_t dim) {
     import std.math : tanh;
     import mir.ndslice : sliced, slice, map;
 
-    mixin FunctionCommon;
     Variable!(T, dim, HostStorage) hy;
 
     ///
@@ -135,6 +135,8 @@ struct Tanh(T, size_t dim) {
         enum mode = CUDNN_ACTIVATION_TANH;
         mixin(CUDNN_ACTIVATION_IMPL_MIXIN);
     }
+
+    mixin FunctionCommon;
 }
 
 ///

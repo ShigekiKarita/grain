@@ -10,6 +10,7 @@ TODO test chains as functions
  +/
 module grain.chain;
 
+import std.traits : isFloatingPoint;
 import numir : normal;
 
 import grain.autograd; // : Variable, variable, to;
@@ -218,10 +219,9 @@ auto addVec(T, alias Storage)(Variable!(T, 2, Storage) a, Variable!(T, 1, Storag
 ////// Parametric chains
 
 /// linear operator
-struct Linear(T, alias Storage) {
+struct Linear(T, alias Storage) if (isFloatingPoint!T) {
     import mir.ndslice : slice;
-    import std.traits : isFloatingPoint;
-    static assert(isFloatingPoint!T);
+
     Variable!(T, 2, Storage) weight;
     Variable!(T, 1, Storage) bias;
     int nInput, nOutput;
@@ -257,27 +257,26 @@ struct Linear(T, alias Storage) {
 
 
 /// Emebedding ID into vector
-struct Embedding(T, alias Storage) {
+struct Embedding(T, alias Storage) if (isFloatingPoint!T) {
     import mir.ndslice : slice;
-    import std.traits : isFloatingPoint;
-    static assert(isFloatingPoint!T);
 
     Variable!(T, 2, Storage) weight;
     uint nVocab, nEmbed;
 
     this(uint nVocab, uint nEmbed) {
         this.nVocab = nVocab;
-        this.nEmebed = nEmbed;
+        this.nEmbed = nEmbed;
+        this.resetParameters();
     }
 
     void resetParameters() {
         import numir : normal;
-        this.weight = normal!T(this.nVocab, this.nEmbed).variable(true).to!Storage;
+        this.weight = normal!T(this.nVocab, this.nEmbed).slice.variable(true).to!Storage;
     }
 
     auto opCall(Variable!(int, 1, Storage) ids) {
         import grain.functions;
         auto func = new grain.functions.Embedding!T;
-        return func.applyForward(this.weight, this.ids);
+        return func.applyForward(this.weight, ids);
     }
 }
