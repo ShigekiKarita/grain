@@ -147,7 +147,7 @@ unittest {
     foreach (f; AliasSeq!(sigmoid, tanh, reciprocal, neg, exp, log, sin, cos, tan, x => pow(x, 2.0f))) {
         auto hx = uniform!float(2, 3).slice.variable(true);
         auto hgy = uniform!float(2, 3).slice.variable;
-        gradCheckChain!f(hx, hgy, 1e-3, 1e-2, 5e-2);
+        gradCheckChain!f(hx, hgy, 1e-3, 5e-2, 5e-2);
     }
 }
 

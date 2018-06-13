@@ -246,6 +246,14 @@ auto toHost(M)(ref M m) if (isDeviceMemory!M) {
     return host;
 }
 
+///
+unittest {
+    foreach (i; 0 .. 100) {
+        auto d = CuPtr!float([3.0]);
+        assert(d.toHost() == [3.0]);
+    }
+}
+
 
 /// fat pointer in CUDA
 struct CuPtr(T) {
@@ -279,46 +287,18 @@ struct CuPtr(T) {
         if (ptr != 0x0) checkCudaErrors(cuMemFree(ptr));
         ptr = 0x0;
     }
-
-
-    /// copy device memory to host (maybe reallocate in host)
-    // ref toHost(scope ref T[] host) {
-    //     host.length = length;
-    //     checkCudaErrors(cuMemcpyDtoH(host.ptr, this.ptr, T.sizeof * length));
-    //     return host;
-    // }
-
-    // /// copy device memory to host (CAUTION: no reallocation here)
-    // auto toHost(T* host) {
-    //     checkCudaErrors(cuMemcpyDtoH(host, this.ptr, T.sizeof * length));
-    //     return host;
-    // }
-
-    // /// allocate host memory and copy device memory content
-    // auto toHost() {
-    //     auto host = new T[this.length];
-    //     checkCudaErrors(cuMemcpyDtoH(host.ptr, this.ptr, T.sizeof * this.length));
-    //     return host;
-    // }
-
-
-    /// duplicate cuda memory (deep copy)
-    auto dup() {
-        CUdeviceptr ret;
-        if (this.length > 0) {
-            checkCudaErrors(cuMemAlloc(&ret, T.sizeof * length));
-            checkCudaErrors(cuMemcpyDtoD(ret, ptr, T.sizeof * length));
-        }
-        return typeof(this)(ret, length);
-    }
 }
 
-///
-unittest {
-    foreach (i; 0 .. 100) {
-        auto d = CuPtr!float([3.0]);
-        assert(d.toHost() == [3.0]);
+
+/// duplicate cuda memory (deep copy)
+auto dup(M)(ref M m) if (isDeviceMemory!M) {
+    CUdeviceptr ret;
+    alias T = CudaElementType!M;
+    if (m.length > 0) {
+        checkCudaErrors(cuMemAlloc(&ret, T.sizeof * m.length));
+        checkCudaErrors(cuMemcpyDtoD(ret, m.ptr, T.sizeof * m.length));
     }
+    return CuPtr!T(ret, m.length);
 }
 
 
@@ -328,8 +308,14 @@ struct CuArray(T) {
     const RefCounted!(CuPtr!T) storage;
     const size_t offset = 0;
 
+    this(CuPtr!T storage, size_t offset=0) {
+        import std.algorithm : move;
+        this.storage = move(storage);
+        this.offset = offset;
+    }
+
     @property
-    const CUdeviceptr ptr() {
+    CUdeviceptr ptr() {
         return this.storage.ptr + this.offset;
     }
 
@@ -339,8 +325,6 @@ struct CuArray(T) {
         return this.storage.length - this.offset;
     }
 }
-
-
 
 
 /// deep copy inter device memory without allocation
@@ -511,4 +495,3 @@ unittest {
     assert(a.toHost() == [3, 4, 5]);
     assert(b.toHost() == [7, 10, 13]);
 }
-
