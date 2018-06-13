@@ -275,6 +275,104 @@ void reduce(cudnnReduceTensorOp_t op, T, size_t dim)(
                     ) );
 }
 
-auto fill(T, size_t dim)(Variable!(T, dim, DeviceStorage) x, T value) {
+void fill(T, size_t dim)(Variable!(T, dim, DeviceStorage) x, T value) {
     checkCUDNN( cudnnSetTensor(cudnnHandle, x.makeCudnnTensor, cast(void*) x.data.ptr, cast(const void*) &value) );
+}
+
+void transform(T, size_t dim)(Variable!(T, dim, DeviceStorage) src, ref Variable!(T, dim, DeviceStorage) dst, T alpha=1, T beta=0) {
+    assert(src.shape == dst.shape);
+    checkCUDNN(
+        cudnnTransformTensor(
+            cudnnHandle,
+            cast(const void*) &alpha, src.makeCudnnTensor, cast(const void*) src.data.ptr,
+            cast(const void*) &beta, dst.makeCudnnTensor, cast(void*) dst.data.ptr
+            ) );
+}
+
+auto contiguous(T, size_t dim)(Variable!(T, dim, DeviceStorage) x) {
+    auto y = x.uninit;
+    y.bprop = x.bprop;
+    transform(x, y);
+    return y;
+}
+
+/// test cudnnTransformTensor with array ptr manipulations
+unittest {
+    import std.stdio;
+    // skipping stride 2
+    {
+        auto x = [1f, 0f, 2f, 0f, 3f].variable;
+        x.strides = [2];
+        x.shape = [3];
+        auto y = x.to!DeviceStorage.contiguous.to!HostStorage;
+        assert(y.data == [1f, 2f, 3f]);
+        assert(y.strides == [1]);
+        assert(y.shape == [3]);
+    }
+    // reverse skipping stride -2
+    {
+        auto x = [1f, 0f, 2f, 0f, 3f].variable;
+        x.strides = [-2];
+        x.shape = [3];
+        auto dx = x.to!DeviceStorage;
+        dx.data.ptr += 4 * float.sizeof;
+        scope(exit) dx.data.ptr -= 4 * float.sizeof;
+        auto y = dx.contiguous.to!HostStorage;
+        assert(y.data == [3f, 2f, 1f]);
+        assert(y.strides == [1]);
+        assert(y.shape == [3]);
+    }
+    // multi-dim transposed stride [3, 1]
+    {
+        auto x = [[1f, 0f, 2f],
+                  [0f, 3f, 0f]].variable;
+        x.strides = [1, 3];
+        x.shape = [3, 2];
+        auto dx = x.to!DeviceStorage;
+        auto y = dx.contiguous.to!HostStorage;
+        assert(y.sliced == [[1f, 0f], [0f, 3f], [2f, 0f]]);
+        assert(y.strides == [2, 1]);
+        assert(y.shape == [3, 2]);
+    }
+    // multi-dim skipping stride [3, 2]
+    {
+        auto x = [[1f, 0f, 2f],
+                  [0f, 3f, 0f]].variable;
+        x.strides = [3, 2];
+        x.shape = [2, 2];
+        auto dx = x.to!DeviceStorage;
+        auto y = dx.contiguous.to!HostStorage;
+        assert(y.sliced == [[1f, 2f],  [0f, 0f]]);
+        assert(y.strides == [2, 1]);
+        assert(y.shape == [2, 2]);
+    }
+    // multi-dim transposed skipping stride [2, 3]
+    {
+        auto x = [[1f, 0f, 2f],
+                  [0f, 3f, 0f]].variable;
+        x.strides = [2, 3];
+        x.shape = [2, 2];
+        auto dx = x.to!DeviceStorage;
+        // dx.data.ptr += (2 * 3 - 1) * float.sizeof;
+        // scope(exit) dx.data.ptr -= (2 * 3 - 1) * float.sizeof;
+        auto y = dx.contiguous.to!HostStorage;
+        assert(y.sliced == [[1f, 0f],  [2f, 0f]]);
+        assert(y.strides == [2, 1]);
+        assert(y.shape == [2, 2]);
+    }
+    // multi-dim transposed reverse skipping stride [-2, -3]
+    {
+        auto x = [[1f, 0f, 2f],
+                  [0f, 3f, 0f]].variable;
+        x.strides = [-2, -3];
+        x.shape = [2, 2];
+        auto dx = x.to!DeviceStorage;
+        dx.data.ptr += (2 * 3 - 1) * float.sizeof;
+        scope(exit) dx.data.ptr -= (2 * 3 - 1) * float.sizeof;
+        auto y = dx.contiguous.to!HostStorage;
+        assert(y.sliced == [[0f, 2f],  [0f, 1f]]);
+        assert(y.strides == [2, 1]);
+        assert(y.shape == [2, 2]);
+    }
+
 }

@@ -26,30 +26,7 @@ version (grain_cuda) {
 //     if (isTuple!() AllSatisfy!(isVariable, ReturnType!(T.init));
 // }();
 
-/// linear operator
-struct Linear(T, alias Storage) {
-    import mir.ndslice : slice;
-    import std.traits : isFloatingPoint;
-    import grain.functions : MatMul, AddBias;
-    static assert(isFloatingPoint!T);
-    Variable!(T, 2, Storage) weight;
-    Variable!(T, 1, Storage) bias;
 
-    this(int ninput, int noutput) {
-        import numir;
-        import mir.random.variable;
-        auto stdv = 1.0 / (cast(T) noutput ^^ 0.5);
-        this.weight = UniformVariable!T(-stdv, stdv).generate(ninput, noutput).slice.variable(true).to!Storage;
-        this.bias = UniformVariable!T(-stdv, stdv).generate(noutput).slice.variable(true).to!Storage;
-    }
-
-    auto opCall(Variable!(T, 2, Storage) x) {
-        auto matmul = new MatMul!T;
-        auto wx = matmul.applyForward(x, this.weight);
-        auto addbias = new AddBias!T;
-        return addbias.applyForward(wx, this.bias);
-    }
-}
 
 //////// Unary functions
 
@@ -220,4 +197,87 @@ auto opBinaryFunc(string op, T, size_t dim, alias Storage)(
     import grain.functions : OpBinary;
     auto func = new OpBinary!(T, dim, op)(alpha1, alpha2);
     return func.applyForward(a, b);
+}
+
+/// matrix x matrix multiplication
+auto matMul(T, alias Storage)(Variable!(T, 2, Storage) a, Variable!(T, 2, Storage) b) {
+    import grain.functions : MatMul;
+    auto func = new MatMul!T;
+    return func.applyForward(a, b);
+}
+
+/// matrix + vector row-wise addition. TODO replace this with broadcasted addition
+auto addVec(T, alias Storage)(Variable!(T, 2, Storage) a, Variable!(T, 1, Storage) b) {
+    import grain.functions : AddBias;
+    auto func = new AddBias!T;
+    return func.applyForward(a, b);
+}
+
+
+
+////// Parametric chains
+
+/// linear operator
+struct Linear(T, alias Storage) {
+    import mir.ndslice : slice;
+    import std.traits : isFloatingPoint;
+    static assert(isFloatingPoint!T);
+    Variable!(T, 2, Storage) weight;
+    Variable!(T, 1, Storage) bias;
+    int nInput, nOutput;
+    bool useBias = true;
+
+    this(int nInput, int nOutput, bool useBias = true) {
+        this.nInput = nInput;
+        this.nOutput = nOutput;
+        this.useBias = useBias;
+        this.resetParameters();
+    }
+
+    // pytorch style init (LeCun uniform init)
+    void resetParameters() {
+        import numir : generate;
+        import mir.random.variable : UniformVariable;
+        auto stdv = 1.0 / (cast(T) this.nOutput ^^ 0.5);
+        this.weight = UniformVariable!T(-stdv, stdv).generate(this.nInput, this.nOutput).slice.variable(true).to!Storage;
+        if (this.useBias) {
+            this.bias = UniformVariable!T(-stdv, stdv).generate(this.nOutput).slice.variable(true).to!Storage;
+        }
+    }
+
+    auto opCall(Variable!(T, 2, Storage) x) {
+        auto wx = matMul(x, this.weight);
+        if (this.useBias) {
+            return addVec(wx, this.bias);
+        } else {
+            return wx;
+        }
+    }
+}
+
+
+/// Emebedding ID into vector
+struct Embedding(T, alias Storage) {
+    import mir.ndslice : slice;
+    import std.traits : isFloatingPoint;
+    static assert(isFloatingPoint!T);
+
+    Variable!(T, 2, Storage) weight;
+    uint nVocab, nEmbed;
+
+    this(uint nVocab, uint nEmbed) {
+        this.nVocab = nVocab;
+        this.nEmebed = nEmbed;
+    }
+
+    void resetParameters() {
+        import numir : normal;
+        this.weight = normal!T(this.nVocab, this.nEmbed).variable(true).to!Storage;
+    }
+
+    auto opCall(Variable!(int, 1, Storage) ids) {
+        import grain.functions;
+        auto func = new grain.functions.Embedding!T;
+        return func.applyForward(this.weight, this.ids);
+    }
 }

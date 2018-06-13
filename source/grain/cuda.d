@@ -1,3 +1,6 @@
+/**
+   CUDA wrapper module
+ */
 module grain.cuda;
 version(grain_cuda):
 
@@ -267,6 +270,7 @@ struct CuPtr(T) {
     }
 
     @disable this(this); // not copyable
+    @disable new(size_t); // not allocatable on heap
 
     /// create uninitialized T.sizeof * n array in device
     this(size_t n) {
@@ -306,23 +310,20 @@ auto dup(M)(ref M m) if (isDeviceMemory!M) {
 struct CuArray(T) {
     import std.typecons : RefCounted;
     const RefCounted!(CuPtr!T) storage;
-    const size_t offset = 0;
+    CUdeviceptr ptr;
+    alias ptr this;
 
     this(CuPtr!T storage, size_t offset=0) {
         import std.algorithm : move;
         this.storage = move(storage);
-        this.offset = offset;
-    }
-
-    @property
-    CUdeviceptr ptr() {
-        return this.storage.ptr + this.offset;
+        this.ptr = this.storage.ptr + offset;
     }
 
     @property
     const length() {
-        assert(this.storage.length >= this.offset);
-        return this.storage.length - this.offset;
+        auto end = this.storage.ptr + this.storage.length;
+        assert(end >= this.ptr);
+        return end - this.ptr;
     }
 }
 
@@ -418,7 +419,7 @@ unittest
     }
 
     // Device data
-    auto devA = new CuPtr!float(hostA);
+    auto devA = CuPtr!float(hostA);
     auto devB = CuPtr!float(hostB);
     auto devC = CuPtr!float(n);
 

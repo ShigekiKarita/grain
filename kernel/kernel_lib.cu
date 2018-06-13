@@ -218,3 +218,22 @@ GRAIN_GLOBAL void absGrad(float* x, uint len, uint ndim, const uint* shape, cons
         }
     }
 }
+
+
+GRAIN_GLOBAL void embedding(const float* w, const int* x, float* y, uint nvocab, uint nembed, uint nbatch) {
+    uint b, e;
+    GRAIN_PARALLEL_FOR(i, nbatch * nembed) {
+        b = i / nembed;
+        e = i % nembed;
+        y[i] = w[x[b] * nembed + e];
+    }
+}
+
+GRAIN_GLOBAL void embeddingGrad(float* gw, const int* x, const float* gy, uint nvocab, uint nembed, uint nbatch) {
+    uint b, e;
+    GRAIN_PARALLEL_FOR(i, nbatch * nembed) {
+        b = i / nembed;
+        e = i % nembed;
+        atomicAdd(gw + x[b] * nembed + e, gy[b * nembed + e]);
+    }
+}

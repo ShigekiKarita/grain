@@ -84,3 +84,6 @@ nothrow @nogc extern(C++):
 
 @kernel void abs(float* x, uint len, uint ndim, const uint* shape, const uint* strides);
 @kernel void absGrad(float* x, uint len, uint ndim, const uint* shape, const uint* strides);
+
+@kernel void embedding(const float* w, const int* x, float* y, uint nvocab, uint nembed, uint nbatch);
+@kernel void embeddingGrad(float* gw, const int* x, const float* gy, uint nvocab, uint nembed, uint nbatch);

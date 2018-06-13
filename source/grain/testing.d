@@ -119,7 +119,7 @@ auto gradCheck(F, In, Out, string file = __FILE__, size_t line = __LINE__)(
     static foreach (i; 0 .. inputs.toTuple.length) {
         static if (!isIntegral!(ElementType!(typeof(inputs.toTuple[i])))) {
             assert(approxEqual(agrad[i].sliced, ngrad[i].sliced, rtol, atol),
-                   format!"%d th input grad %s != %s from %s %d"(i, agrad[i].sliced, ngrad[i].sliced, file , line));
+                   format!"%d th input grad %s (backprop) != %s (numeric) from %s %d"(i, agrad[i].sliced, ngrad[i].sliced, file , line));
         }
     }
 }

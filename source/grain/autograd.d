@@ -70,8 +70,7 @@ auto uninitVariable(T, alias S = HostStorage, size_t dim)(uint[dim] shape, bool 
 version(grain_cuda) {
     /// create new variable with uninitialized array and the same shape/strides to v on CUDA
     auto uninit(T, size_t dim)(Variable!(T, dim, DeviceStorage) v) {
-        RefCounted!(CuPtr!T) data = CuPtr!T(v.length);
-        return Variable!(T, dim, DeviceStorage)(v.requiresGrad, v.shape, v.strides, data);
+        return uninitVariable!(T, DeviceStorage, dim)(v.shape, v.requiresGrad);
     }
 
 
@@ -91,26 +90,6 @@ version(grain_cuda) {
     auto to(alias S : HostStorage, Src)(Src src) if (isDevice!Src) {
         return src.toHost();
     }
-
-    // /// CUDA -> CPU memory conversion
-    // auto to(alias S : DeviceStorage, T)(T[] src) {
-    //     import std.array : empty;
-    //     return src.empty ? DeviceStorage!T() : DeviceStorage!T(src);
-    // }
-
-    // /// CPU -> CUDA memory conversion
-    // auto to(alias S : HostStorage, Src)(Src src) if (is(S!T == HostStorage!T)) {
-    //     return src.toHost();
-    // }
-
-
-    // auto to(alias S : HostStorage, Src)(Src src) if (!isDevice!Src) {
-    //     return src;
-    // }
-
-    // auto to(alias S : DeviceStorage, Src)(Src src) if (isDevice!Src) {
-    //     return src;
-    // }
 
     ///
     unittest {

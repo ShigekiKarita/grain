@@ -1215,3 +1215,72 @@ unittest {
         assert(approxEqual(dgx.to!HostStorage.sliced, hgx.sliced));
     }
 }
+
+import std.traits : isIntegral;
+auto toLength(I, size_t N)(I[N] shape) if (isIntegral!I) {
+    import std.algorithm : reduce;
+    return shape.reduce!"a * b";
+}
+
+/// change the shape of tensors
+struct View(T, size_t srcDim, size_t dstDim) {
+    import numir.core : view;
+    ptrdiff_t[dstDim] yshape;
+    ptrdiff_t[srcDim] xshape;
+
+    void checkLength() {
+        import std.algorithm : count;
+        // allow -1 to be reminder
+        auto xlen = this.xshape.toLength;
+        auto ylen = this.yshape.toLength;
+        assert(this.yshape[0..$].count!"a < 0" <= 1);
+        assert(ylen >= 0 ? xlen == ylen : xlen % ylen == 0);
+    }
+
+    auto forward(Variable!(T, srcDim, HostStorage) x) {
+        this.xshape = x.shape.castArray!ptrdiff_t;
+        this.checkLength();
+        // FIXME is this dup required?
+        return x.dup.sliced.view(this.yshape).variable(x.requiresGrad);
+    }
+
+    auto backward(Variable!(T, dstDim, HostStorage) gy) {
+        return gy.sliced.view(this.xshape).variable(gy.requiresGrad);
+    }
+
+    // version (grain_cuda) {
+    //     auto forward(Variable!(T, srcDim, DeviceStorage) x) {
+    //         this.xshape = x.shape.castArray!ptrdiff_t;
+    //         this.checkLength();
+    //         // FIXME is this dup required?
+    //         int[dstDim] strides = this.yshape
+    //         return Variable!(T, dstDim, DeviceStorage)(x.requiresGrad, this.yshape, this.yshape x.data); // x.dup.sliced.view(this.yshape).variable(x.requiresGrad);
+    //     }
+    // }
+}
+
+///
+unittest {
+    import grain.testing;
+    import std.typecons;
+    import numir;
+    import mir.ndslice;
+    import mir.math : pow;
+
+    ptrdiff_t[3] shape = [1, 3, -1];
+    auto hfunc = View!(float, 2, 3)(shape);
+    auto hx = uniform!float(2, 3).slice.variable;
+    auto hy = hfunc.forward(hx);
+    auto hgy = uniform!float(1, 3, 2).slice.variable;
+    auto hgx = hfunc.backward(hgy);
+    gradCheck(hfunc, hx, hgy);
+    // assert(approxEqual(hy.sliced, hx.sliced.map!(a => pow(a, p))));
+
+    // version (grain_cuda) {
+    //     auto dfunc = Pow!(float, 2)(p);
+    //     auto dy = dfunc.forward(hx.to!DeviceStorage);
+    //     assert(approxEqual(dy.to!HostStorage.sliced, hy.sliced));
+    //     auto dgx = dfunc.backward(hgy.to!DeviceStorage);
+    //     assert(approxEqual(dgx.to!HostStorage.sliced, hgx.sliced));
+    // }
+}

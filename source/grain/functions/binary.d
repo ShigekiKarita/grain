@@ -504,3 +504,78 @@ unittest {
         assert(dgxb[1].to!HostStorage.sliced == hgxb[1].sliced);
     }
 }
+
+/// Emebedding ID into vector. TODO: support N-dim input. support sparse weight matrix
+struct Embedding(T) {
+    import std.range : enumerate;
+    import numir : view, empty, zeros;
+
+    Variable!(int, 1, HostStorage) hx;
+    uint[2] wshape;
+
+     auto forward(Variable!(T, 2, HostStorage) weight, Variable!(int, 1, HostStorage) ids) {
+        this.hx = ids; // TODO if train
+        this.wshape = weight.shape; // TODO if train
+        auto ys = empty!T(ids.shape[0], weight.shape[1]);
+        foreach (i, id; ids.sliced.enumerate) {
+            ys[i, 0..$] = weight.sliced[id];
+        }
+        return ys.variable(weight.requiresGrad);
+    }
+
+    auto backward(Variable!(T, 2, HostStorage) gy) {
+        auto gw = zeros!T(this.wshape.castArray!size_t);
+        foreach (i, id; this.hx.sliced.enumerate) {
+            gw[id, 0..$] += gy.sliced[i];
+        }
+        return tuple(gw.variable(gy.requiresGrad), typeof(this.hx)());
+    }
+
+    version (grain_cuda) {
+        Variable!(int, 1, DeviceStorage) dx;
+
+        auto forward(Variable!(T, 2, DeviceStorage) weight, Variable!(int, 1, DeviceStorage) ids) {
+            import grain.kernel : embedding;
+            this.dx = ids; // TODO if train
+            this.wshape = weight.shape; // TODO if train
+            auto ys = uninitVariable!(T, DeviceStorage, 2)([ids.shape[0], weight.shape[1]], weight.requiresGrad);
+            Global.kernel!embedding
+                .call(weight.data.ptr, ids.data.ptr, ys.data.ptr, weight.shape[0], weight.shape[1], ids.shape[0])
+                .launch(weight.shape[1] * ids.shape[0]);
+            return ys;
+        }
+
+        auto backward(Variable!(T, 2, DeviceStorage) gy) {
+            import grain.kernel : embeddingGrad;
+            auto gw = uninitVariable!(T, DeviceStorage, 2)(this.wshape, gy.requiresGrad);
+            Global.kernel!embeddingGrad
+                .call(gw.data.ptr, this.dx.data.ptr, gy.data.ptr, this.wshape[0], this.wshape[1], this.dx.shape[0])
+                .launch(this.wshape[1] * this.dx.shape[0]);
+            return tuple(gw, typeof(this.dx)());
+        }
+
+    }
+}
+
+///
+unittest {
+    import numir;
+
+    Embedding!float embed;
+    auto w = [[1.0f, 2.0f], [3.0f, 4.0f]].nparray.variable;
+    auto x = [0, 1, 0].variable;
+    auto y = embed.forward(w, x);
+    assert(y.sliced == [[1,2],[3,4],[1,2]]);
+
+    auto gy = [[1f, 2f], [-1f, -2f], [1f, 0f]].nparray.variable;
+    auto gw = embed.backward(gy)[0];
+    assert(gw.sliced == [[2f, 2f], [-1f, -2f]]);
+
+    version (grain_cuda) {
+        Embedding!float dembed;
+        auto dy = dembed.forward(w.to!DeviceStorage, x.to!DeviceStorage);
+        assert(dy.to!HostStorage.sliced == y.sliced);
+        auto dgw = dembed.backward(gy.to!DeviceStorage)[0];
+        assert(dgw.to!HostStorage.sliced == gw.sliced);
+    }
+}
