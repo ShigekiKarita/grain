@@ -81,15 +81,24 @@ struct RNN(alias Storage, T=float) {
     }
 
     /// batch x frame input
-    auto loss(Slice!(Universal, [2L], int*) xs, Variable!(float, 2, Storage) hprev) {
-        auto loss = 0f.variable.to!Storage;
-        auto ret = new Variable!(float, 0, Storage)[xs.length!1 - 1];
+    auto accumGrad(Slice!(Universal, [2L], int*) xs, Variable!(float, 2, Storage) hprev) {
+        grain.autograd.backprop = true;
+        auto loss = new Variable!(float, 0, Storage)[xs.length!1-1];
+        auto hs = new Variable!(float, 2, Storage)[xs.length!1];
+        hs[0] = hprev;
+        loss[0] = 0f.variable;
         foreach (t; 0 .. xs.length!1 - 1) {
-            auto next = this.opCall(xs[0..$, t].variable(true).to!Storage, hprev);
-            hprev = next.h;
-            ret[t] = crossEntropy(next.y, xs[0..$, t+1].variable.to!Storage);
+            auto x = xs[0..$, t].variable.to!Storage;
+            auto result = this.opCall(x, hs[t]);
+            hs[t+1] = result.h;
+            loss[t] = crossEntropy(result.y, xs[0..$, t+1].variable.to!Storage);
         }
-        return ret;
+        auto sumLoss = 0.0;
+        foreach_reverse(l; loss) {
+            l.backward();
+            sumLoss += l.to!HostStorage.data[0];
+        }
+        return sumLoss;
     }
 }
 
@@ -119,7 +128,7 @@ void main() {
     // hyperparameters
     auto hiddenSize = 100; // size of hidden layer of neurons
     auto seqLength = 25;   // number of steps to unroll the RNN for
-    auto learningRate = 1e-1;
+    auto learningRate = 0.001;
     auto maxIter = 10000;
     auto logIter = maxIter / 100;
     auto batchSize = 1;
@@ -150,13 +159,8 @@ void main() {
         // }
 
         // forward seq_length characters through the net and fetch gradient
-        auto ret = model.loss(ids.sliced.unsqueeze!0, hprev);
         model.zeroGrad();
-        auto sumLoss = 0.0;
-        foreach (loss; ret) {
-            loss.backward();
-            sumLoss += loss.to!HostStorage.data[0];
-        }
+        auto sumLoss = model.accumGrad(ids.sliced.unsqueeze!0, hprev);
         optim.update(model);
         smoothLoss = smoothLoss * 0.999 + sumLoss * 0.001;
         if (nIter % logIter == 0) {
@@ -165,10 +169,6 @@ void main() {
                 cast(double) logIter / (C.to!(TickDuration)(sw.peek()).msecs * 1e-3));
             sw.reset();
         }
-        // foreach (k, v; params) {
-        //     memory[k][] += results.grads[k] * results.grads[k];
-        //     params[k][] -= learning_rate * results.grads[k] / (memory[k] + 1e-8).map!sqrt; // adagrad update
-        // }
         beginId += seqLength; // move data pointer
     }
 }

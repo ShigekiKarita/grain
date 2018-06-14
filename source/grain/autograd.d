@@ -346,6 +346,32 @@ unittest {
     }
 }
 
+/// test multiple addition
+unittest {
+    grain.autograd.backprop = true;
+    auto x = [1f, 2f].variable(true);
+    auto y = x + x; // x = 2 x
+    auto z = y + y; // x = 4 x
+    auto g = [0f, 1f].variable;
+    auto u = UntypedVariable(g);
+    z.backward(&u);
+    assert(x.gradSliced == [0f, 4f]);
+}
+
+/// FIXME: test multiple addition with assign
+// unittest {
+//     grain.autograd.backprop = true;
+//     auto x = [1f, 2f].variable(true);
+//     x = x + x; // x = 2 x
+//     x = x + x; // x = 4 x
+//     auto g = [0f, 1f].variable;
+//     auto u = UntypedVariable(g);
+//     x.backward(&u);
+//     x.gradSliced.writeln;
+//     assert(x.gradSliced == [0f, 4f]);
+// }
+
+
 
 /// test Variable.defined
 unittest {
@@ -468,5 +494,3 @@ unittest {
         }
     }
 }
-
-

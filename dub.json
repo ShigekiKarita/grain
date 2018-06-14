@@ -69,6 +69,12 @@
             "targetName": "grain-example-char-rnn",
             "targetType": "executable",
             "mainSourceFile": "example/char_rnn.d",
+        },
+        {
+            "name": "example-char-rnn-hand",
+            "targetName": "grain-example-char-rnn-hand",
+            "targetType": "executable",
+            "mainSourceFile": "example/char_rnn_hand.d",
         }
     ],
     "-ddoxTool": "scod",
