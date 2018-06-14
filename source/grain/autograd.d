@@ -234,6 +234,11 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
         // }
     }
 
+    ref detach() {
+        this.bprop = BackProp();
+        return this;
+    }
+
     @property
     auto ptr() {
         return this.data.ptr + offset;

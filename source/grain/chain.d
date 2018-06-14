@@ -115,6 +115,12 @@ auto pow(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x, T power) {
     return func.applyForward(x);
 }
 
+/// log exp(x_i) / sum_i (exp(x_i))
+auto logSoftmax(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
+    import grain.functions.unary : LogSoftmax;
+    auto func = new LogSoftmax!(T, dim);
+    return func.applyForward(x);
+}
 
 /// test fast math functions
 unittest {
@@ -122,7 +128,7 @@ unittest {
     import numir;
     import mir.ndslice;
     import std.meta;
-    foreach (f; AliasSeq!(sigmoid, tanh, reciprocal, neg, exp, log, sin, cos, tan, x => pow(x, 2.0f))) {
+    foreach (f; AliasSeq!(sigmoid, tanh, reciprocal, neg, exp, log, sin, cos, tan, x => pow(x, 2.0f), logSoftmax)) {
         auto hx = uniform!float(2, 3).slice.variable(true);
         auto hgy = uniform!float(2, 3).slice.variable;
         gradCheckChain!f(hx, hgy, 1e-3, 5e-2, 5e-2);
@@ -132,14 +138,20 @@ unittest {
 
 /////// Loss
 
-/// cross entropy loss (logsoftmax -> negative loglikelihood function)
-auto crossEntropy(alias Storage)(Variable!(float, 2, Storage) x, Variable!(int, 1, Storage) t, int ignoreIndex=-100) {
-    import grain.functions : LogSoftmax, NegativeLogLikelihood;
-    auto lsmax = new LogSoftmax!(float, 2);
-    auto y = lsmax.applyForward(x);
+/// negative loglikelihood - log p(x). note that p(x) should be normalized
+auto negativeLogLikelihood(alias Storage)(Variable!(float, 2, Storage) x, Variable!(int, 1, Storage) t, int ignoreIndex=-100) {
+    import grain.functions : NegativeLogLikelihood;
     auto nll = new NegativeLogLikelihood!(float, int);
     nll.ignoreIndex = ignoreIndex;
-    return nll.applyForward(y, t);
+    return nll.applyForward(x, t);
+}
+
+
+/// cross entropy loss (logsoftmax -> negative loglikelihood function)
+auto crossEntropy(alias Storage)(Variable!(float, 2, Storage) x, Variable!(int, 1, Storage) t, int ignoreIndex=-100) {
+    import grain.functions : NegativeLogLikelihood;
+    auto y = logSoftmax(x);
+    return negativeLogLikelihood(y, t, ignoreIndex);
 }
 
 

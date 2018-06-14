@@ -16,48 +16,13 @@ import std.algorithm : stdmap = map;
 import std.typecons : tuple;
 import std.net.curl : get;
 
-import mir.math.common : log; // , exp, sqrt, fastmath;
-// import mir.random : Random, unpredictableSeed;
-// import mir.random.variable : discreteVar;
-// import std.math : tanh;
-// import mir.ndslice : slice, sliced, map, transposed, ndarray;
-// import mir.math.sum : sum;
-// import lubeck : mtimes;
 import numir;
-
+import mir.random.variable : discreteVar;
+import mir.random;
 import mir.ndslice;
+
 import grain.autograd;
 import grain.optim;
-
-
-
-// /++
-// Params:
-//     params = RNN model parameters
-//     h = memory state
-//     seed_ix = seed letter for first time step
-// Returns:
-//     a sampled sequence of integers from the model
-//  +/
-// //@fastmath
-// auto sample(STuple, S)(STuple params, S h, size_t seed_ix, size_t n) {
-//     auto gen = Random(unpredictableSeed);
-//     auto x = zeros(params.Wxh.length!1, 1);
-//     x[seed_ix][] = 1;
-//     size_t[] ixes;
-//     ixes.length = n;
-//     foreach (t; 0 .. n) {
-//         h[] = map!tanh(mtimes(params.Wxh, x) + mtimes(params.Whh, h) + params.bh);
-//         auto y = mtimes(params.Why, h) + params.by;
-//         auto p = map!exp(y).slice;
-//         p[] /= p.sum;
-//         auto ix = discreteVar(p.squeeze!1.ndarray)(gen);
-//         x[] = 0;
-//         x[ix][] = 1;
-//         ixes[t] = ix;
-//     }
-//     return ixes;
-// }
 
 
 struct RNN(alias Storage, T=float) {
@@ -65,19 +30,42 @@ struct RNN(alias Storage, T=float) {
     alias L = Linear!(T, Storage);
     Embedding!(T, Storage) wx;
     L wh, wy;
+    Random gen;
 
     this(uint nvocab, int nunits) {
+        import grain.utility : castArray;
         this.wx = Embedding!(T, Storage)(nvocab, nunits);
         this.wh = L(nunits, nunits);
         this.wy = L(nunits, nvocab);
+        this.gen = Random(unpredictableSeed);
+        // this.wx.weight.sliced[] = normal!float(this.wx.weight.shape.castArray!size_t) * 0.01;
+        // this.wh.weight.sliced[] = normal!float(this.wx.weight.shape.castArray!size_t) * 0.01;
+        // this.wy.weight.sliced[] = normal!float(this.wx.weight.shape.castArray!size_t) * 0.01;
+        // this.wh.bias.sliced[] = 0;
+        // this.w.bias.sliced[] = 0;
     }
 
     /// framewise batch input
     auto opCall(Variable!(int, 1, Storage) x, Variable!(float, 2, Storage) hprev) {
         import std.typecons : tuple;
         auto h = tanh(this.wx(x) + this.wh(hprev));
-        auto y = this.wy(h);
+        auto y = logSoftmax(this.wy(h));
         return tuple!("y", "h")(y, h);
+    }
+
+    auto sample(int seed_ix, size_t n, Variable!(float, 2, Storage) hprev) {
+        import mir.math : exp, sum;
+        auto x = [seed_ix].variable;
+        int[] ret;
+        ret.length = n;
+        foreach (t; 0 .. n) {
+            auto next = this.opCall(x, hprev);
+            auto p = map!exp(next.y.sliced).slice;
+            auto ix = cast(int) discreteVar(p.squeeze!0.ndarray)(gen);
+            ret ~= [ix];
+            hprev = next.h;
+        }
+        return ret;
     }
 
     /// batch x frame input
@@ -91,19 +79,22 @@ struct RNN(alias Storage, T=float) {
             auto x = xs[0..$, t].variable.to!Storage;
             auto result = this.opCall(x, hs[t]);
             hs[t+1] = result.h;
-            loss[t] = crossEntropy(result.y, xs[0..$, t+1].variable.to!Storage);
+            loss[t] = negativeLogLikelihood(result.y, xs[0..$, t+1].variable.to!Storage);
         }
         auto sumLoss = 0.0;
         foreach_reverse(l; loss) {
             l.backward();
             sumLoss += l.to!HostStorage.data[0];
         }
-        return sumLoss;
+        hs[$-1].detach(); // unchain backprop
+        return tuple!("loss", "hprev")(sumLoss, hs[$-1]);
     }
 }
 
 void main() {
     import C = std.conv;
+    import mir.math : log;
+
     // data I/O
     if (!"data/".exists) {
         import std.file : mkdir;
@@ -151,18 +142,19 @@ void main() {
             beginId = 0; // go from start of data
         }
         auto ids = data[beginId .. beginId + seqLength + 1].stdmap!(c => char2idx[c]).array;
-        // // sample from the model now and then
+        // sample from the model now and then
         // if (nIter % logIter == 0) {
-        //     auto sample_ix = sample(params, hprev, ids[0], 200);
-        //     auto txt = sample_ix.stdmap!(ix => ix_to_char[ix]).to!dstring;
+        //     auto sampleIdx = model.sample(ids[0], 200, hprev);
+        //     auto txt = C.to!dstring(sampleIdx.stdmap!(ix => idx2char[ix]));
         //     writeln("-----\n", txt, "\n-----");
         // }
 
         // forward seq_length characters through the net and fetch gradient
         model.zeroGrad();
-        auto sumLoss = model.accumGrad(ids.sliced.unsqueeze!0, hprev);
+        auto ret = model.accumGrad(ids.sliced.unsqueeze!0, hprev);
+        hprev = ret.hprev;
         optim.update(model);
-        smoothLoss = smoothLoss * 0.999 + sumLoss * 0.001;
+        smoothLoss = smoothLoss * 0.999 + ret.loss * 0.001;
         if (nIter % logIter == 0) {
             writefln!"iter %d, loss: %f, iter/sec: %f"(
                 nIter, smoothLoss,
