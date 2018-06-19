@@ -130,7 +130,6 @@ void main() {
     auto model = RNN!Storage(vocabSize, hiddenSize);
 
     // for optim
-    // SGD optim = { lr: learningRate };
     auto optim = AdaGrad!(typeof(model))(model, learningRate);
     auto smoothLoss = -log(1.0 / vocabSize) * seqLength;
     size_t beginId = 0;
@@ -154,9 +153,9 @@ void main() {
         // forward seq_length characters through the net and fetch gradient
         model.zeroGrad();
         auto ret = model.accumGrad(ids.sliced.unsqueeze!0, hprev);
-        hprev = ret.hprev;
-        optim.update(model);
+        optim.update();
         smoothLoss = smoothLoss * 0.999 + ret.loss * 0.001;
+        hprev = ret.hprev;
         if (nIter % logIter == 0) {
             writefln!"iter %d, loss: %f, iter/sec: %f"(
                 nIter, smoothLoss,

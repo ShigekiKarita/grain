@@ -118,7 +118,7 @@ void main() {
     auto trainBatch = datasets.train.makeBatch(batchSize);
     auto testBatch = datasets.test.makeBatch(batchSize);
     auto model = MLP!(float, S)(inSize, 512, 10);
-    SGD optimizer = {lr: 1e-2};
+    auto optimizer = SGD!(typeof(model))(model, 1e-2);
 
     foreach (epoch; 0 .. 10) {
         // TODO implement model.train();
@@ -135,7 +135,7 @@ void main() {
                 accSum += acc;
                 model.zeroGrad();
                 loss.backward();
-                optimizer.update(model);
+                optimizer.update();
             }
             writefln!"train loss: %f, acc: %f"(lossSum / niter, accSum / niter);
         }
