@@ -580,7 +580,7 @@ unittest {
     auto hy = hfunc.forward(hx);
     auto hgy = uniform!float(2, 2).slice.variable;
     auto hgx = hfunc.backward(hgy);
-    gradCheck(hfunc, hx, hgy, 1e-3, 1e-2, 1e-2);
+    gradCheck(hfunc, hx, hgy, 1e-3, 5e-2, 5e-2);
 
     version (grain_cuda) {
         Reciprocal!(float, 2) dfunc;
@@ -705,7 +705,7 @@ unittest {
     auto hy = hfunc.forward(hx);
     auto hgy = uniform!float(2, 3).slice.variable;
     auto hgx = hfunc.backward(hgy);
-    gradCheck(hfunc, hx, hgy, 1e-3, 1e-2, 1e-2);
+    gradCheck(hfunc, hx, hgy, 1e-3, 5e-2, 5e-2);
     assert(approxEqual(hy.sliced, hx.sliced.map!log));
 
     version (grain_cuda) {

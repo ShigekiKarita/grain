@@ -279,8 +279,38 @@ void fill(T, size_t dim)(Variable!(T, dim, DeviceStorage) x, T value) {
     checkCUDNN( cudnnSetTensor(cudnnHandle, x.makeCudnnTensor, cast(void*) x.data.ptr, cast(const void*) &value) );
 }
 
+///
+bool isContiguous(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
+    // FIXME reconsider this when I support reshape, reversed and transposed
+    return x.strides[$-1] == 1 && x.shape[1..$] == x.strides[0..$-1];
+}
+
+///
+unittest {
+    {
+        auto x = [[0.1f, 0.2f], [0.3f, 0.4f]].variable;
+        assert(x.isContiguous);
+        x.strides = [2, 2];
+        assert(!x.isContiguous);
+    }
+    version (grain_cuda) {
+        auto x = [[0.1f, 0.2f], [0.3f, 0.4f]].variable.to!DeviceStorage;
+        assert(x.isContiguous);
+        x.strides = [2, 2];
+        assert(!x.isContiguous);
+    }
+}
+
+
 void transform(T, size_t dim)(Variable!(T, dim, DeviceStorage) src, ref Variable!(T, dim, DeviceStorage) dst, T alpha=1, T beta=0) {
     assert(src.shape == dst.shape);
+
+    if (src.isContiguous && dst.isContiguous && beta == 1) {
+        import grain.cuda : axpy;
+        axpy(src.data, dst.data, alpha);
+        return;
+    }
+
     checkCUDNN(
         cudnnTransformTensor(
             cudnnHandle,

@@ -473,7 +473,7 @@ unittest {
 }
 
 
-/// high-level axpy wrapper for CuPtr
+/// high-level axpy (y = alpha * x + y) wrapper for CuPtr
 void axpy(T)(const ref CuPtr!T x, ref CuPtr!T y, T alpha=1, int incx=1, int incy=1)  {
     static if (is(T == float)) {
         alias axpy_ = cublasSaxpy_v2;

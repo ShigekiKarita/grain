@@ -30,19 +30,18 @@ struct RNN(alias Storage, T=float) {
     alias L = Linear!(T, Storage);
     Embedding!(T, Storage) wx;
     L wh, wy;
-    Random gen;
 
     this(uint nvocab, int nunits) {
         import grain.utility : castArray;
         this.wx = Embedding!(T, Storage)(nvocab, nunits);
         this.wh = L(nunits, nunits);
         this.wy = L(nunits, nvocab);
-        this.gen = Random(unpredictableSeed);
+
         // this.wx.weight.sliced[] = normal!float(this.wx.weight.shape.castArray!size_t) * 0.01;
         // this.wh.weight.sliced[] = normal!float(this.wx.weight.shape.castArray!size_t) * 0.01;
         // this.wy.weight.sliced[] = normal!float(this.wx.weight.shape.castArray!size_t) * 0.01;
         // this.wh.bias.sliced[] = 0;
-        // this.w.bias.sliced[] = 0;
+        // this.wy.bias.sliced[] = 0;
     }
 
     /// framewise batch input
@@ -54,16 +53,18 @@ struct RNN(alias Storage, T=float) {
     }
 
     auto sample(int seed_ix, size_t n, Variable!(float, 2, Storage) hprev) {
+        // Random gen;
+        auto gen = Random(unpredictableSeed);
         import mir.math : exp, sum;
         auto x = [seed_ix].variable;
-        int[] ret;
-        ret.length = n;
+        int[] ret = [seed_ix];
         foreach (t; 0 .. n) {
             auto next = this.opCall(x, hprev);
             auto p = map!exp(next.y.sliced).slice;
             auto ix = cast(int) discreteVar(p.squeeze!0.ndarray)(gen);
             ret ~= [ix];
             hprev = next.h;
+            x = [ix].variable;
         }
         return ret;
     }
@@ -119,7 +120,7 @@ void main() {
     // hyperparameters
     auto hiddenSize = 100; // size of hidden layer of neurons
     auto seqLength = 25;   // number of steps to unroll the RNN for
-    auto learningRate = 0.001;
+    auto learningRate = 0.01;
     auto maxIter = 10000;
     auto logIter = maxIter / 100;
     auto batchSize = 1;
@@ -129,7 +130,8 @@ void main() {
     auto model = RNN!Storage(vocabSize, hiddenSize);
 
     // for optim
-    SGD optim = { lr: learningRate };
+    // SGD optim = { lr: learningRate };
+    auto optim = AdaGrad!(typeof(model))(model, learningRate);
     auto smoothLoss = -log(1.0 / vocabSize) * seqLength;
     size_t beginId = 0;
     auto hprev = zeros!float(batchSize, hiddenSize).variable(true).to!Storage;
@@ -143,11 +145,11 @@ void main() {
         }
         auto ids = data[beginId .. beginId + seqLength + 1].stdmap!(c => char2idx[c]).array;
         // sample from the model now and then
-        // if (nIter % logIter == 0) {
-        //     auto sampleIdx = model.sample(ids[0], 200, hprev);
-        //     auto txt = C.to!dstring(sampleIdx.stdmap!(ix => idx2char[ix]));
-        //     writeln("-----\n", txt, "\n-----");
-        // }
+        if (nIter % logIter == 0) {
+            auto sampleIdx = model.sample(ids[0], 200, hprev);
+            auto txt = C.to!dstring(sampleIdx.stdmap!(ix => idx2char[ix]));
+            writeln("-----\n", txt, "\n-----");
+        }
 
         // forward seq_length characters through the net and fetch gradient
         model.zeroGrad();

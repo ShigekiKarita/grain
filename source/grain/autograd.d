@@ -135,6 +135,13 @@ struct UntypedVariable {
             this.requiresGrad, this.shape[0..dim], this.strides[0..dim], d);
     }
 
+    auto gradTo(V : Variable!(T, dim, Storage), T, size_t dim, alias Storage)() {
+        auto d = this.data.get!(RefCounted!(Storage!T));
+        return Variable!(T, dim, Storage)(
+            this.requiresGrad, this.shape[0..dim], this.strides[0..dim], d);
+    }
+
+
     string toString() const {
         import std.format : format;
         return "UntypedVariable(%s, dim=%d, data=%s, shape=%s, strides=%s)".format(
@@ -144,6 +151,11 @@ struct UntypedVariable {
     auto gradSlice(V)() if (isVariable!V && isHost!V) {
         import mir.ndslice.slice : sliced;
         return grad.get!(typeof(V.init.data)).ptr.sliced(this.shape[0 .. Ndim!V].castArray!size_t);
+    }
+
+    auto dataSlice(V)() if (isVariable!V && isHost!V) {
+        import mir.ndslice.slice : sliced;
+        return data.get!(typeof(V.init.data)).ptr.sliced(this.shape[0 .. Ndim!V].castArray!size_t);
     }
 }
 
@@ -234,6 +246,10 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
         // }
     }
 
+    auto gradVariable(bool requiresGrad=false) {
+        return Variable(requiresGrad, this.shape, this.strides, this.grad);
+    }
+
     ref detach() {
         this.bprop = BackProp();
         return this;
@@ -310,6 +326,43 @@ struct Variable(T, size_t dim, alias Storage = HostStorage) {
         } else static if (op == "/") {
             return opBinaryFunc!"*"(this, reciprocal(b));
         } else {
+            static assert(false, "unsupported op: " ~ op);
+        }
+    }
+
+    auto opBinary(string op)(T b) {
+        uint[dim] shape;
+        shape[] = 1;
+        auto v = uninitVariable!(T, Storage, dim)(shape, false);
+        static if (is(Storage!T == HostStorage!T)) {
+            import std.algorithm : fill;
+            fill(v.data, b);
+        } else {
+            fill_(v.data, b);
+        }
+        return this.opBinary!op(v);
+    }
+
+    auto opBinaryRight(string op)(T b) {
+        static if (op == "+" || op == "*") {
+            return this.opBinary!op(b);
+        }
+        else static if (op == "-") {
+            return this.opBinary!"+"(-b);
+        }
+        else static if (op == "/"){
+            uint[dim] shape;
+            shape[] = 1;
+            auto v = uninitVariable!(T, Storage, dim)(shape, false);
+            static if (is(Storage!T == HostStorage!T)) {
+                import std.algorithm : fill;
+                fill(v.data, b);
+            } else {
+                fill_(v.data, b);
+            }
+            return v.opBinary!op(this);
+        }
+        else {
             static assert(false, "unsupported op: " ~ op);
         }
     }
