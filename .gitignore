@@ -8,13 +8,13 @@
 !*.cu
 !*.sh
 !.travis.yml
-!dub.selections.json
 !dub.json
 !tmp/*.ptx
 !dcompute/*
 !style.css
 !skeleton.html
 
+dub.selections.json
 generated-docs
 adrdox/
 .dub
@@ -25,3 +25,4 @@ docs/
 *.o
 *.obj
 *.lst
+.#*

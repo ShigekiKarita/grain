@@ -1,4 +1,4 @@
-.PHONY: test clean kernel example-mnist cuda-deps
+.PHONY: test clean kernel example-mnist example-char-rnn cuda-deps
 
 CUDA_COMPUTE_CAPABILITY := `tool/compute_capability.out 0`
 CUDA_BIT := $(shell getconf LONG_BIT)
@@ -53,4 +53,7 @@ clean:
 	find . -type f -name "*.out" -print -delete
 
 example-mnist:
-	dub --config=example-mnist --compiler=ldc2 -b=cuda-release
+	dub --config=example-mnist --compiler=ldc2 $(DUB_OPTS)
+
+example-char-rnn:
+	dub --config=example-char-rnn --compiler=ldc2 $(DUB_OPTS)
