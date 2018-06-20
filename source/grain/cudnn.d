@@ -1,5 +1,7 @@
 /**
    cuDNN high level wrapper for grain.autograd.Variable
+
+   TODO: support global workspace instead of frequent allocation
  */
 module grain.cudnn;
 
@@ -406,3 +408,133 @@ unittest {
     }
 
 }
+
+
+void convForward(cudnnConvolutionFwdAlgo_t algo = CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM,
+                 cudnnConvolutionMode_t mode = CUDNN_CROSS_CORRELATION,
+                 cudnnTensorFormat_t format = CUDNN_TENSOR_NCHW,
+                 T, size_t dim)
+    (
+     Variable!(T, dim, DeviceStorage) input,      // [N, CI, HI, WI]
+     Variable!(T, dim, DeviceStorage) filter,     // [CO, CI/G, KH, KW]
+     ref Variable!(T, dim, DeviceStorage) output, // [N, CO, HO, WO]
+     const int[dim-2]   stride,
+     const int[dim-2]   pad,
+     const int[dim-2]   dilation,
+     int ngroup = 1,
+     float alpha = 1,
+     float beta = 0
+     ) {
+    static assert(dim < CUDNN_DIM_MAX);
+
+    // TODO cache these?
+    cudnnFilterDescriptor_t cudnnFdesc;
+    checkCUDNN( cudnnCreateFilterDescriptor(&cudnnFdesc) );
+    scope(exit) cudnnDestroyFilterDescriptor(cudnnFdesc);
+    checkCUDNN( cudnnSetFilterNdDescriptor(cudnnFdesc, cudnnDataType!T, format,
+                                           cast(int) dim, filter.shape.ptr
+                                           ) );
+
+    cudnnConvolutionDescriptor_t cudnnConvDesc;
+    checkCUDNN( cudnnCreateConvolutionDescriptor(&cudnnConvDesc) );
+    scope(exit) cudnnDestroyConvolutionDescriptor(cudnnConvDesc);
+    checkCUDNN( cudnnSetConvolutionGroupCount(cudnnConvDesc, ngroup) );
+    checkCUDNN( cudnnSetConvolutionNdDescriptor(cudnnConvDesc, cast(int) dim,
+                                                pad.ptr, stride.ptr, dilation.ptr,
+                                                mode, cudnnDataType!T
+                                                ) );
+
+    auto cudnnIdesc = input.makeCudnnTensor;
+    auto cudnnOdesc = output.makeCudnnTensor;
+    size_t workSpaceSize;
+    checkCUDNN ( cudnnGetConvolutionForwardWorkspaceSize
+                 (cudnnHandle, cudnnIdesc, cudnnFdesc, cudnnConvDesc,
+                  cudnnOdesc, algo, &workSpaceSize) );
+    auto workSpace = CuPtr!byte(workSpaceSize);
+
+    checkCudnnErr ( cudnnConvolutionForward (cudnnHandle,
+                                             cast(const void*) &alpha,
+                                             cudnnIdesc, cast(const void*) input.data.ptr,
+                                             cudnnFdesc, cast(const void*) filter.data.ptr,
+                                             cudnnConvDesc,
+                                             algo,
+                                             cast(void*) workSpace.data.ptr, workSpaceSize,
+                                             cast(const void*) &beta,
+                                             cudnnOdesc, cast(void*) output.data.ptr) );
+}
+
+
+void convBackward(cudnnConvolutionBwdDataAlgo_t algo = CUDNN_CONVOLUTION_BWD_DATA_ALGO_1,
+                  cudnnConvolutionMode_t mode = CUDNN_CROSS_CORRELATION,
+                  cudnnTensorFormat_t format = CUDNN_TENSOR_NCHW,
+                  T, size_t dim)
+    (
+     ref Variable!(T, dim, DeviceStorage) gradInput,      // [N, CI, HI, WI]
+     Variable!(T, dim, DeviceStorage) input,      // [N, CI, HI, WI]
+     ref Variable!(T, dim, DeviceStorage) gradFilter,     // [CO, CI/G, KH, KW]
+     Variable!(T, dim, DeviceStorage) filter,     // [CO, CI/G, KH, KW]
+     Variable!(T, dim, DeviceStorage) gradOutput, // [N, CO, HO, WO]
+     const int[dim-2]   stride,
+     const int[dim-2]   pad,
+     const int[dim-2]   dilation,
+     int ngroup = 1,
+     float alpha = 1,
+     float beta = 0
+) {
+    static assert(dim < CUDNN_DIM_MAX);
+
+    // TODO cache these?
+    cudnnFilterDescriptor_t cudnnFdesc;
+    checkCUDNN( cudnnCreateFilterDescriptor(&cudnnFdesc) );
+    scope(exit) cudnnDestroyFilterDescriptor(cudnnFdesc);
+    checkCUDNN( cudnnSetFilterNdDescriptor(cudnnFdesc, cudnnDataType!T, format,
+                                           cast(int) dim, filter.shape.ptr
+                                           ) );
+
+    cudnnConvolutionDescriptor_t cudnnConvDesc;
+    checkCUDNN( cudnnCreateConvolutionDescriptor(&cudnnConvDesc) );
+    scope(exit) cudnnDestroyConvolutionDescriptor(cudnnConvDesc);
+    checkCUDNN( cudnnSetConvolutionGroupCount(cudnnConvDesc, ngroup) );
+    checkCUDNN( cudnnSetConvolutionNdDescriptor(cudnnConvDesc, cast(int) dim,
+                                                pad.ptr, stride.ptr, dilation.ptr,
+                                                mode, cudnnDataType!T
+                                                ) );
+
+    auto cudnnIdesc = input.makeCudnnTensor;
+    auto cudnnOdesc = output.makeCudnnTensor;
+    auto cudnnGIdesc = gradInput.makeCudnnTensor;
+    auto cudnnGOdesc = gradOutput.makeCudnnTensor;
+
+    size_t dworkSpaceSize;
+    checkCudnnErr ( cudnnGetConvolutionBackwardDataWorkspaceSize
+                    (cudnnHandle, cudnnFdesc, cudnnGOdesc, cudnnConvDesc,
+                     cudnnGIdesc, algo, &dworkSpaceSize) );
+    auto dworkSpace = CuPtr!byte(workSpaceSize);
+    checkCudnnErr ( cudnnConvolutionBackwardData (cudnnHandle,
+                                                  cast(void*)(&alpha),
+                                                  cudnnFdesc, cast(const void*) filter.data.ptr,
+                                                  cudnnGOdesc, cast(const void*) gradOutput.data.ptr,
+                                                  cudnnConvDesc,
+                                                  algo,
+                                                  cast(const void*) dworkSpace.ptr, dworkSpaceSize,
+                                                  cast(const void*)(&beta),
+                                                  cudnnGIdesc, cast(void*) gradInput.data.ptr) );
+
+    size_t fworkSpaceSize;
+    checkCudnnErr ( cudnnGetConvolutionBackwardFilterWorkspaceSize
+                    (cudnnHandle, cudnnIdesc, cudnnGOdesc, cudnnConvDesc,
+                     cudnnFdesc, algo, &fworkSpaceSize) );
+    auto fworkSpace = CuPtr!byte(workSpaceSize);
+    checkCudnnErr ( cudnnConvolutionBackwardFilter (cudnnHandle,
+                                                    cast(const void*)(&alpha),
+                                                    cudnnIdesc,  cast(const void*) input.data.ptr,
+                                                    cudnnGOdesc, cast(const void*) gradOutput.data.ptr,
+                                                    cudnnConvDesc,
+                                                    balgo,
+                                                    cast(void*) fworkSpace.ptr, fworkSpaceSize,
+                                                    cast(const void*)(&beta),
+                                                    cudnnFdesc, cast(void*) gradFilter.data.ptr) );
+}
+
+// TODO setup convolutionBias or find other way (just use add)
+
