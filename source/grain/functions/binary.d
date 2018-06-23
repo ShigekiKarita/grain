@@ -620,15 +620,63 @@ void doEpilog(float *o, int idx, float alphaAcc, float beta) {
     }
 }
 
-struct Convolution(T, size_t imDims, size_t group=1, bool isNchw=true, bool isConv=true) {
-    size_t[dim] kernel;
-    size_t[dim] stride;
-    size_t[dim] pad;
-    size_t[dim] dilation;
+int dim2lin(const int* ids, const int* strides, int length) {
+    int res = 0 ;
+    for(int i = 0 ; i < length ; i++) {
+        res += ids[i] * strides[i];
+    }
+    return res ;
+}
+
+struct Convolution(T, size_t imDims, size_t group=1, bool isConv=true) {
+    int[imDims] stride;
+    int[imDims] pad;
+    int[imDims] dilation;
     enum int nbDims = imDims + 2;
+    enum bool isNchw=true; // TODO support NHWC ?
+
+    /// https://pytorch.org/docs/master/nn.html#convolution-layers
+    auto outShape(uint[nbDims] inShape, uint[nbDims] weightShape) {
+        uint[nbDims] ret;
+        ret[0] = inShape[0]; // batchsize
+        ret[1] = weightShape[0]; // output ch size
+        assert(inShape[1] == weightShape[1]);
+        auto kernel = weightShape[2..$];
+        foreach (d; 0 .. imDims) {
+            ret[d+2] = cast(uint)
+                ((inShape[d+2] + 2 * pad[d] - dilation[d] * (kernel[d] - 1) - 1)
+                 / stride[d] + 1);
+        }
+        return ret;
+    }
 
     auto forward(Variable!(T, nbDims, HostStorage) x, Variable!(T, nbDims, HostStorage) w) {
-        return ;
+        import std.algorithm : all;
+        foreach (d; 0..imDims) {
+            if (this.stride[d] == 0) {
+                this.stride[d] = 1;
+            }
+            if (this.dilation[d] == 0) {
+                this.dilation[d] = 1;
+            }
+        }
+
+
+        auto y = uninitVariable!(T, HostStorage)(outShape(x.shape, w.shape));
+        convCpuRef(x.data.ptr,
+                          w.data.ptr,
+                          y.data.ptr,
+                          1f, 0f,
+                          x.shape.castArray!int.ptr,
+                          w.shape.castArray!int.ptr,
+                          y.shape.castArray!int.ptr,
+                          x.strides.ptr,
+                          y.strides.ptr,
+                          this.stride.ptr,
+                          this.pad.ptr,
+                          this.dilation.ptr
+                          );
+        return y;
     }
 
     // auto forward(Variable!(T, nbDims, HostStorage) x, Variable!(T, nbDims, HostStorage) w) {
@@ -637,7 +685,6 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isNchw=true, bool isCo
                      T*       outputData,
                      float        alpha,
                      float        beta,
-                     bool         isNchw,
                      const int*   inDims,
                      const int*   filDims,
                      const int*   outDims,
@@ -646,10 +693,9 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isNchw=true, bool isCo
                      const int*   stride,
                      const int*   pad,
                      const int*   dilation,
-                     int          nbDims
                      ) {
         int[8] filStride;
-        generateStrides(filDims, filStride, nbDims, isNchw);
+        generateStrides(filDims, filStride.ptr, nbDims, isNchw);
         // Number of pixels in output
         int nPixelsOut = 1 ;
         for(int i = 2 ; i < nbDims ; i++)
@@ -668,20 +714,20 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isNchw=true, bool isCo
                 // Loop over all entries of the result
                 for(int outId = 0 ; outId < nPixelsOut ; outId++) {
                     // Get output pixel ids
-                    lin2dim(outId, outIds, outDims+2, imDims) ; // Skip n and k dimensions
+                    lin2dim(outId, outIds.ptr, outDims+2, imDims) ; // Skip n and k dimensions
                     // Now we get the coordinates in input space of
                     // the "top left" corner of the filter: multiply by stride and remove pad
                     for(int d = 0 ; d < imDims ; d++) {
                         inIds[d] = outIds[d] * stride[d] - pad[d] ;
                     }
                     // We then accumulate
-                    float tmp = 0.f;
+                    float tmp = 0f;
                     for(int ci = 0 ; ci < inDims[1] ; ci++) {
                         int inputOffset = ni * inStride[0] + ci * inStride[1] ;
                         int filterOffset = ki * filStride[0] + ci * filStride[1] ;
                         for(int filId = 0 ; filId < nPixelsFil ; filId ++) {
                             // Get the position of the pixel
-                            lin2dim(filId, filIds, filDims+2, imDims) ;
+                            lin2dim(filId, filIds.ptr, filDims+2, imDims) ;
                             // Compute the corresponding output pixel
                             // and check wether we are in the padding area on the fly too
                             // (not that for convolution, we flip the image patch
@@ -696,9 +742,9 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isNchw=true, bool isCo
                                 inside &= (tmpIds[d] >= 0 && tmpIds[d] < inDims[2+d]) ; // If we are in the padding area: stop and skip computations
                             }
                             if(inside) {
-                                int actualTmpId = inputOffset + dim2lin(tmpIds, (inStride)+2, imDims) ;
+                                int actualTmpId = inputOffset + dim2lin(tmpIds.ptr, (inStride)+2, imDims) ;
                                 //int actualFilId = filterOffset + filId ;
-                                int actualFilId = filterOffset + dim2lin(filIds, (filStride)+2, imDims) ;
+                                int actualFilId = filterOffset + dim2lin(filIds.ptr, (filStride.ptr)+2, imDims) ;
                                 T fval = filterData[actualFilId] ;
                                 T ival = inputData [actualTmpId] ;
                                 tmp += fval * ival; // doFma(fval, ival, tmp);
@@ -707,7 +753,7 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isNchw=true, bool isCo
                     }
 
                     // We put the result in the output
-                    int actualOutId = outputOffset + dim2lin(outIds, (outStride)+2, imDims) ;
+                    int actualOutId = outputOffset + dim2lin(outIds.ptr, (outStride)+2, imDims) ;
                     doEpilog(outputData, actualOutId, alpha*tmp, beta);
                 }
             }
@@ -734,5 +780,12 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isNchw=true, bool isCo
    ```
 */
 unittest {
-    
+    import std.stdio;
+    import mir.ndslice;
+    import numir;
+    auto x = iota(2, 3, 4).as!float.slice.variable;
+    auto w = iota(5, 3, 3).as!float.slice.variable;
+    Convolution!(float, 1) conv;
+    auto y = conv.forward(x, w);
+    writeln(y);
 }
