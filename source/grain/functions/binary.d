@@ -813,55 +813,64 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isConv=false) {
         assert(diffDims[1]  == filDims[0]) ;
 
         // Filter stride
-        int[4] filterStride; // FIXME hardcoded here
+        int[nbDims] filterStride;
         generateStrides(filDims, filterStride.ptr, nbDims, isNchw);
 
+        // Number of pixels in output
+        int nPixelsDiff = 1 ;
+        for(int i = 2 ; i < nbDims ; i++)
+            nPixelsDiff *= diffDims[i] ;
+        // Number of pixels in filter
+        int nPixelsFil = 1 ;
+        for(int i = 2 ; i < nbDims ; i++)
+            nPixelsFil *= filDims[i] ;
 
         // For every filter pixel (k x c x r x s)
-        for(int ci = 0; ci < inDims[1]; ci++) { // Loop over filter output pixels
-            for(int ri = 0; ri < filDims[2]; ri++) { //        ^
-                for(int si = 0; si < filDims[3]; si++) { //    ^
-                    for(int ki = 0; ki < filDims[0]; ki++){ // ^
-                        int filIdx = ki * filterStride[0] + ci * filterStride[1] + ri * filterStride[2] + si * filterStride[3] ;
-                        float val = 0f ;
-                        // For every image (n)
-                        for(int ni = 0 ; ni < inDims[0]; ni++) { // Sum over the batch
-                            int offset_image  = ni * inStride[0] + ci * inStride[1] ;
-                            int offset_diff   = ni * diffStride[0]  + ki * diffStride[1] ;
-                            // For every pixel in diff (p x q)
-                            for(int pi = 0; pi < diffDims[2] ; pi++ ) { // Sum over the pixels of diff
-                                for(int qi = 0; qi < diffDims[3] ; qi++ ) { //  ^ 
-                                    // Fetch the value in image and diff, product and accumulate
-                                    int y = pi * stride[0] - pad[0] ;
-                                    int x = qi * stride[1] - pad[1] ;
-                                    // Convolution = Correlation with a flipped filter
-                                    // So basically, for the convolution, we replace r by dim-1-r and s by dim-1-s to "flip" the filter
-                                    // We can then just reason in term of correlation
-                                    if (isConv){
-                                        y += (filDims[2] - 1 - ri) * dilation[0] ;
-                                        x += (filDims[3] - 1 - si) * dilation[1] ;
-                                    } else {
-                                        // The effect of dilation on the gradient is to start the "zone of influence" of a given pixel further into the image, so dilation
-                                        // only produces a shift in x and y
-                                        y += ri * dilation[0] ;
-                                        x += si * dilation[1] ;
-                                    }
-                                    // Image value
-                                    int inBounds = ((x >=0)&&(x < inDims[3])&&(y >=0)&&(y < inDims[2]));
-                                    if (inBounds) {
-                                        int imIdx    = offset_image  + y * inStride[2] + x * inStride[3] ;
-                                        // Diff value
-                                        int diffIdx  = offset_diff   + pi * diffStride[2]  + qi * diffStride[3] ;
-                                        // Prod and accumulate
-                                        T imTmp = image[imIdx] ;
-                                        T diffTmp = diffData[diffIdx];
-                                        val += diffTmp * imTmp;
-                                    }
-                                }
+        int[imDims] filIds, diffIds, accIds;
+        for(int ki = 0; ki < filDims[0]; ki++){ // ^
+            for(int ci = 0; ci < filDims[1]; ci++) { // Loop over filter output pixels
+                foreach (filIdx; 0 .. nPixelsFil) {
+                    lin2dim(filIdx, filIds.ptr, filDims+2, imDims);
+                    float val = 0f ;
+                    // For every image (n)
+                    for(int ni = 0 ; ni < inDims[0]; ni++) { // Sum over the batch
+                        int offset_image  = ni * inStride[0] + ci * inStride[1] ;
+                        int offset_diff   = ni * diffStride[0] + ki * diffStride[1] ;
+                        // For every pixel in diff
+                        foreach (diffIdx; 0 .. nPixelsDiff) {
+                            lin2dim(diffIdx, diffIds.ptr, diffDims+2, imDims);
+                            // Fetch the value in image and diff, product and accumulate
+                            accIds[] = diffIds[] * stride[0..imDims] - pad[0..imDims];
+
+                            // Convolution = Correlation with a flipped filter
+                            // So basically, for the convolution, we replace r by dim-1-r and s
+                            // by dim-1-s to "flip" the filter
+                            // We can then just reason in term of correlation
+                            if (isConv){
+                                accIds[] += (filDims[2..nbDims] - 1 - filIds[]) * dilation[0..imDims];
+                            } else {
+                                // The effect of dilation on the gradient is to start the "zone of influence"
+                                // of a given pixel further into the image, so dilation
+                                // only produces a shift in x and y
+                                accIds[] += filIds[] * dilation[0..imDims];
+                            }
+                            // Image value
+                            import std.algorithm : all, sum, map;
+                            import std.range : iota;
+                            auto inBounds = iota(imDims).map!(i => 0 <= accIds[i] && accIds[i] < inDims[i+2]).all;
+                            if (inBounds) {
+                                int imId = offset_image + dim2lin(accIds.ptr, inStride+2, imDims);
+                                // Diff value
+                                int diffId  = offset_diff + dim2lin(diffIds.ptr, diffStride+2, imDims);
+                                // Prod and accumulate
+                                T imTmp = image[imId] ;
+                                T diffTmp = diffData[diffId];
+                                val += diffTmp * imTmp;
                             }
                         }
-                        doEpilog(output, filIdx, alpha*val, beta);
                     }
+                    auto offset_filter = ki * filterStride[0] + ci * filterStride[1];
+                    doEpilog(output, offset_filter + filIdx, alpha*val, beta);
                 }
             }
         }
@@ -869,7 +878,7 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isConv=false) {
 
 }
 
-/**
+/** Conv1d pytorch equality test
    ``` python
    >>> iota = lambda s: torch.arange(torch.prod(torch.tensor(s))).view(s)
    >>> torch.nn.functional.conv1d(iota([2, 3, 4]), iota([5, 3, 3]))
@@ -918,11 +927,11 @@ unittest {
     import std.stdio;
     import mir.ndslice;
     import numir;
-    auto x = iota(2, 3, 4, 1).as!float.slice.variable;
-    auto w = iota(5, 3, 3, 1).as!float.slice.variable;
-    Convolution!(float, 2) conv;
+    auto x = iota(2, 3, 4).as!float.slice.variable;
+    auto w = iota(5, 3, 3).as!float.slice.variable;
+    Convolution!(float, 1) conv;
     auto y = conv.forward(x, w);
-    auto ex = [[[  258.,   294.],
+    auto yx = [[[  258.,   294.],
                 [  663.,   780.],
                 [ 1068.,  1266.],
                 [ 1473.,  1752.],
@@ -932,8 +941,8 @@ unittest {
                 [ 2067.,  2184.],
                 [ 3444.,  3642.],
                 [ 4821.,  5100.],
-                [ 6198.,  6558.]]].nparray;
-    assert(y.data == ex.view(-1));
+                [ 6198.,  6558.]]];
+    assert(y.sliced == yx);
 
     auto gwx = [[[ 26.,  30.,  34.],
                  [ 42.,  46.,  50.],
@@ -953,10 +962,103 @@ unittest {
 
                 [[ 26.,  30.,  34.],
                  [ 42.,  46.,  50.],
-                 [ 58.,  62.,  66.]]].nparray;
+                 [ 58.,  62.,  66.]]];
 
     auto gy = y.uninit;
     gy.data[] = 1;
     auto gw = conv.backward(gy);
-    assert(gw.data == gwx.view(-1));
+    assert(gw.sliced == gwx);
+}
+
+/** Conv1d pytorch equality test
+   ``` python
+   >>> import torch
+   >>> iota = lambda s: torch.arange(torch.prod(torch.tensor(s))).view(s)
+   >>> w = iota([2, 3, 3, 3])
+   >>> w.requires_grad = True
+   >>> y = torch.nn.functional.conv2d(iota([2,3,4,4]), w)
+   >>> y
+   tensor([[[[ 10197.,  10548.],
+             [ 11601.,  11952.]],
+
+            [[ 25506.,  26586.],
+             [ 29826.,  30906.]]],
+
+
+            [[[ 27045.,  27396.],
+              [ 28449.,  28800.]],
+
+             [[ 77346.,  78426.],
+              [ 81666.,  82746.]]]])
+
+   >>> y = torch.nn.functional.conv1d(iota([2, 3, 4]), w)
+   >>> y.backward(torch.ones_like(y))
+   >>> w.grad
+   tensor([[[[ 212.,  220.,  228.],
+          [ 244.,  252.,  260.],
+          [ 276.,  284.,  292.]],
+
+         [[ 340.,  348.,  356.],
+          [ 372.,  380.,  388.],
+          [ 404.,  412.,  420.]],
+
+         [[ 468.,  476.,  484.],
+          [ 500.,  508.,  516.],
+          [ 532.,  540.,  548.]]],
+
+
+        [[[ 212.,  220.,  228.],
+          [ 244.,  252.,  260.],
+          [ 276.,  284.,  292.]],
+
+         [[ 340.,  348.,  356.],
+          [ 372.,  380.,  388.],
+          [ 404.,  412.,  420.]],
+
+         [[ 468.,  476.,  484.],
+          [ 500.,  508.,  516.],
+          [ 532.,  540.,  548.]]]])
+   ```
+*/
+unittest {
+    import std.stdio;
+    import mir.ndslice;
+    import numir;
+    auto x = iota(2, 3, 4, 4).as!float.slice.variable;
+    auto w = iota(2, 3, 3, 3).as!float.slice.variable;
+    Convolution!(float, 2) conv;
+    auto y = conv.forward(x, w);
+    auto yx = [[[[ 10197.,  10548.],
+                 [ 11601.,  11952.]],
+                [[ 25506.,  26586.],
+                 [ 29826.,  30906.]]],
+               [[[ 27045.,  27396.],
+                 [ 28449.,  28800.]],
+                [[ 77346.,  78426.],
+                 [ 81666.,  82746.]]]];
+    assert(y.sliced == yx);
+
+    auto gwx = [[[[ 212.,  220.,  228.],
+                  [ 244.,  252.,  260.],
+                  [ 276.,  284.,  292.]],
+                 [[ 340.,  348.,  356.],
+                  [ 372.,  380.,  388.],
+                  [ 404.,  412.,  420.]],
+                 [[ 468.,  476.,  484.],
+                  [ 500.,  508.,  516.],
+                  [ 532.,  540.,  548.]]],
+                [[[ 212.,  220.,  228.],
+                  [ 244.,  252.,  260.],
+                  [ 276.,  284.,  292.]],
+                 [[ 340.,  348.,  356.],
+                  [ 372.,  380.,  388.],
+                  [ 404.,  412.,  420.]],
+                 [[ 468.,  476.,  484.],
+                  [ 500.,  508.,  516.],
+                  [ 532.,  540.,  548.]]]];
+
+    auto gy = y.uninit;
+    gy.data[] = 1;
+    auto gw = conv.backward(gy);
+    assert(gw.sliced == gwx);
 }
