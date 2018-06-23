@@ -628,7 +628,11 @@ int dim2lin(const int* ids, const int* strides, int length) {
     return res ;
 }
 
+/++
+ Convolution/Cross-correration function
 
+ TODO add cudnn wrapped functions
+ +/
 struct Convolution(T, size_t imDims, size_t group=1, bool isConv=false) {
     int[imDims] stride;
     int[imDims] pad;
@@ -765,6 +769,26 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isConv=false) {
     }
 
     auto backward(Variable!(T, nbDims, HostStorage) gy) {
+        // TODO use requires_grad for skipping grad calc
+        auto gx = this.hx.uninit;
+        gx.data.zero_();
+        dataGradCpuRef(this.hw.data.ptr,
+                       gy.data.ptr,
+                       gx.data.ptr,
+                       1f, 0f,
+
+                       gy.shape.castArray!int.ptr,
+                       this.hw.shape.castArray!int.ptr,
+                       gx.shape.castArray!int.ptr,
+
+                       gy.strides.ptr,
+                       gx.strides.ptr,
+
+                       this.stride.ptr,
+                       this.pad.ptr,
+                       this.dilation.ptr
+                       );
+
         auto gw = this.hw.uninit;
         gw.data.zero_();
         weightGradCpuRef(this.hx.data.ptr,
@@ -782,11 +806,108 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isConv=false) {
                          this.pad.ptr,
                          this.dilation.ptr
                          );
-        return gw;
+        return tuple(gx, gw);
     }
 
+
+    void dataGradCpuRef(const T *weight,
+                        const T *top_diff,
+                        T *output,
+                        float alpha,
+                        float beta,
+
+                        const int*   inDims,
+                        const int*   filDims,
+                        const int*   outDims,
+
+                        const int*   inStride,
+                        const int*   outStride,
+
+                        const int*   stride,
+                        const int*   pad,
+                        const int*   dilation)
+    {
+        // Sanity checks
+        // output is n x c x h x w
+        // diff   is n x k x p x q
+        // filter is k x c x r x s
+        assert(inDims[0] == outDims[0]); // n
+        assert(inDims[1] == filDims[0]); // k
+        assert(outDims[1] == filDims[1]); // c
+        auto diffDims = inDims;
+        auto diffStride = inStride;
+
+        // Filter stride
+        int[nbDims] filterStride;
+        generateStrides(filDims, filterStride.ptr, nbDims, isNchw);
+
+        // Number of pixels in output
+        int nPixelsOut = 1 ;
+        for(int i = 2 ; i < nbDims ; i++)
+            nPixelsOut *= outDims[i] ;
+        // Number of pixels in diff
+        int nPixelsDiff = 1 ;
+        for(int i = 2 ; i < nbDims ; i++)
+            nPixelsDiff *= diffDims[i] ;
+        // Number of pixels in filter
+        int nPixelsFil = 1 ;
+        for(int i = 2 ; i < nbDims ; i++)
+            nPixelsFil *= filDims[i] ;
+
+        int[imDims] outIds, filIds, accIds;
+        for(int ni = 0; ni < outDims[0]; ni++) {
+            for(int ci = 0; ci < outDims[1]; ci++) {
+                foreach (outIdx; 0 .. nPixelsOut) {
+                    lin2dim(outIdx, outIds.ptr, outDims+2, imDims);
+                    float val = 0.0;
+                    // For every diff channel (k)
+                    for(int ki = 0; ki < inDims[1]; ki++) {
+                        const offset_filter = ki * filterStride[0] + ci * filterStride[1];
+                        const offset_diff   = ni * inStride[0] + ki * inStride[1];
+
+                        foreach (filIdx; 0 .. nPixelsFil) {
+                            lin2dim(filIdx, filIds.ptr, filDims+2, imDims);
+
+                            // Fetch the value in filter and diff, product and accumulate
+                            // So basically, for the convolution,
+                            // we replace r by dim-1-r and s by dim-1-s to "flip" the filter
+                            // We can then just reason in term of correlation
+                            accIds[] = outIds[] + pad[0..imDims];
+                            if (isConv){
+                                accIds[] -= (filDims[2..nbDims] - 1 - filIds[]) * dilation[0..imDims];
+                            } else {
+                                accIds[] -= filIds[] * dilation[0..imDims];
+                            }
+
+                            import std.algorithm : map, any, all;
+                            import std.range : iota;
+                            const outtaStride = iota(imDims).map!(i => accIds[i] % stride[i]).any;
+                            if (outtaStride) {
+                                continue;
+                            }
+                            accIds[] /= stride[0..imDims];
+
+                            const inBounds = iota(imDims).map!(i => 0 <= accIds[i] && accIds[i] < inDims[i+2]).all;
+                            if (inBounds) {
+                                int filterIdx  = offset_filter + dim2lin(filIds.ptr, filterStride.ptr+2, imDims);
+                                int diffIdx  = offset_diff + dim2lin(accIds.ptr, inStride+2, imDims);
+
+                                T imTmp = top_diff[diffIdx];
+                                T filTmp = weight[filterIdx];
+                                val += filTmp * imTmp;
+                            }
+                        }
+                        const offset_out = ni * outStride[0] + ci * outStride[1];
+                        doEpilog(output, offset_out + outIdx, alpha*val, beta);
+                    }
+                }
+            }
+        }
+    }
+
+
     void weightGradCpuRef(/*const TensorNdTestDesc_t *tensorInputDesc,*/
-                            const T *image,
+                          const T *image,
                             /*const TensorNdTestDesc_t *tensorDiffDesc,*/
                             const T *diffData,
                             /*const ConvNdTestDesc_t *convDesc,*/
@@ -896,10 +1017,21 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isConv=false) {
    >>> y.shape
    [2, 5, 2]
 
+   >>> x = iota([2, 3, 4])
+   >>> x.requires_grad = True
    >>> w = iota([5, 3, 3])
    >>> w.requires_grad = True
-   >>> y = torch.nn.functional.conv1d(iota([2, 3, 4]), w)
+   >>> y = torch.nn.functional.conv1d(x, w)
    >>> y.backward(torch.ones_like(y))
+   >>> x.grad
+   tensor(
+       [[[  90.,  185.,  195.,  100.],
+         [ 105.,  215.,  225.,  115.],
+         [ 120.,  245.,  255.,  130.]],
+
+        [[  90.,  185.,  195.,  100.],
+         [ 105.,  215.,  225.,  115.],
+         [ 120.,  245.,  255.,  130.]]])
    >>> w.grad
    tensor([[[ 26.,  30.,  34.],
             [ 42.,  46.,  50.],
@@ -944,6 +1076,22 @@ unittest {
                 [ 6198.,  6558.]]];
     assert(y.sliced == yx);
 
+    // test backward
+    auto gy = y.uninit;
+    gy.data[] = 1;
+    auto gs = conv.backward(gy);
+    auto gx = gs[0];
+    auto gw = gs[1];
+
+    auto gxx = [[[  90.,  185.,  195.,  100.],
+                 [ 105.,  215.,  225.,  115.],
+                 [ 120.,  245.,  255.,  130.]],
+
+                [[  90.,  185.,  195.,  100.],
+                 [ 105.,  215.,  225.,  115.],
+                 [ 120.,  245.,  255.,  130.]]];
+    assert(gx.sliced == gxx);
+
     auto gwx = [[[ 26.,  30.,  34.],
                  [ 42.,  46.,  50.],
                  [ 58.,  62.,  66.]],
@@ -963,20 +1111,18 @@ unittest {
                 [[ 26.,  30.,  34.],
                  [ 42.,  46.,  50.],
                  [ 58.,  62.,  66.]]];
-
-    auto gy = y.uninit;
-    gy.data[] = 1;
-    auto gw = conv.backward(gy);
     assert(gw.sliced == gwx);
 }
 
-/** Conv1d pytorch equality test
+/** Conv2d pytorch equality test
    ``` python
    >>> import torch
    >>> iota = lambda s: torch.arange(torch.prod(torch.tensor(s))).view(s)
+   >>> x = iota([2, 3, 4, 4])
+   >>> px.requires_grad = True
    >>> w = iota([2, 3, 3, 3])
    >>> w.requires_grad = True
-   >>> y = torch.nn.functional.conv2d(iota([2,3,4,4]), w)
+   >>> y = torch.nn.functional.conv2d(x, w)
    >>> y
    tensor([[[[ 10197.,  10548.],
              [ 11601.,  11952.]],
@@ -993,8 +1139,41 @@ unittest {
 
    >>> y = torch.nn.functional.conv1d(iota([2, 3, 4]), w)
    >>> y.backward(torch.ones_like(y))
+   >>> x.grad
+   tensor(
+       [[[[  27.,   56.,   60.,   31.],
+          [  60.,  124.,  132.,   68.],
+          [  72.,  148.,  156.,   80.],
+          [  39.,   80.,   84.,   43.]],
+
+         [[  45.,   92.,   96.,   49.],
+          [  96.,  196.,  204.,  104.],
+          [ 108.,  220.,  228.,  116.],
+          [  57.,  116.,  120.,   61.]],
+
+         [[  63.,  128.,  132.,   67.],
+          [ 132.,  268.,  276.,  140.],
+          [ 144.,  292.,  300.,  152.],
+          [  75.,  152.,  156.,   79.]]],
+
+
+        [[[  27.,   56.,   60.,   31.],
+          [  60.,  124.,  132.,   68.],
+          [  72.,  148.,  156.,   80.],
+          [  39.,   80.,   84.,   43.]],
+
+         [[  45.,   92.,   96.,   49.],
+          [  96.,  196.,  204.,  104.],
+          [ 108.,  220.,  228.,  116.],
+          [  57.,  116.,  120.,   61.]],
+
+         [[  63.,  128.,  132.,   67.],
+          [ 132.,  268.,  276.,  140.],
+          [ 144.,  292.,  300.,  152.],
+          [  75.,  152.,  156.,   79.]]]])
    >>> w.grad
-   tensor([[[[ 212.,  220.,  228.],
+   tensor(
+       [[[[ 212.,  220.,  228.],
           [ 244.,  252.,  260.],
           [ 276.,  284.,  292.]],
 
@@ -1038,6 +1217,45 @@ unittest {
                  [ 81666.,  82746.]]]];
     assert(y.sliced == yx);
 
+    // test backward
+    auto gy = y.uninit;
+    gy.data[] = 1;
+    auto gs = conv.backward(gy);
+    auto gx = gs[0];
+    auto gw = gs[1];
+
+    auto gxx = [[[[  27.,   56.,   60.,   31.],
+                  [  60.,  124.,  132.,   68.],
+                  [  72.,  148.,  156.,   80.],
+                  [  39.,   80.,   84.,   43.]],
+
+                 [[  45.,   92.,   96.,   49.],
+                  [  96.,  196.,  204.,  104.],
+                  [ 108.,  220.,  228.,  116.],
+                  [  57.,  116.,  120.,   61.]],
+
+                 [[  63.,  128.,  132.,   67.],
+                  [ 132.,  268.,  276.,  140.],
+                  [ 144.,  292.,  300.,  152.],
+                  [  75.,  152.,  156.,   79.]]],
+
+
+                [[[  27.,   56.,   60.,   31.],
+                  [  60.,  124.,  132.,   68.],
+                  [  72.,  148.,  156.,   80.],
+                  [  39.,   80.,   84.,   43.]],
+
+                 [[  45.,   92.,   96.,   49.],
+                  [  96.,  196.,  204.,  104.],
+                  [ 108.,  220.,  228.,  116.],
+                  [  57.,  116.,  120.,   61.]],
+
+                 [[  63.,  128.,  132.,   67.],
+                  [ 132.,  268.,  276.,  140.],
+                  [ 144.,  292.,  300.,  152.],
+                  [  75.,  152.,  156.,   79.]]]];
+    assert(gx.sliced == gxx);
+
     auto gwx = [[[[ 212.,  220.,  228.],
                   [ 244.,  252.,  260.],
                   [ 276.,  284.,  292.]],
@@ -1056,9 +1274,5 @@ unittest {
                  [[ 468.,  476.,  484.],
                   [ 500.,  508.,  516.],
                   [ 532.,  540.,  548.]]]];
-
-    auto gy = y.uninit;
-    gy.data[] = 1;
-    auto gw = conv.backward(gy);
     assert(gw.sliced == gwx);
 }
