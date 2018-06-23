@@ -636,6 +636,8 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isConv=false) {
     enum int nbDims = imDims + 2;
     enum bool isNchw=true; // TODO support NHWC ?
 
+    Variable!(T, nbDims, HostStorage) hx, hw;
+
     /// https://pytorch.org/docs/master/nn.html#convolution-layers
     auto outShape(uint[nbDims] inShape, uint[nbDims] weightShape) {
         uint[nbDims] ret;
@@ -652,8 +654,6 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isConv=false) {
     }
 
     auto forward(Variable!(T, nbDims, HostStorage) x, Variable!(T, nbDims, HostStorage) w) {
-        import std.algorithm : all;
-
         // set default values if stride and dilation are 0 (init)
         foreach (d; 0..imDims) {
             if (this.stride[d] == 0) {
@@ -663,8 +663,9 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isConv=false) {
                 this.dilation[d] = 1;
             }
         }
-
-
+        // TODO if train
+        this.hx = x;
+        this.hw = w;
         auto y = uninitVariable!(T, HostStorage)(outShape(x.shape, w.shape));
         convCpuRef(x.data.ptr,
                           w.data.ptr,
@@ -763,8 +764,28 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isConv=false) {
         }
     }
 
-    /+
-    void weightGrad_cpu_ref(/*const TensorNdTestDesc_t *tensorInputDesc,*/
+    auto backward(Variable!(T, nbDims, HostStorage) gy) {
+        auto gw = this.hw.uninit;
+        gw.data.zero_();
+        weightGradCpuRef(this.hx.data.ptr,
+                         gy.data.ptr,
+                         1f, 0f,
+                         gw.data.ptr,
+
+                         this.hx.shape.castArray!int.ptr,
+                         gw.shape.castArray!int.ptr,
+                         gy.shape.castArray!int.ptr,
+                         this.hx.strides.ptr,
+                         gy.strides.ptr,
+
+                         this.stride.ptr,
+                         this.pad.ptr,
+                         this.dilation.ptr
+                         );
+        return gw;
+    }
+
+    void weightGradCpuRef(/*const TensorNdTestDesc_t *tensorInputDesc,*/
                             const T *image,
                             /*const TensorNdTestDesc_t *tensorDiffDesc,*/
                             const T *diffData,
@@ -792,10 +813,9 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isConv=false) {
         assert(diffDims[1]  == filDims[0]) ;
 
         // Filter stride
-        int[4] filterStride;
-        generateStrides(filDims, filterStride, nbDims, isNchw);
+        int[4] filterStride; // FIXME hardcoded here
+        generateStrides(filDims, filterStride.ptr, nbDims, isNchw);
 
-        bool isConv = true; //(CUDNN_CONVOLUTION == mode) ;
 
         // For every filter pixel (k x c x r x s)
         for(int ci = 0; ci < inDims[1]; ci++) { // Loop over filter output pixels
@@ -803,7 +823,7 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isConv=false) {
                 for(int si = 0; si < filDims[3]; si++) { //    ^
                     for(int ki = 0; ki < filDims[0]; ki++){ // ^
                         int filIdx = ki * filterStride[0] + ci * filterStride[1] + ri * filterStride[2] + si * filterStride[3] ;
-                        float val = 0.f ;
+                        float val = 0f ;
                         // For every image (n)
                         for(int ni = 0 ; ni < inDims[0]; ni++) { // Sum over the batch
                             int offset_image  = ni * inStride[0] + ci * inStride[1] ;
@@ -835,7 +855,7 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isConv=false) {
                                         // Prod and accumulate
                                         T imTmp = image[imIdx] ;
                                         T diffTmp = diffData[diffIdx];
-                                        val = doFma(diffTmp, imTmp, val);
+                                        val += diffTmp * imTmp;
                                     }
                                 }
                             }
@@ -846,7 +866,7 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isConv=false) {
             }
         }
     }
-    +/
+
 }
 
 /**
@@ -867,15 +887,40 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isConv=false) {
    >>> y.shape
    [2, 5, 2]
 
+   >>> w = iota([5, 3, 3])
+   >>> w.requires_grad = True
+   >>> y = torch.nn.functional.conv1d(iota([2, 3, 4]), w)
+   >>> y.backward(torch.ones_like(y))
+   >>> w.grad
+   tensor([[[ 26.,  30.,  34.],
+            [ 42.,  46.,  50.],
+            [ 58.,  62.,  66.]],
+
+           [[ 26.,  30.,  34.],
+            [ 42.,  46.,  50.],
+            [ 58.,  62.,  66.]],
+
+           [[ 26.,  30.,  34.],
+            [ 42.,  46.,  50.],
+            [ 58.,  62.,  66.]],
+
+           [[ 26.,  30.,  34.],
+            [ 42.,  46.,  50.],
+            [ 58.,  62.,  66.]],
+
+           [[ 26.,  30.,  34.],
+            [ 42.,  46.,  50.],
+            [ 58.,  62.,  66.]]])
+
    ```
 */
 unittest {
     import std.stdio;
     import mir.ndslice;
     import numir;
-    auto x = iota(2, 3, 4).as!float.slice.variable;
-    auto w = iota(5, 3, 3).as!float.slice.variable;
-    Convolution!(float, 1) conv;
+    auto x = iota(2, 3, 4, 1).as!float.slice.variable;
+    auto w = iota(5, 3, 3, 1).as!float.slice.variable;
+    Convolution!(float, 2) conv;
     auto y = conv.forward(x, w);
     auto ex = [[[  258.,   294.],
                 [  663.,   780.],
@@ -887,6 +932,31 @@ unittest {
                 [ 2067.,  2184.],
                 [ 3444.,  3642.],
                 [ 4821.,  5100.],
-                [ 6198.,  6558.]]];
-    assert(y.sliced == ex);
+                [ 6198.,  6558.]]].nparray;
+    assert(y.data == ex.view(-1));
+
+    auto gwx = [[[ 26.,  30.,  34.],
+                 [ 42.,  46.,  50.],
+                 [ 58.,  62.,  66.]],
+
+                [[ 26.,  30.,  34.],
+                 [ 42.,  46.,  50.],
+                 [ 58.,  62.,  66.]],
+
+                [[ 26.,  30.,  34.],
+                 [ 42.,  46.,  50.],
+                 [ 58.,  62.,  66.]],
+
+                [[ 26.,  30.,  34.],
+                 [ 42.,  46.,  50.],
+                 [ 58.,  62.,  66.]],
+
+                [[ 26.,  30.,  34.],
+                 [ 42.,  46.,  50.],
+                 [ 58.,  62.,  66.]]].nparray;
+
+    auto gy = y.uninit;
+    gy.data[] = 1;
+    auto gw = conv.backward(gy);
+    assert(gw.data == gwx.view(-1));
 }
