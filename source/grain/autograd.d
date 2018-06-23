@@ -58,14 +58,23 @@ auto uninitVariable(T, alias S = HostStorage, size_t dim)(uint[dim] shape, bool 
         }
     }
     int[dim] strides;
-    foreach (i; 0 .. dim-1) {
-        assert(shape[i+1] < int.max);
-        strides[i] = cast(int) shape[i+1];
-    }
     strides[dim-1] = 1;
+    foreach_reverse (i; 0 .. dim-1) {
+        assert(shape[i+1] < int.max);
+        strides[i] = cast(int) shape[i+1] * strides[i+1];
+    }
     return Variable!(T, dim, S)(requiresGrad, shape, strides, data);
 }
 
+///
+unittest {
+    import std.stdio;
+    import numir;
+    import mir.ndslice;
+    auto x = numir.zeros(2, 3, 4).universal;
+    auto y = uninitVariable!float([2, 3, 4]);
+    assert(x.strides == y.strides);
+}
 
 version(grain_cuda) {
     /// create new variable with uninitialized array and the same shape/strides to v on CUDA

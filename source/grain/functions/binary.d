@@ -6,7 +6,7 @@
    - support opBinary(add, mul, min, max) cudnnOpTensor
    - convolution
    - batchnorm
- */
+*/
 module grain.functions.binary;
 
 import grain.functions.common; // : FunctionCommon, TypeChecker;
@@ -91,11 +91,11 @@ struct OpBinary(T, size_t dim, string ops) if (isFloatingPoint!T) {
         import std.algorithm : find;
 
         enum opBinaryDict = [
-            "+": CUDNN_OP_TENSOR_ADD,
-            "*": CUDNN_OP_TENSOR_MUL,
-            "min": CUDNN_OP_TENSOR_MIN,
-            "max": CUDNN_OP_TENSOR_MAX
-            ];
+                             "+": CUDNN_OP_TENSOR_ADD,
+                             "*": CUDNN_OP_TENSOR_MUL,
+                             "min": CUDNN_OP_TENSOR_MIN,
+                             "max": CUDNN_OP_TENSOR_MAX
+                             ];
 
         static if (opBinaryDict.keys.find(ops)) {
             static if (ops == "*") {
@@ -321,7 +321,7 @@ struct MatMul(T) {
             assert(a.shape[1] == b.shape[0]);
             auto cdata = RefCounted!(CuPtr!T)(a.shape[0] * b.shape[1]);
             auto c = Variable!(T, 2, DeviceStorage)(
-                a.requiresGrad || b.requiresGrad, [a.shape[0], b.shape[1]], [b.shape[1], 1], cdata);
+                                                    a.requiresGrad || b.requiresGrad, [a.shape[0], b.shape[1]], [b.shape[1], 1], cdata);
             // C = A x B = (BT x AT)T
             // TODO support transposed (CUBLAS_OP_T)
             // see https://github.com/libmir/mir-blas/blob/master/source/mir/blas.d#L299
@@ -513,7 +513,7 @@ struct Embedding(T) {
     Variable!(int, 1, HostStorage) hx;
     uint[2] wshape;
 
-     auto forward(Variable!(T, 2, HostStorage) weight, Variable!(int, 1, HostStorage) ids) {
+    auto forward(Variable!(T, 2, HostStorage) weight, Variable!(int, 1, HostStorage) ids) {
         this.hx = ids; // TODO if train
         this.wshape = weight.shape; // TODO if train
         auto ys = empty!T(ids.shape[0], weight.shape[1]);
@@ -579,4 +579,160 @@ unittest {
         auto dgw = dembed.backward(gy.to!DeviceStorage)[0];
         assert(dgw.to!HostStorage.sliced == gw.sliced);
     }
+}
+
+
+void generateStrides(const int* dimA, int* strideA, int nbDims, bool isNchw) {
+    if (isNchw) {
+        strideA[nbDims-1] = 1 ;
+        for(int d = nbDims-2 ; d >= 0 ; d--) {
+            strideA[d] = strideA[d+1] * dimA[d+1] ;
+        }
+    } else {
+        strideA[1] = 1;
+        strideA[nbDims-1] = strideA[1]*dimA[1];
+        for(int d = nbDims-2 ; d >= 2 ; d--) {
+            strideA[d] = strideA[d+1] * dimA[d+1] ;
+        }
+        strideA[0] = strideA[2]*dimA[2];
+    }
+}
+
+// Convert a linear index
+// i = d_1 s_1 ... s_n + d_2 s_2 ... s_n + d_n-1 s_n + d_n
+// into a multidimensional index
+// (d_1, d_2, ..., d_n)
+void lin2dim(int id, int* ids, const int* dims, int length) {
+    int idrem = id ;
+    int prod  = 1 ; // accumulates the product of the dimensions
+    for(int i = length-1; i >= 0; i--) {
+        ids[i] = (idrem / prod) % dims[i] ;
+        idrem = id - ids[i] * prod ;
+        prod *= dims[i] ;
+    }
+}
+
+void doEpilog(float *o, int idx, float alphaAcc, float beta) {
+    if( beta == 0f ) {
+        o[idx] = alphaAcc;
+    } else {
+        o[idx] = alphaAcc + o[idx]*beta;
+    }
+}
+
+struct Convolution(T, size_t imDims, size_t group=1, bool isNchw=true, bool isConv=true) {
+    size_t[dim] kernel;
+    size_t[dim] stride;
+    size_t[dim] pad;
+    size_t[dim] dilation;
+    enum int nbDims = imDims + 2;
+
+    auto forward(Variable!(T, nbDims, HostStorage) x, Variable!(T, nbDims, HostStorage) w) {
+        return ;
+    }
+
+    // auto forward(Variable!(T, nbDims, HostStorage) x, Variable!(T, nbDims, HostStorage) w) {
+    void convCpuRef (const T* inputData,
+                     const T* filterData,
+                     T*       outputData,
+                     float        alpha,
+                     float        beta,
+                     bool         isNchw,
+                     const int*   inDims,
+                     const int*   filDims,
+                     const int*   outDims,
+                     const int*   inStride,
+                     const int*   outStride,
+                     const int*   stride,
+                     const int*   pad,
+                     const int*   dilation,
+                     int          nbDims
+                     ) {
+        int[8] filStride;
+        generateStrides(filDims, filStride, nbDims, isNchw);
+        // Number of pixels in output
+        int nPixelsOut = 1 ;
+        for(int i = 2 ; i < nbDims ; i++)
+            nPixelsOut *= outDims[i] ;
+        // Number of pixels in filter
+        int nPixelsFil = 1 ;
+        for(int i = 2 ; i < nbDims ; i++)
+            nPixelsFil *= filDims[i] ;
+        // Used to store coordinates
+        int[8] filIds, outIds, inIds, tmpIds;
+        // For each image in the output
+        for(int ni = 0 ; ni < outDims[0] ; ni++) {
+            // For each feature layer of the output
+            for(int ki = 0 ; ki < outDims[1] ; ki++) {
+                int outputOffset = ni * outStride[0] + ki * outStride[1] ;
+                // Loop over all entries of the result
+                for(int outId = 0 ; outId < nPixelsOut ; outId++) {
+                    // Get output pixel ids
+                    lin2dim(outId, outIds, outDims+2, imDims) ; // Skip n and k dimensions
+                    // Now we get the coordinates in input space of
+                    // the "top left" corner of the filter: multiply by stride and remove pad
+                    for(int d = 0 ; d < imDims ; d++) {
+                        inIds[d] = outIds[d] * stride[d] - pad[d] ;
+                    }
+                    // We then accumulate
+                    float tmp = 0.f;
+                    for(int ci = 0 ; ci < inDims[1] ; ci++) {
+                        int inputOffset = ni * inStride[0] + ci * inStride[1] ;
+                        int filterOffset = ki * filStride[0] + ci * filStride[1] ;
+                        for(int filId = 0 ; filId < nPixelsFil ; filId ++) {
+                            // Get the position of the pixel
+                            lin2dim(filId, filIds, filDims+2, imDims) ;
+                            // Compute the corresponding output pixel
+                            // and check wether we are in the padding area on the fly too
+                            // (not that for convolution, we flip the image patch
+                            // (equivalent to flipping the filter patch))
+                            bool inside = true ;
+                            for(int d = 0 ; d < imDims && inside ; d++) {
+                                if (isConv) {
+                                    tmpIds[d] = inIds[d] + dilation[d] * (filDims[2+d]-1 - filIds[d]) ;
+                                } else {
+                                    tmpIds[d] = inIds[d] + dilation[d] * filIds[d] ;
+                                }
+                                inside &= (tmpIds[d] >= 0 && tmpIds[d] < inDims[2+d]) ; // If we are in the padding area: stop and skip computations
+                            }
+                            if(inside) {
+                                int actualTmpId = inputOffset + dim2lin(tmpIds, (inStride)+2, imDims) ;
+                                //int actualFilId = filterOffset + filId ;
+                                int actualFilId = filterOffset + dim2lin(filIds, (filStride)+2, imDims) ;
+                                T fval = filterData[actualFilId] ;
+                                T ival = inputData [actualTmpId] ;
+                                tmp += fval * ival; // doFma(fval, ival, tmp);
+                            }
+                        }
+                    }
+
+                    // We put the result in the output
+                    int actualOutId = outputOffset + dim2lin(outIds, (outStride)+2, imDims) ;
+                    doEpilog(outputData, actualOutId, alpha*tmp, beta);
+                }
+            }
+        }
+    }
+}
+
+/**
+   ``` python
+   >>> iota = lambda s: torch.arange(torch.prod(torch.tensor(s))).view(s)
+   >>> torch.nn.functional.conv1d(iota([2, 3, 4]), iota([5, 3, 3]))
+   tensor([[[  258.,   294.],
+   [  663.,   780.],
+   [ 1068.,  1266.],
+   [ 1473.,  1752.],
+   [ 1878.,  2238.]],
+
+   [[  690.,   726.],
+   [ 2067.,  2184.],
+   [ 3444.,  3642.],
+   [ 4821.,  5100.],
+   [ 6198.,  6558.]]])
+
+   ```
+*/
+unittest {
+    
 }

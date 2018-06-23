@@ -284,13 +284,20 @@ void fill(T, size_t dim)(Variable!(T, dim, DeviceStorage) x, T value) {
 ///
 bool isContiguous(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
     // FIXME reconsider this when I support reshape, reversed and transposed
-    return x.strides[$-1] == 1 && x.shape[1..$] == x.strides[0..$-1];
+    bool ret = x.strides[$-1] == 1;
+    int s = 1;
+    foreach_reverse(i; 0..dim-1) {
+        ret &= x.strides[i] == x.strides[i + 1] * x.shape[i+1];
+    }
+    return ret;
 }
 
 ///
 unittest {
     {
+        import std.stdio;
         auto x = [[0.1f, 0.2f], [0.3f, 0.4f]].variable;
+        writeln(x.strides);
         assert(x.isContiguous);
         x.strides = [2, 2];
         assert(!x.isContiguous);
