@@ -628,7 +628,8 @@ int dim2lin(const int* ids, const int* strides, int length) {
     return res ;
 }
 
-struct Convolution(T, size_t imDims, size_t group=1, bool isConv=true) {
+
+struct Convolution(T, size_t imDims, size_t group=1, bool isConv=false) {
     int[imDims] stride;
     int[imDims] pad;
     int[imDims] dilation;
@@ -652,6 +653,8 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isConv=true) {
 
     auto forward(Variable!(T, nbDims, HostStorage) x, Variable!(T, nbDims, HostStorage) w) {
         import std.algorithm : all;
+
+        // set default values if stride and dilation are 0 (init)
         foreach (d; 0..imDims) {
             if (this.stride[d] == 0) {
                 this.stride[d] = 1;
@@ -759,6 +762,91 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isConv=true) {
             }
         }
     }
+
+    /+
+    void weightGrad_cpu_ref(/*const TensorNdTestDesc_t *tensorInputDesc,*/
+                            const T *image,
+                            /*const TensorNdTestDesc_t *tensorDiffDesc,*/
+                            const T *diffData,
+                            /*const ConvNdTestDesc_t *convDesc,*/
+                            /*const TensorNdTestDesc_t *filterOutputDesc,*/
+                            float alpha,
+                            float beta,
+                            T *output,
+
+                            const int*   inDims,
+                            const int*   filDims,
+                            const int*   diffDims,
+                            const int*   inStride,
+                            const int*   diffStride,
+                            const int*   stride,
+                            const int*   pad,
+                            const int*   dilation)
+    {
+        // Some sanity checks
+        // image   is n x c x h x w
+        // diff    is n x k x p x q
+        // filter  is k x c x r x s
+        assert(inDims[0] == diffDims[0]) ;
+        assert(inDims[1] == filDims[1]) ;
+        assert(diffDims[1]  == filDims[0]) ;
+
+        // Filter stride
+        int[4] filterStride;
+        generateStrides(filDims, filterStride, nbDims, isNchw);
+
+        bool isConv = true; //(CUDNN_CONVOLUTION == mode) ;
+
+        // For every filter pixel (k x c x r x s)
+        for(int ci = 0; ci < inDims[1]; ci++) { // Loop over filter output pixels
+            for(int ri = 0; ri < filDims[2]; ri++) { //        ^
+                for(int si = 0; si < filDims[3]; si++) { //    ^
+                    for(int ki = 0; ki < filDims[0]; ki++){ // ^
+                        int filIdx = ki * filterStride[0] + ci * filterStride[1] + ri * filterStride[2] + si * filterStride[3] ;
+                        float val = 0.f ;
+                        // For every image (n)
+                        for(int ni = 0 ; ni < inDims[0]; ni++) { // Sum over the batch
+                            int offset_image  = ni * inStride[0] + ci * inStride[1] ;
+                            int offset_diff   = ni * diffStride[0]  + ki * diffStride[1] ;
+                            // For every pixel in diff (p x q)
+                            for(int pi = 0; pi < diffDims[2] ; pi++ ) { // Sum over the pixels of diff
+                                for(int qi = 0; qi < diffDims[3] ; qi++ ) { //  ^ 
+                                    // Fetch the value in image and diff, product and accumulate
+                                    int y = pi * stride[0] - pad[0] ;
+                                    int x = qi * stride[1] - pad[1] ;
+                                    // Convolution = Correlation with a flipped filter
+                                    // So basically, for the convolution, we replace r by dim-1-r and s by dim-1-s to "flip" the filter
+                                    // We can then just reason in term of correlation
+                                    if (isConv){
+                                        y += (filDims[2] - 1 - ri) * dilation[0] ;
+                                        x += (filDims[3] - 1 - si) * dilation[1] ;
+                                    } else {
+                                        // The effect of dilation on the gradient is to start the "zone of influence" of a given pixel further into the image, so dilation
+                                        // only produces a shift in x and y
+                                        y += ri * dilation[0] ;
+                                        x += si * dilation[1] ;
+                                    }
+                                    // Image value
+                                    int inBounds = ((x >=0)&&(x < inDims[3])&&(y >=0)&&(y < inDims[2]));
+                                    if (inBounds) {
+                                        int imIdx    = offset_image  + y * inStride[2] + x * inStride[3] ;
+                                        // Diff value
+                                        int diffIdx  = offset_diff   + pi * diffStride[2]  + qi * diffStride[3] ;
+                                        // Prod and accumulate
+                                        T imTmp = image[imIdx] ;
+                                        T diffTmp = diffData[diffIdx];
+                                        val = doFma(diffTmp, imTmp, val);
+                                    }
+                                }
+                            }
+                        }
+                        doEpilog(output, filIdx, alpha*val, beta);
+                    }
+                }
+            }
+        }
+    }
+    +/
 }
 
 /**
@@ -766,16 +854,18 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isConv=true) {
    >>> iota = lambda s: torch.arange(torch.prod(torch.tensor(s))).view(s)
    >>> torch.nn.functional.conv1d(iota([2, 3, 4]), iota([5, 3, 3]))
    tensor([[[  258.,   294.],
-   [  663.,   780.],
-   [ 1068.,  1266.],
-   [ 1473.,  1752.],
-   [ 1878.,  2238.]],
+            [  663.,   780.],
+            [ 1068.,  1266.],
+            [ 1473.,  1752.],
+            [ 1878.,  2238.]],
 
-   [[  690.,   726.],
-   [ 2067.,  2184.],
-   [ 3444.,  3642.],
-   [ 4821.,  5100.],
-   [ 6198.,  6558.]]])
+           [[  690.,   726.],
+            [ 2067.,  2184.],
+            [ 3444.,  3642.],
+            [ 4821.,  5100.],
+            [ 6198.,  6558.]]])
+   >>> y.shape
+   [2, 5, 2]
 
    ```
 */
@@ -787,5 +877,16 @@ unittest {
     auto w = iota(5, 3, 3).as!float.slice.variable;
     Convolution!(float, 1) conv;
     auto y = conv.forward(x, w);
-    writeln(y);
+    auto ex = [[[  258.,   294.],
+                [  663.,   780.],
+                [ 1068.,  1266.],
+                [ 1473.,  1752.],
+                [ 1878.,  2238.]],
+
+               [[  690.,   726.],
+                [ 2067.,  2184.],
+                [ 3444.,  3642.],
+                [ 4821.,  5100.],
+                [ 6198.,  6558.]]];
+    assert(y.sliced == ex);
 }

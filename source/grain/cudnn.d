@@ -295,9 +295,7 @@ bool isContiguous(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
 ///
 unittest {
     {
-        import std.stdio;
         auto x = [[0.1f, 0.2f], [0.3f, 0.4f]].variable;
-        writeln(x.strides);
         assert(x.isContiguous);
         x.strides = [2, 2];
         assert(!x.isContiguous);
