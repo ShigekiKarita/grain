@@ -664,6 +664,7 @@ static struct ConvolutionRefImpl(T, size_t imDims, bool isConv=false, bool isNch
         // Used to store coordinates
         int[imDims] filIds, outIds, inIds, tmpIds;
         // For each image in the output
+        // TODO these three loops can be parallelized without atomic ops
         foreach (ni; 0 .. outDims[0]) {
             // For each feature layer of the output
             foreach (ki; 0 .. outDims[1]) {
@@ -747,6 +748,7 @@ static struct ConvolutionRefImpl(T, size_t imDims, bool isConv=false, bool isNch
         immutable nPixelsFil = filDims[2..$].reduce!"a * b";
 
         int[imDims] outIds, filIds, accIds;
+        // TODO these three loops can be parallelized without atomic ops
         foreach (ni; 0 .. outDims[0]) {
             foreach (ci; 0 .. outDims[1]) {
                 foreach (outIdx; 0 .. nPixelsOut) {
@@ -830,6 +832,7 @@ static struct ConvolutionRefImpl(T, size_t imDims, bool isConv=false, bool isNch
 
         // For every filter pixel (k x c x r x s)
         int[imDims] filIds, diffIds, accIds;
+        // TODO these three loops can be parallelized without atomic ops
         foreach (ki; 0 .. filDims[0]){
             foreach (ci; 0 .. filDims[1]) {
                 foreach (filIdx; 0 .. nPixelsFil) {
@@ -934,6 +937,7 @@ struct Convolution(T, size_t imDims, bool isConv=false, bool isNchw = true) {
 
     auto backward(Variable!(T, nbDims, HostStorage) gy) {
         // TODO use requires_grad for skipping grad calc
+        static assert(3 <= nbDims && nbDims < 6, "cudnn7 only supports 3, 4, 5 dimensionl inputs");
         auto gx = this.hx.uninit;
         gx.data.zero_();
         RefImpl.backwardData(this.hw.data, gy.data, gx.data,
@@ -1300,4 +1304,35 @@ unittest {
         assert(approxEqual(dgx[0].to!HostStorage.sliced, hgx[0].sliced));
         assert(approxEqual(dgx[1].to!HostStorage.sliced, hgx[1].sliced));
     }
+}
+
+
+unittest {
+    import numir;
+    import mir.ndslice;
+    import grain.testing : gradCheck;
+    import derelict.cudnn7;
+    static foreach (i; 1..4) {{
+        size_t[i+2] xshape, wshape;
+        xshape[] = 3;
+        wshape[] = 2;
+        xshape[1] = 2;
+        Convolution!(float, i) conv;
+        // conv.forwardAlgo = CUDNN_CONVOLUTION_FWD_ALGO_GEMM;
+
+        auto hx = uniform!float(xshape).slice.variable;
+        auto hw = uniform!float(wshape).slice.variable;
+        auto hy = conv.forward(hx, hw);
+        auto hgy = uniform!float(hy.shape.castArray!size_t).slice.variable;
+        auto hgx = conv.backward(hgy);
+        gradCheck(conv, tuple(hx, hw), hgy, 1e-3, 1e-3, 1e-2);
+
+        version (grain_cuda) {
+            auto dy = conv.forward(hx.to!DeviceStorage, hw.to!DeviceStorage);
+            auto dgx = conv.backward(hgy.to!DeviceStorage);
+            assert(approxEqual(dy.to!HostStorage.sliced, hy.sliced));
+            assert(approxEqual(dgx[0].to!HostStorage.sliced, hgx[0].sliced));
+            assert(approxEqual(dgx[1].to!HostStorage.sliced, hgx[1].sliced));
+        }
+    }}
 }
