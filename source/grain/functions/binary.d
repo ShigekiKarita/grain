@@ -886,7 +886,7 @@ struct Convolution(T, size_t imDims, bool isConv=false, bool isNchw = true) {
     int[imDims] pad;
     int[imDims] dilation;
     enum int nbDims = imDims + 2;
-    enum int group=1;
+    enum int ngroup=1; // TODO support ngroup > 1?
     alias RefImpl = ConvolutionRefImpl!(T, imDims, isConv, isNchw);
 
     Variable!(T, nbDims, HostStorage) hx, hw;
@@ -951,6 +951,42 @@ struct Convolution(T, size_t imDims, bool isConv=false, bool isNchw = true) {
                                this.hx.strides, gw.strides, gy.strides,
                                this.stride, this.pad, this.dilation);
         return tuple(gx, gw);
+    }
+
+    version (grain_cuda) {
+        import derelict.cudnn7;
+        import grain.cudnn;
+        // TODO implement benchmark mode to search the best algo
+        cudnnConvolutionFwdAlgo_t forwardAlgo = CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM;
+        cudnnConvolutionBwdDataAlgo_t backwardAlgo = CUDNN_CONVOLUTION_BWD_DATA_ALGO_1;
+
+        Variable!(T, nbDims, DeviceStorage) dx, dw;
+
+        auto forward(Variable!(T, nbDims, DeviceStorage) x, Variable!(T, nbDims, DeviceStorage) w) {
+            this.setDefault();
+            // TODO if train
+            this.dx = x;
+            this.dw = w;
+            auto y = uninitVariable!(T, DeviceStorage)(outShape(x.shape, w.shape));
+            grain.cudnn.convForward!(isConv, isNchw)(x, w, y, this.stride, this.pad, this.dilation,
+                                                     this.ngroup, this.forwardAlgo);
+            return y;
+        }
+
+
+        auto backward(Variable!(T, nbDims, DeviceStorage) gy) {
+            // TODO use requires_grad for skipping grad calc
+            auto gx = this.dx.uninit;
+            gx.data.zero_();
+            auto gw = this.dw.uninit;
+            gw.data.zero_();
+            // TODO separate data/weight backward
+            grain.cudnn.convBackward!(isConv, isNchw)
+                (gx, this.dx, gw, this.dw, gy, this.stride, this.pad, this.dilation,
+                 this.ngroup, this.backwardAlgo);
+            return tuple(gx, gw);
+        }
+
     }
 }
 
@@ -1067,6 +1103,13 @@ unittest {
                  [ 42.,  46.,  50.],
                  [ 58.,  62.,  66.]]];
     assert(gw.sliced == gwx);
+
+    import grain.testing : gradCheck;
+    auto hx = uniform!float(x.shape.castArray!size_t).slice.variable;
+    auto hw = uniform!float(w.shape.castArray!size_t).slice.variable;
+    auto hgy = uniform!float(y.shape.castArray!size_t).slice.variable;
+    auto hgx = conv.backward(hgy);
+    gradCheck(conv, tuple(hx, hw), hgy, 1e-3, 1e-3, 1e-2);
 }
 
 /** Conv2d pytorch equality test
@@ -1230,4 +1273,20 @@ unittest {
                   [ 500.,  508.,  516.],
                   [ 532.,  540.,  548.]]]];
     assert(gw.sliced == gwx);
+
+    import grain.testing : gradCheck;
+    auto hx = uniform!float(x.shape.castArray!size_t).slice.variable;
+    auto hw = uniform!float(w.shape.castArray!size_t).slice.variable;
+    auto hgy = uniform!float(y.shape.castArray!size_t).slice.variable;
+    auto hy = conv.forward(hx, hw);
+    auto hgx = conv.backward(hgy);
+    gradCheck(conv, tuple(hx, hw), hgy, 1e-3, 1e-3, 1e-2);
+
+    version (grain_cuda) {
+        auto dy = conv.forward(hx.to!DeviceStorage, hw.to!DeviceStorage);
+        auto dgx = conv.backward(hgy.to!DeviceStorage);
+        assert(approxEqual(dy.to!HostStorage.sliced, hy.sliced));
+        assert(approxEqual(dgx[0].to!HostStorage.sliced, hgx[0].sliced));
+        assert(approxEqual(dgx[1].to!HostStorage.sliced, hgx[1].sliced));
+    }
 }

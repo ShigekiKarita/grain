@@ -9,6 +9,7 @@ version (grain_cuda):
 
 public import grain.cuda : cudnnHandle, checkCUDNN, CuPtr, isDeviceMemory;
 import grain.autograd; //  : Variable, DeviceStorage;
+import grain.utility : castArray;
 public import derelict.cuda;
 public import derelict.cudnn7;
 
@@ -48,9 +49,9 @@ struct TensorDesc {
 }
 
 /// convert variable to cudnn tensor discriptor object
-auto makeCudnnTensor(T, size_t dim)(Variable!(T, dim, DeviceStorage) x) {
+auto makeCudnnTensor(bool pad4 = true, T, size_t dim)(Variable!(T, dim, DeviceStorage) x) {
     static assert(dim < CUDNN_DIM_MAX);
-    static if (dim < 4) {
+    static if (dim < 4 && pad4) {
         enum int ddim = 4;
         int[ddim] shape;
         int[ddim] strides;
@@ -64,7 +65,11 @@ auto makeCudnnTensor(T, size_t dim)(Variable!(T, dim, DeviceStorage) x) {
         strides[0..dim] = x.strides;
     } else {
         enum int ddim = cast(int) dim;
-        auto shape = x.shape;
+        int[ddim] shape;
+        foreach (d; 0 .. dim) {
+            assert(x.shape[d] < int.max);
+            shape[d] = cast(int) x.shape[d];
+        }
         auto strides = x.strides;
     }
 
@@ -414,37 +419,37 @@ unittest {
 
 }
 
-
-void convForward(cudnnConvolutionFwdAlgo_t algo = CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM,
-                 cudnnConvolutionMode_t mode = CUDNN_CROSS_CORRELATION,
-                 cudnnTensorFormat_t format = CUDNN_TENSOR_NCHW,
-                 T, size_t dim)
-    (
-     Variable!(T, dim, DeviceStorage) input,      // [N, CI, HI, WI]
+/// wrapper of cudnnConvolutionForward for Variable
+void convForward(bool isConv, bool isNchw, T, size_t dim, size_t imDims)
+    (Variable!(T, dim, DeviceStorage) input,      // [N, CI, HI, WI]
      Variable!(T, dim, DeviceStorage) filter,     // [CO, CI/G, KH, KW]
      ref Variable!(T, dim, DeviceStorage) output, // [N, CO, HO, WO]
-     const int[dim-2]   stride,
-     const int[dim-2]   pad,
-     const int[dim-2]   dilation,
+     const int[imDims]   stride,
+     const int[imDims]   pad,
+     const int[imDims]   dilation,
      int ngroup = 1,
+     cudnnConvolutionFwdAlgo_t algo = CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM,
      float alpha = 1,
      float beta = 0
-     ) {
+        ) {
     static assert(dim < CUDNN_DIM_MAX);
+    static assert(dim == imDims + 2, "dim should be like N(batch), C(channel) ~ dim(stride)");
+    enum cudnnConvolutionMode_t mode = isConv ? CUDNN_CONVOLUTION : CUDNN_CROSS_CORRELATION;
+    enum cudnnTensorFormat_t format = isNchw ? CUDNN_TENSOR_NCHW : CUDNN_TENSOR_NCHW;
 
     // TODO cache these?
     cudnnFilterDescriptor_t cudnnFdesc;
     checkCUDNN( cudnnCreateFilterDescriptor(&cudnnFdesc) );
     scope(exit) cudnnDestroyFilterDescriptor(cudnnFdesc);
     checkCUDNN( cudnnSetFilterNdDescriptor(cudnnFdesc, cudnnDataType!T, format,
-                                           cast(int) dim, filter.shape.ptr
+                                           cast(int) dim, filter.shape.castArray!int.ptr
                                            ) );
 
     cudnnConvolutionDescriptor_t cudnnConvDesc;
     checkCUDNN( cudnnCreateConvolutionDescriptor(&cudnnConvDesc) );
     scope(exit) cudnnDestroyConvolutionDescriptor(cudnnConvDesc);
     checkCUDNN( cudnnSetConvolutionGroupCount(cudnnConvDesc, ngroup) );
-    checkCUDNN( cudnnSetConvolutionNdDescriptor(cudnnConvDesc, cast(int) dim,
+    checkCUDNN( cudnnSetConvolutionNdDescriptor(cudnnConvDesc, cast(int) imDims,
                                                 pad.ptr, stride.ptr, dilation.ptr,
                                                 mode, cudnnDataType!T
                                                 ) );
@@ -457,85 +462,86 @@ void convForward(cudnnConvolutionFwdAlgo_t algo = CUDNN_CONVOLUTION_FWD_ALGO_IMP
                   cudnnOdesc, algo, &workSpaceSize) );
     auto workSpace = CuPtr!byte(workSpaceSize);
 
-    checkCudnnErr ( cudnnConvolutionForward (cudnnHandle,
+    checkCUDNN ( cudnnConvolutionForward (cudnnHandle,
                                              cast(const void*) &alpha,
                                              cudnnIdesc, cast(const void*) input.data.ptr,
                                              cudnnFdesc, cast(const void*) filter.data.ptr,
                                              cudnnConvDesc,
                                              algo,
-                                             cast(void*) workSpace.data.ptr, workSpaceSize,
+                                             cast(void*) workSpace.ptr, workSpaceSize,
                                              cast(const void*) &beta,
                                              cudnnOdesc, cast(void*) output.data.ptr) );
 }
 
-
-void convBackward(cudnnConvolutionBwdDataAlgo_t algo = CUDNN_CONVOLUTION_BWD_DATA_ALGO_1,
-                  cudnnConvolutionMode_t mode = CUDNN_CROSS_CORRELATION,
-                  cudnnTensorFormat_t format = CUDNN_TENSOR_NCHW,
-                  T, size_t dim)
+/// wrapper of cudnnConvolutionBackwardData and Weight for Variable
+void convBackward(bool isConv, bool isNchw, T, size_t dim, size_t imDims
+    )
     (
      ref Variable!(T, dim, DeviceStorage) gradInput,      // [N, CI, HI, WI]
      Variable!(T, dim, DeviceStorage) input,      // [N, CI, HI, WI]
      ref Variable!(T, dim, DeviceStorage) gradFilter,     // [CO, CI/G, KH, KW]
      Variable!(T, dim, DeviceStorage) filter,     // [CO, CI/G, KH, KW]
      Variable!(T, dim, DeviceStorage) gradOutput, // [N, CO, HO, WO]
-     const int[dim-2]   stride,
-     const int[dim-2]   pad,
-     const int[dim-2]   dilation,
+     const int[imDims]   stride,
+     const int[imDims]   pad,
+     const int[imDims]   dilation,
      int ngroup = 1,
+     cudnnConvolutionBwdDataAlgo_t algo = CUDNN_CONVOLUTION_BWD_DATA_ALGO_1,
      float alpha = 1,
      float beta = 0
-) {
+)  {
     static assert(dim < CUDNN_DIM_MAX);
+    static assert(dim == imDims + 2, "dim should be like N(batch), C(channel) ~ dim(stride)");
+    enum cudnnConvolutionMode_t mode = isConv ? CUDNN_CONVOLUTION : CUDNN_CROSS_CORRELATION;
+    enum cudnnTensorFormat_t format = isNchw ? CUDNN_TENSOR_NCHW : CUDNN_TENSOR_NCHW;
 
     // TODO cache these?
     cudnnFilterDescriptor_t cudnnFdesc;
     checkCUDNN( cudnnCreateFilterDescriptor(&cudnnFdesc) );
     scope(exit) cudnnDestroyFilterDescriptor(cudnnFdesc);
     checkCUDNN( cudnnSetFilterNdDescriptor(cudnnFdesc, cudnnDataType!T, format,
-                                           cast(int) dim, filter.shape.ptr
+                                           cast(int) dim, filter.shape.castArray!int.ptr
                                            ) );
 
     cudnnConvolutionDescriptor_t cudnnConvDesc;
     checkCUDNN( cudnnCreateConvolutionDescriptor(&cudnnConvDesc) );
     scope(exit) cudnnDestroyConvolutionDescriptor(cudnnConvDesc);
     checkCUDNN( cudnnSetConvolutionGroupCount(cudnnConvDesc, ngroup) );
-    checkCUDNN( cudnnSetConvolutionNdDescriptor(cudnnConvDesc, cast(int) dim,
+    checkCUDNN( cudnnSetConvolutionNdDescriptor(cudnnConvDesc, cast(int) imDims,
                                                 pad.ptr, stride.ptr, dilation.ptr,
                                                 mode, cudnnDataType!T
                                                 ) );
 
     auto cudnnIdesc = input.makeCudnnTensor;
-    auto cudnnOdesc = output.makeCudnnTensor;
     auto cudnnGIdesc = gradInput.makeCudnnTensor;
     auto cudnnGOdesc = gradOutput.makeCudnnTensor;
 
     size_t dworkSpaceSize;
-    checkCudnnErr ( cudnnGetConvolutionBackwardDataWorkspaceSize
+    checkCUDNN ( cudnnGetConvolutionBackwardDataWorkspaceSize
                     (cudnnHandle, cudnnFdesc, cudnnGOdesc, cudnnConvDesc,
                      cudnnGIdesc, algo, &dworkSpaceSize) );
-    auto dworkSpace = CuPtr!byte(workSpaceSize);
-    checkCudnnErr ( cudnnConvolutionBackwardData (cudnnHandle,
-                                                  cast(void*)(&alpha),
+    auto dworkSpace = CuPtr!byte(dworkSpaceSize);
+    checkCUDNN ( cudnnConvolutionBackwardData (cudnnHandle,
+                                                  cast(const void*)(&alpha),
                                                   cudnnFdesc, cast(const void*) filter.data.ptr,
                                                   cudnnGOdesc, cast(const void*) gradOutput.data.ptr,
                                                   cudnnConvDesc,
                                                   algo,
-                                                  cast(const void*) dworkSpace.ptr, dworkSpaceSize,
+                                                  cast(void*) dworkSpace.ptr, dworkSpaceSize,
                                                   cast(const void*)(&beta),
                                                   cudnnGIdesc, cast(void*) gradInput.data.ptr) );
 
     size_t fworkSpaceSize;
-    checkCudnnErr ( cudnnGetConvolutionBackwardFilterWorkspaceSize
+    checkCUDNN ( cudnnGetConvolutionBackwardFilterWorkspaceSize
                     (cudnnHandle, cudnnIdesc, cudnnGOdesc, cudnnConvDesc,
                      cudnnFdesc, algo, &fworkSpaceSize) );
-    auto fworkSpace = CuPtr!byte(workSpaceSize);
-    checkCudnnErr ( cudnnConvolutionBackwardFilter (cudnnHandle,
+    auto fworkSpace = CuPtr!byte(fworkSpaceSize);
+    checkCUDNN ( cudnnConvolutionBackwardFilter (cudnnHandle,
                                                     cast(const void*)(&alpha),
                                                     cudnnIdesc,  cast(const void*) input.data.ptr,
                                                     cudnnGOdesc, cast(const void*) gradOutput.data.ptr,
                                                     cudnnConvDesc,
-                                                    balgo,
+                                                    algo,
                                                     cast(void*) fworkSpace.ptr, fworkSpaceSize,
                                                     cast(const void*)(&beta),
                                                     cudnnFdesc, cast(void*) gradFilter.data.ptr) );
