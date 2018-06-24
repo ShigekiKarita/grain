@@ -598,21 +598,22 @@ void generateStrides(const int* dimA, int* strideA, int nbDims, bool isNchw) {
     }
 }
 
-// Convert a linear index
-// i = d_1 s_1 ... s_n + d_2 s_2 ... s_n + d_n-1 s_n + d_n
-// into a multidimensional index
-// (d_1, d_2, ..., d_n)
-void lin2dim(int id, int* ids, const int* dims, int length) {
+/** Convert a linear index
+i = d_1 s_1 ... s_n + d_2 s_2 ... s_n + d_n-1 s_n + d_n
+into a multidimensional index
+(d_1, d_2, ..., d_n)
+*/
+void lin2dim(size_t length)(int id, scope ref int[length] ids, const ref int[length] dims) {
     int idrem = id ;
     int prod  = 1 ; // accumulates the product of the dimensions
-    for(int i = length-1; i >= 0; i--) {
+    foreach_reverse(i; 0 .. length) {
         ids[i] = (idrem / prod) % dims[i] ;
         idrem = id - ids[i] * prod ;
         prod *= dims[i] ;
     }
 }
 
-void doEpilog(float *o, int idx, float alphaAcc, float beta) {
+void doEpilog(float[] o, int idx, float alphaAcc, float beta) {
     if( beta == 0f ) {
         o[idx] = alphaAcc;
     } else {
@@ -620,13 +621,13 @@ void doEpilog(float *o, int idx, float alphaAcc, float beta) {
     }
 }
 
-int dim2lin(const int* ids, const int* strides, int length) {
-    int res = 0 ;
-    for(int i = 0 ; i < length ; i++) {
-        res += ids[i] * strides[i];
-    }
-    return res ;
+@nogc pure @safe int dim2lin(size_t length)(const ref int[length] ids, const int[] strides) {
+    assert(length == strides.length);
+    import mir.ndslice;
+    import mir.math;
+    return sum(ids.sliced * strides.sliced);
 }
+
 
 /++
  Convolution/Cross-correration function
@@ -671,97 +672,98 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isConv=false) {
         this.hx = x;
         this.hw = w;
         auto y = uninitVariable!(T, HostStorage)(outShape(x.shape, w.shape));
-        convCpuRef(x.data.ptr,
-                          w.data.ptr,
-                          y.data.ptr,
-                          1f, 0f,
-                          x.shape.castArray!int.ptr,
-                          w.shape.castArray!int.ptr,
-                          y.shape.castArray!int.ptr,
-                          x.strides.ptr,
-                          y.strides.ptr,
-                          this.stride.ptr,
-                          this.pad.ptr,
-                          this.dilation.ptr
-                          );
+        convCpuRef(x.data,
+                   w.data,
+                   y.data,
+                   1f, 0f,
+                   x.shape.castArray!int,
+                   w.shape.castArray!int,
+                   y.shape.castArray!int,
+                   x.strides,
+                   w.strides,
+                   y.strides,
+                   this.stride,
+                   this.pad,
+                   this.dilation
+                   );
         return y;
     }
 
     // auto forward(Variable!(T, nbDims, HostStorage) x, Variable!(T, nbDims, HostStorage) w) {
-    void convCpuRef (const T* inputData,
-                     const T* filterData,
-                     T*       outputData,
-                     float        alpha,
-                     float        beta,
-                     const int*   inDims,
-                     const int*   filDims,
-                     const int*   outDims,
-                     const int*   inStride,
-                     const int*   outStride,
-                     const int*   stride,
-                     const int*   pad,
-                     const int*   dilation,
-                     ) {
-        int[8] filStride;
-        generateStrides(filDims, filStride.ptr, nbDims, isNchw);
-        // Number of pixels in output
-        int nPixelsOut = 1 ;
-        for(int i = 2 ; i < nbDims ; i++)
-            nPixelsOut *= outDims[i] ;
-        // Number of pixels in filter
-        int nPixelsFil = 1 ;
-        for(int i = 2 ; i < nbDims ; i++)
-            nPixelsFil *= filDims[i] ;
+    static void convCpuRef(const T[] inputData,
+                           const T[] filterData,
+                           T[] outputData,
+                           T alpha,
+                           T beta,
+                           const int[nbDims] inDims,
+                           const int[nbDims] filDims,
+                           const int[nbDims] outDims,
+                           const int[nbDims] inStride,
+                           const int[nbDims] filStride,
+                           const int[nbDims] outStride,
+                           const int[imDims] stride,
+                           const int[imDims] pad,
+                           const int[imDims] dilation,
+                           )
+    in {
+        // Sanity checks
+        // in     is n x c x h x w
+        // out    is n x k x p x q
+        // filter is k x c x r x s
+        assert(inDims[0] == outDims[0]); // n
+        assert(inDims[1] == filDims[1]); // k
+        assert(outDims[1] == filDims[0]); // c
+    } do {
+        import std.algorithm : reduce;
+
+        immutable nPixelsOut = outDims[2..$].reduce!"a * b";
+        immutable nPixelsFil = filDims[2..$].reduce!"a * b";
+
         // Used to store coordinates
-        int[8] filIds, outIds, inIds, tmpIds;
+        int[imDims] filIds, outIds, inIds, tmpIds;
         // For each image in the output
-        for(int ni = 0 ; ni < outDims[0] ; ni++) {
+        foreach (ni; 0 .. outDims[0]) {
             // For each feature layer of the output
-            for(int ki = 0 ; ki < outDims[1] ; ki++) {
-                int outputOffset = ni * outStride[0] + ki * outStride[1] ;
+            foreach (ki; 0 .. outDims[1]) {
+                immutable outputOffset = ni * outStride[0] + ki * outStride[1] ;
                 // Loop over all entries of the result
-                for(int outId = 0 ; outId < nPixelsOut ; outId++) {
+                foreach (outId; 0 .. nPixelsOut) {
                     // Get output pixel ids
-                    lin2dim(outId, outIds.ptr, outDims+2, imDims) ; // Skip n and k dimensions
+                    lin2dim(outId, outIds, outDims[2..$]) ; // Skip n and k dimensions
                     // Now we get the coordinates in input space of
                     // the "top left" corner of the filter: multiply by stride and remove pad
-                    for(int d = 0 ; d < imDims ; d++) {
-                        inIds[d] = outIds[d] * stride[d] - pad[d] ;
-                    }
+                    inIds[] = outIds[] * stride[] - pad[];
                     // We then accumulate
-                    float tmp = 0f;
-                    for(int ci = 0 ; ci < inDims[1] ; ci++) {
-                        int inputOffset = ni * inStride[0] + ci * inStride[1] ;
-                        int filterOffset = ki * filStride[0] + ci * filStride[1] ;
-                        for(int filId = 0 ; filId < nPixelsFil ; filId ++) {
+                    T tmp = 0;
+                    foreach (ci; 0 .. inDims[1]) {
+                        immutable inputOffset = ni * inStride[0] + ci * inStride[1] ;
+                        immutable filterOffset = ki * filStride[0] + ci * filStride[1] ;
+                        foreach (filId; 0 .. nPixelsFil) {
                             // Get the position of the pixel
-                            lin2dim(filId, filIds.ptr, filDims+2, imDims) ;
+                            lin2dim(filId, filIds, filDims[2..$]) ;
                             // Compute the corresponding output pixel
                             // and check wether we are in the padding area on the fly too
                             // (not that for convolution, we flip the image patch
                             // (equivalent to flipping the filter patch))
                             bool inside = true ;
-                            for(int d = 0 ; d < imDims && inside ; d++) {
+                            for (int d = 0; d < imDims && inside; d++) {
                                 if (isConv) {
-                                    tmpIds[d] = inIds[d] + dilation[d] * (filDims[2+d]-1 - filIds[d]) ;
+                                    tmpIds[d] = inIds[d] + dilation[d] * (filDims[2+d]-1 - filIds[d]);
                                 } else {
-                                    tmpIds[d] = inIds[d] + dilation[d] * filIds[d] ;
+                                    tmpIds[d] = inIds[d] + dilation[d] * filIds[d];
                                 }
-                                inside &= (tmpIds[d] >= 0 && tmpIds[d] < inDims[2+d]) ; // If we are in the padding area: stop and skip computations
+                                // If we are in the padding area: stop and skip computations
+                                inside &= (tmpIds[d] >= 0 && tmpIds[d] < inDims[2+d]) ;
                             }
-                            if(inside) {
-                                int actualTmpId = inputOffset + dim2lin(tmpIds.ptr, (inStride)+2, imDims) ;
-                                //int actualFilId = filterOffset + filId ;
-                                int actualFilId = filterOffset + dim2lin(filIds.ptr, (filStride.ptr)+2, imDims) ;
-                                T fval = filterData[actualFilId] ;
-                                T ival = inputData [actualTmpId] ;
-                                tmp += fval * ival; // doFma(fval, ival, tmp);
+                            if (inside) {
+                                immutable actualTmpId = inputOffset + dim2lin(tmpIds, inStride[2..$]);
+                                immutable actualFilId = filterOffset + dim2lin(filIds, filStride[2..$]);
+                                tmp += filterData[actualFilId] * inputData [actualTmpId];
                             }
                         }
                     }
-
                     // We put the result in the output
-                    int actualOutId = outputOffset + dim2lin(outIds.ptr, (outStride)+2, imDims) ;
+                    immutable actualOutId = outputOffset + dim2lin(outIds, outStride[2..$]);
                     doEpilog(outputData, actualOutId, alpha*tmp, beta);
                 }
             }
@@ -772,61 +774,65 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isConv=false) {
         // TODO use requires_grad for skipping grad calc
         auto gx = this.hx.uninit;
         gx.data.zero_();
-        dataGradCpuRef(this.hw.data.ptr,
-                       gy.data.ptr,
-                       gx.data.ptr,
+        dataGradCpuRef(this.hw.data,
+                       gy.data,
+                       gx.data,
                        1f, 0f,
 
-                       gy.shape.castArray!int.ptr,
-                       this.hw.shape.castArray!int.ptr,
-                       gx.shape.castArray!int.ptr,
+                       gy.shape.castArray!int,
+                       this.hw.shape.castArray!int,
+                       gx.shape.castArray!int,
 
-                       gy.strides.ptr,
-                       gx.strides.ptr,
+                       gy.strides,
+                       this.hw.strides,
+                       gx.strides,
 
-                       this.stride.ptr,
-                       this.pad.ptr,
-                       this.dilation.ptr
+                       this.stride,
+                       this.pad,
+                       this.dilation
                        );
 
         auto gw = this.hw.uninit;
         gw.data.zero_();
-        weightGradCpuRef(this.hx.data.ptr,
-                         gy.data.ptr,
+        weightGradCpuRef(this.hx.data,
+                         gy.data,
                          1f, 0f,
-                         gw.data.ptr,
+                         gw.data,
 
-                         this.hx.shape.castArray!int.ptr,
-                         gw.shape.castArray!int.ptr,
-                         gy.shape.castArray!int.ptr,
-                         this.hx.strides.ptr,
-                         gy.strides.ptr,
+                         this.hx.shape.castArray!int,
+                         gw.shape.castArray!int,
+                         gy.shape.castArray!int,
 
-                         this.stride.ptr,
-                         this.pad.ptr,
-                         this.dilation.ptr
+                         this.hx.strides,
+                         gw.strides,
+                         gy.strides,
+
+                         this.stride,
+                         this.pad,
+                         this.dilation
                          );
         return tuple(gx, gw);
     }
 
 
-    void dataGradCpuRef(const T *weight,
-                        const T *top_diff,
-                        T *output,
-                        float alpha,
-                        float beta,
+    static void dataGradCpuRef(const T[] weight,
+                               const T[] top_diff,
+                               scope T[] output,
+                               float alpha,
+                               float beta,
 
-                        const int*   inDims,
-                        const int*   filDims,
-                        const int*   outDims,
+                               const int[nbDims] inDims,
+                               const int[nbDims] filDims,
+                               const int[nbDims] outDims,
 
-                        const int*   inStride,
-                        const int*   outStride,
+                               const int[nbDims] inStride,
+                               const int[nbDims] filterStride,
+                               const int[nbDims] outStride,
 
-                        const int*   stride,
-                        const int*   pad,
-                        const int*   dilation)
-    {
+                               const int[imDims] stride,
+                               const int[imDims] pad,
+                               const int[imDims] dilation)
+    in {
         // Sanity checks
         // output is n x c x h x w
         // diff   is n x k x p x q
@@ -834,97 +840,80 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isConv=false) {
         assert(inDims[0] == outDims[0]); // n
         assert(inDims[1] == filDims[0]); // k
         assert(outDims[1] == filDims[1]); // c
-        auto diffDims = inDims;
-        auto diffStride = inStride;
-
-        // Filter stride
-        int[nbDims] filterStride;
-        generateStrides(filDims, filterStride.ptr, nbDims, isNchw);
+    } do {
+        import std.algorithm : map, any, all, reduce;
+        import std.range : iota;
 
         // Number of pixels in output
-        int nPixelsOut = 1 ;
-        for(int i = 2 ; i < nbDims ; i++)
-            nPixelsOut *= outDims[i] ;
-        // Number of pixels in diff
-        int nPixelsDiff = 1 ;
-        for(int i = 2 ; i < nbDims ; i++)
-            nPixelsDiff *= diffDims[i] ;
+        immutable nPixelsOut = outDims[2..$].reduce!"a * b";
         // Number of pixels in filter
-        int nPixelsFil = 1 ;
-        for(int i = 2 ; i < nbDims ; i++)
-            nPixelsFil *= filDims[i] ;
+        immutable nPixelsFil = filDims[2..$].reduce!"a * b";
 
         int[imDims] outIds, filIds, accIds;
-        for(int ni = 0; ni < outDims[0]; ni++) {
-            for(int ci = 0; ci < outDims[1]; ci++) {
+        foreach (ni; 0 .. outDims[0]) {
+            foreach (ci; 0 .. outDims[1]) {
                 foreach (outIdx; 0 .. nPixelsOut) {
-                    lin2dim(outIdx, outIds.ptr, outDims+2, imDims);
-                    float val = 0.0;
+                    lin2dim(outIdx, outIds, outDims[2..$]);
+                    T val = 0;
                     // For every diff channel (k)
-                    for(int ki = 0; ki < inDims[1]; ki++) {
-                        const offset_filter = ki * filterStride[0] + ci * filterStride[1];
-                        const offset_diff   = ni * inStride[0] + ki * inStride[1];
+                    foreach (ki; 0 .. inDims[1]) {
+                        immutable offsetFilter = ki * filterStride[0] + ci * filterStride[1];
+                        immutable offsetDiff = ni * inStride[0] + ki * inStride[1];
 
                         foreach (filIdx; 0 .. nPixelsFil) {
-                            lin2dim(filIdx, filIds.ptr, filDims+2, imDims);
+                            lin2dim(filIdx, filIds, filDims[2..$]);
 
                             // Fetch the value in filter and diff, product and accumulate
                             // So basically, for the convolution,
                             // we replace r by dim-1-r and s by dim-1-s to "flip" the filter
                             // We can then just reason in term of correlation
-                            accIds[] = outIds[] + pad[0..imDims];
+                            accIds[] = outIds[] + pad[];
                             if (isConv){
-                                accIds[] -= (filDims[2..nbDims] - 1 - filIds[]) * dilation[0..imDims];
+                                accIds[] -= (filDims[2..$] - 1 - filIds[]) * dilation[];
                             } else {
-                                accIds[] -= filIds[] * dilation[0..imDims];
+                                accIds[] -= filIds[] * dilation[];
                             }
-
-                            import std.algorithm : map, any, all;
-                            import std.range : iota;
-                            const outtaStride = iota(imDims).map!(i => accIds[i] % stride[i]).any;
+                            immutable outtaStride = iota(imDims).map!(i => accIds[i] % stride[i]).any;
                             if (outtaStride) {
                                 continue;
                             }
-                            accIds[] /= stride[0..imDims];
+                            accIds[] /= stride[];
 
-                            const inBounds = iota(imDims).map!(i => 0 <= accIds[i] && accIds[i] < inDims[i+2]).all;
+                            immutable inBounds = iota(imDims).map!(i => 0 <= accIds[i] && accIds[i] < inDims[i+2]).all;
                             if (inBounds) {
-                                int filterIdx  = offset_filter + dim2lin(filIds.ptr, filterStride.ptr+2, imDims);
-                                int diffIdx  = offset_diff + dim2lin(accIds.ptr, inStride+2, imDims);
-
-                                T imTmp = top_diff[diffIdx];
-                                T filTmp = weight[filterIdx];
-                                val += filTmp * imTmp;
+                                immutable filterIdx = offsetFilter + dim2lin(filIds, filterStride[2..$]);
+                                immutable diffIdx = offsetDiff + dim2lin(accIds, inStride[2..$]);
+                                val += top_diff[diffIdx] * weight[filterIdx];
                             }
                         }
-                        const offset_out = ni * outStride[0] + ci * outStride[1];
-                        doEpilog(output, offset_out + outIdx, alpha*val, beta);
+                        immutable offsetOut = ni * outStride[0] + ci * outStride[1];
+                        doEpilog(output, offsetOut + outIdx, alpha*val, beta);
                     }
                 }
             }
         }
     }
 
+    static void weightGradCpuRef(/*const TensorNdTestDesc_t *tensorInputDesc,*/
+                                 const T[] image,
+                                 /*const TensorNdTestDesc_t *tensorDiffDesc,*/
+                                 const T[] diffData,
+                                 /*const ConvNdTestDesc_t *convDesc,*/
+                                 /*const TensorNdTestDesc_t *filterOutputDesc,*/
+                                 float alpha,
+                                 float beta,
+                                 scope T[] output,
 
-    void weightGradCpuRef(/*const TensorNdTestDesc_t *tensorInputDesc,*/
-                          const T *image,
-                            /*const TensorNdTestDesc_t *tensorDiffDesc,*/
-                            const T *diffData,
-                            /*const ConvNdTestDesc_t *convDesc,*/
-                            /*const TensorNdTestDesc_t *filterOutputDesc,*/
-                            float alpha,
-                            float beta,
-                            T *output,
-
-                            const int*   inDims,
-                            const int*   filDims,
-                            const int*   diffDims,
-                            const int*   inStride,
-                            const int*   diffStride,
-                            const int*   stride,
-                            const int*   pad,
-                            const int*   dilation)
-    {
+                                 const int[nbDims] inDims,
+                                 const int[nbDims] filDims,
+                                 const int[nbDims] diffDims,
+                                 const int[nbDims] inStride,
+                                 const int[nbDims] filterStride,
+                                 const int[nbDims] diffStride,
+                                 const int[imDims] stride,
+                                 const int[imDims] pad,
+                                 const int[imDims] dilation)
+    in {
         // Some sanity checks
         // image   is n x c x h x w
         // diff    is n x k x p x q
@@ -933,65 +922,57 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isConv=false) {
         assert(inDims[1] == filDims[1]) ;
         assert(diffDims[1]  == filDims[0]) ;
 
-        // Filter stride
-        int[nbDims] filterStride;
-        generateStrides(filDims, filterStride.ptr, nbDims, isNchw);
+    } do {
+        import std.algorithm : all, sum, map, reduce;
+        import std.range : iota;
 
         // Number of pixels in output
-        int nPixelsDiff = 1 ;
-        for(int i = 2 ; i < nbDims ; i++)
-            nPixelsDiff *= diffDims[i] ;
+        immutable nPixelsDiff = diffDims[2..$].reduce!"a * b";
         // Number of pixels in filter
-        int nPixelsFil = 1 ;
-        for(int i = 2 ; i < nbDims ; i++)
-            nPixelsFil *= filDims[i] ;
+        immutable nPixelsFil = filDims[2..$].reduce!"a * b";
 
         // For every filter pixel (k x c x r x s)
         int[imDims] filIds, diffIds, accIds;
-        for(int ki = 0; ki < filDims[0]; ki++){ // ^
-            for(int ci = 0; ci < filDims[1]; ci++) { // Loop over filter output pixels
+        foreach (ki; 0 .. filDims[0]){
+            foreach (ci; 0 .. filDims[1]) {
                 foreach (filIdx; 0 .. nPixelsFil) {
-                    lin2dim(filIdx, filIds.ptr, filDims+2, imDims);
-                    float val = 0f ;
+                    lin2dim(filIdx, filIds, filDims[2..$]);
+                    T val = 0;
                     // For every image (n)
-                    for(int ni = 0 ; ni < inDims[0]; ni++) { // Sum over the batch
-                        int offset_image  = ni * inStride[0] + ci * inStride[1] ;
-                        int offset_diff   = ni * diffStride[0] + ki * diffStride[1] ;
+                    foreach (ni; 0 .. inDims[0]) { // Sum over the batch
+                        immutable offsetIn = ni * inStride[0] + ci * inStride[1] ;
+                        immutable offsetDiff = ni * diffStride[0] + ki * diffStride[1] ;
                         // For every pixel in diff
                         foreach (diffIdx; 0 .. nPixelsDiff) {
-                            lin2dim(diffIdx, diffIds.ptr, diffDims+2, imDims);
+                            lin2dim(diffIdx, diffIds, diffDims[2..$]);
                             // Fetch the value in image and diff, product and accumulate
-                            accIds[] = diffIds[] * stride[0..imDims] - pad[0..imDims];
+                            accIds[] = diffIds[] * stride[] - pad[];
 
                             // Convolution = Correlation with a flipped filter
                             // So basically, for the convolution, we replace r by dim-1-r and s
                             // by dim-1-s to "flip" the filter
                             // We can then just reason in term of correlation
                             if (isConv){
-                                accIds[] += (filDims[2..nbDims] - 1 - filIds[]) * dilation[0..imDims];
+                                accIds[] += (filDims[2..$] - 1 - filIds[]) * dilation[];
                             } else {
                                 // The effect of dilation on the gradient is to start the "zone of influence"
                                 // of a given pixel further into the image, so dilation
                                 // only produces a shift in x and y
-                                accIds[] += filIds[] * dilation[0..imDims];
+                                accIds[] += filIds[] * dilation[];
                             }
                             // Image value
-                            import std.algorithm : all, sum, map;
-                            import std.range : iota;
-                            auto inBounds = iota(imDims).map!(i => 0 <= accIds[i] && accIds[i] < inDims[i+2]).all;
+                            immutable inBounds = iota(imDims).map!(i => 0 <= accIds[i] && accIds[i] < inDims[i+2]).all;
                             if (inBounds) {
-                                int imId = offset_image + dim2lin(accIds.ptr, inStride+2, imDims);
+                                immutable imId = offsetIn + dim2lin(accIds, inStride[2..$]);
                                 // Diff value
-                                int diffId  = offset_diff + dim2lin(diffIds.ptr, diffStride+2, imDims);
+                                immutable diffId  = offsetDiff + dim2lin(diffIds, diffStride[2..$]);
                                 // Prod and accumulate
-                                T imTmp = image[imId] ;
-                                T diffTmp = diffData[diffId];
-                                val += diffTmp * imTmp;
+                                val += image[imId] * diffData[diffId];
                             }
                         }
                     }
-                    auto offset_filter = ki * filterStride[0] + ci * filterStride[1];
-                    doEpilog(output, offset_filter + filIdx, alpha*val, beta);
+                    immutable offsetFilter = ki * filterStride[0] + ci * filterStride[1];
+                    doEpilog(output, offsetFilter + filIdx, alpha*val, beta);
                 }
             }
         }
