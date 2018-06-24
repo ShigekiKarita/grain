@@ -957,8 +957,10 @@ struct Convolution(T, size_t imDims, bool isConv=false, bool isNchw = true) {
         import derelict.cudnn7;
         import grain.cudnn;
         // TODO implement benchmark mode to search the best algo
-        cudnnConvolutionFwdAlgo_t forwardAlgo = CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM;
-        cudnnConvolutionBwdDataAlgo_t backwardAlgo = CUDNN_CONVOLUTION_BWD_DATA_ALGO_1;
+        cudnnConvolutionFwdAlgo_t forwardAlgo = // CUDNN_CONVOLUTION_FWD_ALGO_DIRECT;
+            CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM;
+        cudnnConvolutionBwdDataAlgo_t backwardAlgo = CUDNN_CONVOLUTION_BWD_DATA_ALGO_1;;
+        // CUDNN_CONVOLUTION_BWD_DATA_ALGO_1;
 
         Variable!(T, nbDims, DeviceStorage) dx, dw;
 
@@ -1108,8 +1110,17 @@ unittest {
     auto hx = uniform!float(x.shape.castArray!size_t).slice.variable;
     auto hw = uniform!float(w.shape.castArray!size_t).slice.variable;
     auto hgy = uniform!float(y.shape.castArray!size_t).slice.variable;
+    auto hy = conv.forward(hx, hw);
     auto hgx = conv.backward(hgy);
     gradCheck(conv, tuple(hx, hw), hgy, 1e-3, 1e-3, 1e-2);
+
+    version (grain_cuda) {
+        auto dy = conv.forward(hx.to!DeviceStorage, hw.to!DeviceStorage);
+        auto dgx = conv.backward(hgy.to!DeviceStorage);
+        assert(approxEqual(dy.to!HostStorage.sliced, hy.sliced));
+        assert(approxEqual(dgx[0].to!HostStorage.sliced, hgx[0].sliced));
+        assert(approxEqual(dgx[1].to!HostStorage.sliced, hgx[1].sliced));
+    }
 }
 
 /** Conv2d pytorch equality test

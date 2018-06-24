@@ -49,9 +49,9 @@ struct TensorDesc {
 }
 
 /// convert variable to cudnn tensor discriptor object
-auto makeCudnnTensor(bool pad4 = true, T, size_t dim)(Variable!(T, dim, DeviceStorage) x) {
+auto makeCudnnTensor(T, size_t dim)(Variable!(T, dim, DeviceStorage) x) {
     static assert(dim < CUDNN_DIM_MAX);
-    static if (dim < 4 && pad4) {
+    static if (dim < 4) {
         enum int ddim = 4;
         int[ddim] shape;
         int[ddim] strides;
@@ -437,20 +437,41 @@ void convForward(bool isConv, bool isNchw, T, size_t dim, size_t imDims)
     enum cudnnConvolutionMode_t mode = isConv ? CUDNN_CONVOLUTION : CUDNN_CROSS_CORRELATION;
     enum cudnnTensorFormat_t format = isNchw ? CUDNN_TENSOR_NCHW : CUDNN_TENSOR_NCHW;
 
+    static if (imDims == 1) {
+        enum nbDim_ = 4;
+        enum imDim_ = 2;
+        const stride_ = stride ~ [1];
+        const pad_ = pad ~ [0];
+        const dilation_ = dilation ~ [1];
+        const fshape_ = filter.shape.castArray!int ~ [1];
+    } else {
+        enum nbDim_ = dim;
+        enum imDim_ = imDims;
+        const pad_ = pad;
+        const stride_ = stride;
+        const dilation_ = dilation;
+        const fshape_ = filter.shape.castArray!int;
+    }
+
+    // import std.stdio;
+    // writeln("stride:", stride_);
+    // writeln("pad:", pad_);
+    // writeln("dilation:", dilation_);
+
     // TODO cache these?
     cudnnFilterDescriptor_t cudnnFdesc;
     checkCUDNN( cudnnCreateFilterDescriptor(&cudnnFdesc) );
     scope(exit) cudnnDestroyFilterDescriptor(cudnnFdesc);
     checkCUDNN( cudnnSetFilterNdDescriptor(cudnnFdesc, cudnnDataType!T, format,
-                                           cast(int) dim, filter.shape.castArray!int.ptr
+                                           cast(int) nbDim_, fshape_.ptr
                                            ) );
 
     cudnnConvolutionDescriptor_t cudnnConvDesc;
     checkCUDNN( cudnnCreateConvolutionDescriptor(&cudnnConvDesc) );
     scope(exit) cudnnDestroyConvolutionDescriptor(cudnnConvDesc);
     checkCUDNN( cudnnSetConvolutionGroupCount(cudnnConvDesc, ngroup) );
-    checkCUDNN( cudnnSetConvolutionNdDescriptor(cudnnConvDesc, cast(int) imDims,
-                                                pad.ptr, stride.ptr, dilation.ptr,
+    checkCUDNN( cudnnSetConvolutionNdDescriptor(cudnnConvDesc, cast(int) imDim_,
+                                                pad_.ptr, stride_.ptr, dilation_.ptr,
                                                 mode, cudnnDataType!T
                                                 ) );
 
@@ -495,20 +516,36 @@ void convBackward(bool isConv, bool isNchw, T, size_t dim, size_t imDims
     enum cudnnConvolutionMode_t mode = isConv ? CUDNN_CONVOLUTION : CUDNN_CROSS_CORRELATION;
     enum cudnnTensorFormat_t format = isNchw ? CUDNN_TENSOR_NCHW : CUDNN_TENSOR_NCHW;
 
+    static if (imDims == 1) {
+        enum nbDim_ = 4;
+        enum imDim_ = 2;
+        const stride_ = stride ~ [1];
+        const pad_ = pad ~ [0];
+        const dilation_ = dilation ~ [1];
+        const fshape_ = filter.shape.castArray!int ~ [1];
+    } else {
+        enum nbDim_ = dim;
+        enum imDim_ = imDims;
+        const pad_ = pad;
+        const stride_ = stride;
+        const dilation_ = dilation;
+        const fshape_ = filter.shape.castArray!int;
+    }
+
     // TODO cache these?
     cudnnFilterDescriptor_t cudnnFdesc;
     checkCUDNN( cudnnCreateFilterDescriptor(&cudnnFdesc) );
     scope(exit) cudnnDestroyFilterDescriptor(cudnnFdesc);
     checkCUDNN( cudnnSetFilterNdDescriptor(cudnnFdesc, cudnnDataType!T, format,
-                                           cast(int) dim, filter.shape.castArray!int.ptr
+                                           cast(int) nbDim_, fshape_.ptr
                                            ) );
 
     cudnnConvolutionDescriptor_t cudnnConvDesc;
     checkCUDNN( cudnnCreateConvolutionDescriptor(&cudnnConvDesc) );
     scope(exit) cudnnDestroyConvolutionDescriptor(cudnnConvDesc);
     checkCUDNN( cudnnSetConvolutionGroupCount(cudnnConvDesc, ngroup) );
-    checkCUDNN( cudnnSetConvolutionNdDescriptor(cudnnConvDesc, cast(int) imDims,
-                                                pad.ptr, stride.ptr, dilation.ptr,
+    checkCUDNN( cudnnSetConvolutionNdDescriptor(cudnnConvDesc, cast(int) imDim_,
+                                                pad_.ptr, stride_.ptr, dilation_.ptr,
                                                 mode, cudnnDataType!T
                                                 ) );
 
