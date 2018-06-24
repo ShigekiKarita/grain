@@ -628,83 +628,25 @@ void doEpilog(float[] o, int idx, float alphaAcc, float beta) {
     return sum(ids.sliced * strides.sliced);
 }
 
-
-/++
- Convolution/Cross-correration function
-
- TODO add cudnn wrapped functions
- +/
-struct Convolution(T, size_t imDims, size_t group=1, bool isConv=false) {
-    int[imDims] stride;
-    int[imDims] pad;
-    int[imDims] dilation;
+/// Reference CPU implementation of Convolution function
+static struct ConvolutionRefImpl(T, size_t imDims, bool isConv=false, bool isNchw = true) {
     enum int nbDims = imDims + 2;
-    enum bool isNchw=true; // TODO support NHWC ?
 
-    Variable!(T, nbDims, HostStorage) hx, hw;
-
-    /// https://pytorch.org/docs/master/nn.html#convolution-layers
-    auto outShape(uint[nbDims] inShape, uint[nbDims] weightShape) {
-        uint[nbDims] ret;
-        ret[0] = inShape[0]; // batchsize
-        ret[1] = weightShape[0]; // output ch size
-        assert(inShape[1] == weightShape[1]);
-        auto kernel = weightShape[2..$];
-        foreach (d; 0 .. imDims) {
-            ret[d+2] = cast(uint)
-                ((inShape[d+2] + 2 * pad[d] - dilation[d] * (kernel[d] - 1) - 1)
-                 / stride[d] + 1);
-        }
-        return ret;
-    }
-
-    auto forward(Variable!(T, nbDims, HostStorage) x, Variable!(T, nbDims, HostStorage) w) {
-        // set default values if stride and dilation are 0 (init)
-        foreach (d; 0..imDims) {
-            if (this.stride[d] == 0) {
-                this.stride[d] = 1;
-            }
-            if (this.dilation[d] == 0) {
-                this.dilation[d] = 1;
-            }
-        }
-        // TODO if train
-        this.hx = x;
-        this.hw = w;
-        auto y = uninitVariable!(T, HostStorage)(outShape(x.shape, w.shape));
-        convCpuRef(x.data,
-                   w.data,
-                   y.data,
-                   1f, 0f,
-                   x.shape.castArray!int,
-                   w.shape.castArray!int,
-                   y.shape.castArray!int,
-                   x.strides,
-                   w.strides,
-                   y.strides,
-                   this.stride,
-                   this.pad,
-                   this.dilation
-                   );
-        return y;
-    }
-
-    // auto forward(Variable!(T, nbDims, HostStorage) x, Variable!(T, nbDims, HostStorage) w) {
-    static void convCpuRef(const T[] inputData,
-                           const T[] filterData,
-                           T[] outputData,
-                           T alpha,
-                           T beta,
-                           const int[nbDims] inDims,
-                           const int[nbDims] filDims,
-                           const int[nbDims] outDims,
-                           const int[nbDims] inStride,
-                           const int[nbDims] filStride,
-                           const int[nbDims] outStride,
-                           const int[imDims] stride,
-                           const int[imDims] pad,
-                           const int[imDims] dilation,
-                           )
+    static void forward(const T[] inputData,
+                        const T[] filterData,
+                        T[] outputData,
+                        T alpha,
+                        T beta,
+                        const int[nbDims] inDims,
+                        const int[nbDims] filDims,
+                        const int[nbDims] outDims,
+                        const int[nbDims] inStride,
+                        const int[nbDims] filStride,
+                        const int[nbDims] outStride,
+                        const int[imDims] stride,
+                        const int[imDims] pad,
+                        const int[imDims] dilation,
+                        )
     in {
         // Sanity checks
         // in     is n x c x h x w
@@ -770,68 +712,23 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isConv=false) {
         }
     }
 
-    auto backward(Variable!(T, nbDims, HostStorage) gy) {
-        // TODO use requires_grad for skipping grad calc
-        auto gx = this.hx.uninit;
-        gx.data.zero_();
-        dataGradCpuRef(this.hw.data,
-                       gy.data,
-                       gx.data,
-                       1f, 0f,
+    static void backwardData(const T[] weight,
+                             const T[] top_diff,
+                             scope T[] output,
+                             float alpha,
+                             float beta,
 
-                       gy.shape.castArray!int,
-                       this.hw.shape.castArray!int,
-                       gx.shape.castArray!int,
+                             const int[nbDims] inDims,
+                             const int[nbDims] filDims,
+                             const int[nbDims] outDims,
 
-                       gy.strides,
-                       this.hw.strides,
-                       gx.strides,
+                             const int[nbDims] inStride,
+                             const int[nbDims] filterStride,
+                             const int[nbDims] outStride,
 
-                       this.stride,
-                       this.pad,
-                       this.dilation
-                       );
-
-        auto gw = this.hw.uninit;
-        gw.data.zero_();
-        weightGradCpuRef(this.hx.data,
-                         gy.data,
-                         1f, 0f,
-                         gw.data,
-
-                         this.hx.shape.castArray!int,
-                         gw.shape.castArray!int,
-                         gy.shape.castArray!int,
-
-                         this.hx.strides,
-                         gw.strides,
-                         gy.strides,
-
-                         this.stride,
-                         this.pad,
-                         this.dilation
-                         );
-        return tuple(gx, gw);
-    }
-
-
-    static void dataGradCpuRef(const T[] weight,
-                               const T[] top_diff,
-                               scope T[] output,
-                               float alpha,
-                               float beta,
-
-                               const int[nbDims] inDims,
-                               const int[nbDims] filDims,
-                               const int[nbDims] outDims,
-
-                               const int[nbDims] inStride,
-                               const int[nbDims] filterStride,
-                               const int[nbDims] outStride,
-
-                               const int[imDims] stride,
-                               const int[imDims] pad,
-                               const int[imDims] dilation)
+                             const int[imDims] stride,
+                             const int[imDims] pad,
+                             const int[imDims] dilation)
     in {
         // Sanity checks
         // output is n x c x h x w
@@ -894,25 +791,25 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isConv=false) {
         }
     }
 
-    static void weightGradCpuRef(/*const TensorNdTestDesc_t *tensorInputDesc,*/
-                                 const T[] image,
-                                 /*const TensorNdTestDesc_t *tensorDiffDesc,*/
-                                 const T[] diffData,
-                                 /*const ConvNdTestDesc_t *convDesc,*/
-                                 /*const TensorNdTestDesc_t *filterOutputDesc,*/
-                                 float alpha,
-                                 float beta,
-                                 scope T[] output,
+    static void backwardWeight(/*const TensorNdTestDesc_t *tensorInputDesc,*/
+                               const T[] image,
+                               /*const TensorNdTestDesc_t *tensorDiffDesc,*/
+                               const T[] diffData,
+                               /*const ConvNdTestDesc_t *convDesc,*/
+                               /*const TensorNdTestDesc_t *filterOutputDesc,*/
+                               float alpha,
+                               float beta,
+                               scope T[] output,
 
-                                 const int[nbDims] inDims,
-                                 const int[nbDims] filDims,
-                                 const int[nbDims] diffDims,
-                                 const int[nbDims] inStride,
-                                 const int[nbDims] filterStride,
-                                 const int[nbDims] diffStride,
-                                 const int[imDims] stride,
-                                 const int[imDims] pad,
-                                 const int[imDims] dilation)
+                               const int[nbDims] inDims,
+                               const int[nbDims] filDims,
+                               const int[nbDims] diffDims,
+                               const int[nbDims] inStride,
+                               const int[nbDims] filterStride,
+                               const int[nbDims] diffStride,
+                               const int[imDims] stride,
+                               const int[imDims] pad,
+                               const int[imDims] dilation)
     in {
         // Some sanity checks
         // image   is n x c x h x w
@@ -977,7 +874,84 @@ struct Convolution(T, size_t imDims, size_t group=1, bool isConv=false) {
             }
         }
     }
+}
 
+/++
+ Convolution/Cross-correration function
+
+ TODO add cudnn wrapped functions
+ +/
+struct Convolution(T, size_t imDims, bool isConv=false, bool isNchw = true) {
+    int[imDims] stride;
+    int[imDims] pad;
+    int[imDims] dilation;
+    enum int nbDims = imDims + 2;
+    enum int group=1;
+    alias RefImpl = ConvolutionRefImpl!(T, imDims, isConv, isNchw);
+
+    Variable!(T, nbDims, HostStorage) hx, hw;
+
+    /// https://pytorch.org/docs/master/nn.html#convolution-layers
+    auto outShape(uint[nbDims] inShape, uint[nbDims] weightShape) {
+        uint[nbDims] ret;
+        ret[0] = inShape[0]; // batchsize
+        ret[1] = weightShape[0]; // output ch size
+        assert(inShape[1] == weightShape[1]);
+        auto kernel = weightShape[2..$];
+        foreach (d; 0 .. imDims) {
+            ret[d+2] = cast(uint)
+                ((inShape[d+2] + 2 * pad[d] - dilation[d] * (kernel[d] - 1) - 1)
+                 / stride[d] + 1);
+        }
+        return ret;
+    }
+
+    void setDefault() {
+        foreach (d; 0..imDims) {
+            if (this.stride[d] == 0) {
+                this.stride[d] = 1;
+            }
+            if (this.dilation[d] == 0) {
+                this.dilation[d] = 1;
+            }
+        }
+    }
+
+    auto forward(Variable!(T, nbDims, HostStorage) x, Variable!(T, nbDims, HostStorage) w) {
+        this.setDefault();
+        // TODO if train
+        this.hx = x;
+        this.hw = w;
+        auto y = uninitVariable!(T, HostStorage)(outShape(x.shape, w.shape));
+        RefImpl.forward(x.data, w.data, y.data,
+                        1f, 0f,
+                        x.shape.castArray!int, w.shape.castArray!int, y.shape.castArray!int,
+                        x.strides, w.strides, y.strides,
+                        this.stride, this.pad, this.dilation);
+        return y;
+    }
+
+
+    auto backward(Variable!(T, nbDims, HostStorage) gy) {
+        // TODO use requires_grad for skipping grad calc
+        auto gx = this.hx.uninit;
+        gx.data.zero_();
+        RefImpl.backwardData(this.hw.data, gy.data, gx.data,
+                             1f, 0f,
+                             gy.shape.castArray!int, this.hw.shape.castArray!int, gx.shape.castArray!int,
+                             gy.strides, this.hw.strides, gx.strides,
+                             this.stride, this.pad, this.dilation);
+
+        auto gw = this.hw.uninit;
+        gw.data.zero_();
+        RefImpl.backwardWeight(this.hx.data, gy.data,
+                               1f, 0f,
+                               gw.data,
+                               this.hx.shape.castArray!int, gw.shape.castArray!int, gy.shape.castArray!int,
+                               this.hx.strides, gw.strides, gy.strides,
+                               this.stride, this.pad, this.dilation);
+        return tuple(gx, gw);
+    }
 }
 
 /** Conv1d pytorch equality test
