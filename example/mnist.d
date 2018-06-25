@@ -8,6 +8,7 @@ import snck : snck;
 import grain.autograd;
 import grain.chain; // : Linear, relu;
 import grain.optim; //  : zeroGrad;
+import grain.serializer : save, load;
 
 enum files = [
     "train-images-idx3-ubyte",
@@ -115,6 +116,7 @@ version (grain_cuda) {
 }
 
 void main() {
+    import std.file : exists;
     RNG.setSeed(0);
     grain.autograd.backprop = true;
     auto datasets = prepareDataset();
@@ -124,6 +126,9 @@ void main() {
     auto testBatch = datasets.test.makeBatch(batchSize);
     auto model = Model!(float, S)(inSize, 512, 10);
     auto optimizer = SGD!(typeof(model))(model, 1e-2);
+    if ("mnist.h5".exists) {
+        model.load("mnist.h5");
+    }
 
     foreach (epoch; 0 .. 10) {
         // TODO implement model.train();
@@ -159,5 +164,6 @@ void main() {
             }
             writefln!"test loss: %f, acc: %f"(lossSum / niter, accSum / niter);
         }
+        model.save("mnist.h5");
     }
 }
