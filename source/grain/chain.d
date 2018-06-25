@@ -226,9 +226,110 @@ auto addVec(T, alias Storage)(Variable!(T, 2, Storage) a, Variable!(T, 1, Storag
     return func.applyForward(a, b);
 }
 
-
+/// tensor convolution (do cross correlation default)
+auto convolution(bool isConv = false, bool isNchw = true, T, size_t dim, size_t imDim, alias Storage)(
+    Variable!(T, dim, Storage) x, Variable!(T, dim, Storage) w,
+    int[imDim] stride, int[imDim] pad, int[imDim] dilation
+    ) {
+    static assert(dim == imDim + 2);
+    import grain.functions : Convolution;
+    static assert(dim > 2); // TODO support 1d, 2d inputs
+    auto func = new Convolution!(T, dim-2, isConv, isNchw);
+    func.stride = stride;
+    func.pad = pad;
+    func.dilation = dilation;
+    return func.applyForward(x, w);
+}
 
 ////// Parametric chains
+
+/// convolution operator
+struct Convolution(T, size_t dim,  alias Storage) {
+    import grain.utility : castArray;
+    import mir.ndslice : slice;
+
+    Variable!(T, dim+2, Storage) weight;
+    Variable!(T, dim+2, Storage) bias; // TODO implement unsqueeze
+    int nInput, nOutput;
+    bool useBias = true;
+    int[dim] kernel, stride, pad, dilation;
+
+    ///
+    this(int nInput, int nOutput, int[dim] kernel, bool useBias = true) {
+        this.nInput = nInput;
+        this.nOutput = nOutput;
+        this.kernel = kernel;
+        this.stride[] = 1;
+        this.pad[] = 0;
+        this.dilation[] = 1;
+        this.useBias = useBias;
+        this.resetParameters();
+    }
+
+    ///
+    this(int nInput, int nOutput, int[dim] kernel,
+         int[dim] stride, int[dim] pad, int[dim] dilation, bool useBias = true) {
+        this.nInput = nInput;
+        this.nOutput = nOutput;
+        this.kernel = kernel;
+        this.stride = stride;
+        this.pad = pad;
+        this.dilation = dilation;
+        this.useBias = useBias;
+        this.resetParameters();
+    }
+
+    /// pytorch style init (LeCun uniform init)
+    void resetParameters() {
+        import std.algorithm : reduce;
+        import numir : generate;
+        import mir.random.variable : UniformVariable;
+
+        // TODO create initializer
+        const receptiveSize = this.kernel.reduce!"a * b";
+        const fanIn = this.nInput * receptiveSize;
+        const fanOut = this.nOutput * receptiveSize;
+        auto stdv = 1.0 / (cast(T) fanIn ^^ 0.5);
+        int[dim+2] wshape;
+        wshape[0] = this.nOutput;
+        wshape[1] = this.nInput;
+        wshape[2..$] = this.kernel;
+        this.weight = UniformVariable!T(-stdv, stdv)
+            .generate(wshape.castArray!size_t)
+            .slice.variable(true).to!Storage;
+        if (this.useBias) {
+            int[dim+2] bshape;
+            bshape[] = 1;
+            bshape[1] = this.nOutput;
+            this.bias = UniformVariable!T(-stdv, stdv)
+                .generate(bshape.castArray!size_t)
+                .slice.variable(true).to!Storage;
+        }
+    }
+
+    ///
+    auto opCall(Variable!(T, dim+2, Storage) x) {
+        auto wx = convolution(x, this.weight, this.stride, this.pad, this.dilation);
+        if (this.useBias) {
+            return wx + this.bias;
+        } else {
+            return wx;
+        }
+    }
+}
+
+///
+unittest {
+    import grain.testing;
+    import grain.utility;
+    import numir;
+    import mir.ndslice;
+    auto conv = Convolution!(float, 2, HostStorage)(3, 4, [3, 3]);
+    auto x = uniform!float(2, 3, 4, 4).slice.variable(true);
+    auto y = conv(x);
+    auto gy = uniform!float(y.shape.castArray!size_t).slice.variable;
+    gradCheckChain!conv(x, gy, 1e-3, 5e-2, 5e-2);
+}
 
 /// linear operator
 struct Linear(T, alias Storage) if (isFloatingPoint!T) {
@@ -267,6 +368,18 @@ struct Linear(T, alias Storage) if (isFloatingPoint!T) {
     }
 }
 
+///
+unittest {
+    import grain.testing;
+    import grain.utility;
+    import numir;
+    import mir.ndslice;
+    auto f = Linear!(float, HostStorage)(2, 3);
+    auto x = uniform!float(2, 2).slice.variable(true);
+    auto y = f(x);
+    auto gy = uniform!float(y.shape.castArray!size_t).slice.variable;
+    gradCheckChain!f(x, gy, 1e-3, 5e-2, 5e-2);
+}
 
 /// Emebedding ID into vector
 struct Embedding(T, alias Storage) if (isFloatingPoint!T) {

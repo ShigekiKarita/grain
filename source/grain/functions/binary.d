@@ -994,6 +994,8 @@ struct Convolution(T, size_t imDims, bool isConv=false, bool isNchw = true) {
         }
 
     }
+
+    mixin FunctionCommon;
 }
 
 /** Conv1d pytorch equality test
