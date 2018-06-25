@@ -1,4 +1,7 @@
-.PHONY: test clean kernel example-mnist example-char-rnn cuda-deps
+.PHONY: test clean kernel example-mnist example-char-rnn cuda-deps install-hdf5
+
+HDF5_URL := https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.8/hdf5-1.8.15-patch1/bin/linux-centos7-x86_64/hdf5-1.8.15-patch1-linux-centos7-x86_64-static.tar.gz
+HDF5_ROOT := $(shell basename $(HDF5_URL) .tar.gz)
 
 CUDA_COMPUTE_CAPABILITY := `tool/compute_capability.out 0`
 CUDA_BIT := $(shell getconf LONG_BIT)
@@ -51,9 +54,25 @@ clean:
 	find . -type f -name "*.ptx" -print -delete
 	find . -type f -name "*.di" -print -delete
 	find . -type f -name "*.out" -print -delete
+	rm *.a
 
 example-mnist:
 	dub --config=example-mnist --compiler=ldc2 $(DUB_OPTS)
 
 example-char-rnn:
 	dub --config=example-char-rnn --compiler=ldc2 $(DUB_OPTS)
+
+$(HDF5_ROOT):
+	wget $(HDF5_URL)
+	tar -xvf $(HDF5_ROOT).tar.gz
+
+libsz.a: $(HDF5_ROOT)
+	cp -f $(HDF5_ROOT)/lib/libsz.a .
+
+libhdf5.a: $(HDF5_ROOT)
+	cp -f $(HDF5_ROOT)/lib/libhdf5.a .
+
+libhdf5_hl.a: $(HDF5_ROOT)
+	cp -f $(HDF5_ROOT)/lib/libhdf5_hl.a .
+
+install-hdf5: libhdf5.a libhdf5_hl.a libsz.a

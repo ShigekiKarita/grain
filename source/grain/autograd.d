@@ -561,3 +561,38 @@ unittest {
         }
     }
 }
+
+
+/// kind of std.algorithm.each for iterating variables inside a chain
+void iterVariables(alias proc, C)(C* chain, string prefix="") {
+    import std.traits;
+    import grain.autograd;
+
+    foreach (name; FieldNameTuple!C) {
+        auto fullName = prefix ~ "." ~ name;
+        auto value = __traits(getMember, chain, name);
+        alias V = typeof(value);
+        static if (isVariable!V) {
+            proc(fullName, value);
+        } else static if (hasMember!(V, "tupleof")) {
+            iterVariables!proc(&value, fullName);
+        }
+    }
+}
+
+
+void refIterVariables(alias proc, C)(ref C chain, string prefix="") {
+    import std.traits;
+    import grain.autograd;
+
+    foreach (name; FieldNameTuple!C) {
+        auto fullName = prefix ~ "." ~ name;
+        auto value = __traits(getMember, chain, name);
+        alias V = typeof(value);
+        static if (isVariable!V) {
+            proc(fullName, value);
+        } else static if (hasMember!(V, "tupleof")) {
+            refIterVariables!proc(value, fullName);
+        }
+    }
+}
