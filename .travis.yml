@@ -16,6 +16,7 @@ addons:
   apt:
     packages:
       - libopenblas-dev
+      - libhdf5-dev
 
 script:
   - dub test --arch "$ARCH" --build=unittest-cov

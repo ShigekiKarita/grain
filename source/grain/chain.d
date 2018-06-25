@@ -244,7 +244,7 @@ auto convolution(bool isConv = false, bool isNchw = true, T, size_t dim, size_t 
 ////// Parametric chains
 
 /// convolution operator
-struct Convolution(T, size_t dim,  alias Storage) {
+struct Convolution(T, size_t dim, alias Storage) {
     import grain.utility : castArray;
     import mir.ndslice : slice;
 
@@ -253,6 +253,12 @@ struct Convolution(T, size_t dim,  alias Storage) {
     int nInput, nOutput;
     bool useBias = true;
     int[dim] kernel, stride, pad, dilation;
+
+    auto outShape(uint[dim+2] inShape) {
+        import grain.functions;
+        auto func = grain.functions.Convolution!(T, dim)(this.stride, this.pad, this.dilation);
+        return func.outShape(inShape, this.weight.shape);
+    }
 
     ///
     this(int nInput, int nOutput, int[dim] kernel, bool useBias = true) {
