@@ -12,9 +12,10 @@ d:
 env:
   - ARCH="x86_64"
 
-
-before_install:
-  - sudo apt-get install -qq libopenblas-dev
+addons:
+  apt:
+    packages:
+      - libopenblas-dev
 
 script:
   - dub test --arch "$ARCH" --build=unittest-cov

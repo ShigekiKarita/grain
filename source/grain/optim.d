@@ -4,7 +4,7 @@
 module grain.optim;
 
 import std.stdio;
-import grain.autograd : isVariable, zero_, isHost, UntypedVariable, Variable, HostStorage;
+import grain.autograd : isVariable, zero_, isHost, UntypedVariable, Variable, HostStorage, iterVariables;
 import std.traits : hasMember;
 import std.stdio;
 version (grain_cuda) {
@@ -30,49 +30,6 @@ enum bool isOptimizer(T) = is(typeof({
             Variable!(float, 2) v;
             T.init.step("", v);
         }));
-
-
-/// kind of std.algorithm.each for iterating variables inside a chain
-void iterVariables(alias proc, C)(C* chain, string prefix="") {
-    import std.traits;
-    import grain.autograd;
-
-    foreach (name; FieldNameTuple!C) {
-        auto fullName = prefix ~ "." ~ name;
-        auto value = __traits(getMember, chain, name);
-        alias V = typeof(value);
-        static if (isVariable!V) {
-            proc(fullName, value);
-        } else static if (hasMember!(V, "tupleof")) {
-            iterVariables!proc(&value, fullName);
-        }
-    }
-}
-
-/*
-enum variableNames(C) = {
-    string[] ret;
-    void register(V)(string k, V v) if (isVariable!V) {
-        ret ~= [k];
-    }
-    C chain;
-    iterVariables!( (k, v) { register(k, v); })(chain, "");
-    return ret;
-}();
-
-///
-unittest {
-    import std.traits;
-    import grain.autograd;
-    auto mlp = MLP!(float, HostStorage)(3);
-    static assert(variableNames!(typeof(mlp)) ==
-                  [".fc1.weight", ".fc1.bias", ".fc2.weight", ".fc2.bias", ".fc3.weight", ".fc3.bias"]);
-
-    StateDict dict;
-    iterVariables!( (k, v) { dict[k] = UntypedVariable(v); } )(mlp);
-}
-*/
-
 
 alias StateDict = UntypedVariable[string];
 

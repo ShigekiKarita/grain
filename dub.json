@@ -5,11 +5,15 @@
     ],
     "dependencies": {
         "derelict-cuda": "~>3.1.1",
+        "d_hdf5": "~>0.3.0",
         "numir": "~>0.1.2",
         "lubeck": "~>0.0.5"
     },
     "targetType": "library",
     "libs": ["openblas"],
+    "dflags-ldc2": ["-relocation-model=pic"],
+    "sourceFiles": ["libhdf5.a", "libhdf5_hl.a", "libsz.a"],
+    "preBuildCommands": ["make --silent install-hdf5"],
     "buildTypes": {
         "cuda-unittest": {
             "buildOptions": ["unittests", "debugMode", "debugInfo"],
