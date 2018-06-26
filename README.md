@@ -1,5 +1,6 @@
 # grain
 [![Build Status](https://travis-ci.org/ShigekiKarita/grain.svg?branch=master)](https://travis-ci.org/ShigekiKarita/grain)
+[![codecov](https://codecov.io/gh/ShigekiKarita/grain/branch/master/graph/badge.svg)](https://codecov.io/gh/ShigekiKarita/grain)
 [![Dub version](https://img.shields.io/dub/v/grain.svg)](https://code.dlang.org/packages/grain)
 
 autograd [mir](https://github.com/libmir/mir-algorithm) and CUDA library for dynamic neural networks in D.
