@@ -40,4 +40,5 @@ deploy:
   local_dir: docs
   on:
     branch: master
+    condition: $DC = dmd
 
