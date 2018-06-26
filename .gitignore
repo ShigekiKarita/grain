@@ -14,6 +14,7 @@
 !dcompute/*
 !style.css
 !skeleton.html
+!LICENSE
 hdf5-*/
 
 dub.selections.json
