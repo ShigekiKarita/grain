@@ -22,12 +22,14 @@ script:
   - dub test --arch "$ARCH" --build=unittest-cov
 
 after_success:
-  - if [ $DC = dmd ]; then
+  - if [[ "$DC" == dmd ]]; then
        git clone https://github.com/adamdruppe/adrdox.git; fi
        cd adrdox && make && cd;
        ./adrdox/doc2 source;
        mv generated-docs docs;
        bash <(curl -s https://codecov.io/bash) -s "source-grain-*.lst";
+    else
+       echo "skipping coverage and doc stage in ${DC}";
     fi
 
 deploy:
