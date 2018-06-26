@@ -22,8 +22,8 @@ script:
   - dub test --arch "$ARCH" --build=unittest-cov
 
 after_success:
-  - if [[ "$DC" == dmd ]]; then
-       git clone https://github.com/adamdruppe/adrdox.git; fi
+  - if [ "$DC" = dmd ]; then
+       git clone https://github.com/adamdruppe/adrdox.git;
        cd adrdox && make && cd;
        ./adrdox/doc2 source;
        mv generated-docs docs;
