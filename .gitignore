@@ -3,6 +3,7 @@
 !*/
 !.gitignore
 !*.d
+!kernel/*.di
 !Makefile
 !*.md
 !*.cu

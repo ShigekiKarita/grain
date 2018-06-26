@@ -12,6 +12,7 @@ autograd [mir](https://github.com/libmir/mir-algorithm) and CUDA library for dyn
 - statically typed tensor `Variable(T, size_t dim, alias Storage)` unlike numpy
 - CPU (mir) and CUDA (cublas/cudnn) backend
 - extensible (i.e., user-defined) autograd function
+- LDC2 (CPU/CUDA) and DMD (CPU only) support
 
 ## how to run MNIST
 

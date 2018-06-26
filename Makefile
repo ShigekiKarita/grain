@@ -11,7 +11,7 @@ DUB_BUILD := unittest
 ifeq ($(NO_CUDA),true)
 	DUB_OPTS = -b=$(DUB_BUILD)
 else
-	CUDA_DEPS = tool/compute_capability.out source/grain/kernel.di kernel/kernel.ptx
+	CUDA_DEPS = tool/compute_capability.out source/grain/kernel.di kernel/kernel_lib.ptx
 	DUB_OPTS = -b=cuda-$(DUB_BUILD)
 endif
 
@@ -26,19 +26,19 @@ kernel/kernel_lib.ptx: kernel/kernel_lib.cu
 	# llc-6.0 -mcpu=sm_$(CUDA_COMPUTE_CAPABILITY) $(shell basename -s .cu $<)-cuda-nvptx64-nvidia-cuda-sm_$(CUDA_COMPUTE_CAPABILITY).ll -o $@
 	nvcc -ptx -arch=sm_$(CUDA_COMPUTE_CAPABILITY) $< -o $@ -std=c++11 -use_fast_math
 
-kernel/kernel.ptx: kernel/kernel.d kernel/kernel_lib.ptx
-	ldc2 $< --mdcompute-targets=cuda-$(CUDA_COMPUTE_CAPABILITY)0 -H -Hd kernel -mdcompute-file-prefix=$(shell basename -s .d $<) -I=source
-	mv $(shell basename -s .d $<)_cuda$(CUDA_COMPUTE_CAPABILITY)0_$(CUDA_BIT).ptx $@
+# kernel/kernel.di: kernel/kernel.d kernel/kernel_lib.ptx
+# 	ldc2 $< --mdcompute-targets=cuda-$(CUDA_COMPUTE_CAPABILITY)0 -H -Hd kernel -mdcompute-file-prefix=$(shell basename -s .d $<) -I=source
+# # 	mv $(shell basename -s .d $<)_cuda$(CUDA_COMPUTE_CAPABILITY)0_$(CUDA_BIT).ptx $@
 
-
-source/grain/kernel.di: kernel/kernel.ptx kernel/kernel_lib.ptx
-	cat kernel/$(shell basename -s .ptx $<).di     > $@
-	@echo "/**"                                   >> $@
-	@echo " * generated PTX (see Makefile %.di) " >> $@
-	@echo "**/"                                   >> $@
-	@echo 'enum ptx = q"EOS'                      >> $@
-	@cat kernel/kernel.ptx                        >> $@
-	@echo 'EOS";'                                 >> $@
+source/grain/kernel.di: kernel/kernel.di kernel/kernel_lib.ptx
+	# cat kernel/$(shell basename -s .ptx $<).di     > $@
+	cat kernel/kernel.di     > $@
+	# @echo "/**"                                   >> $@
+	# @echo " * generated PTX (see Makefile %.di) " >> $@
+	# @echo "**/"                                   >> $@
+	# @echo 'enum ptx = q"EOS'                      >> $@
+	# @cat kernel/kernel.ptx                        >> $@
+	# @echo 'EOS";'                                 >> $@
 	@echo "/**"                                   >> $@
 	@echo " * generated PTX (see Makefile %.di) " >> $@
 	@echo "**/"                                   >> $@
@@ -52,9 +52,10 @@ tool/%.out: tool/%.cu
 clean:
 	find . -type f -name "*.ll" -print -delete
 	find . -type f -name "*.ptx" -print -delete
-	find . -type f -name "*.di" -print -delete
+	# find . -type f -name "*.di" -print -delete
 	find . -type f -name "*.out" -print -delete
-	rm *.a
+	find . -type f -name "*.lst" -print -delete	
+	rm -fv *.a
 
 example-mnist:
 	dub --config=example-mnist --compiler=ldc2 $(DUB_OPTS)

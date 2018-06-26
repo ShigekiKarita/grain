@@ -2,6 +2,7 @@
    cuBLAS wrappers
  */
 module grain.cublas;
+version (grain_cuda):
 
 import derelict.cuda;
 

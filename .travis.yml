@@ -7,7 +7,7 @@ language: d
 
 d:
   - ldc
-  # TODO - dmd
+  - dmd
 
 env:
   - ARCH="x86_64"
@@ -22,14 +22,16 @@ script:
   - dub test --arch "$ARCH" --build=unittest-cov
 
 after_success:
-  # - bash <(curl -s https://codecov.io/bash)
-  - git clone https://github.com/adamdruppe/adrdox.git
-  - cd adrdox && make ldc && cd -
-  - ./adrdox/adrdox.main source
-  - mv generated-docs docs
+  - if [ $DC = dmd ]; then
+       git clone https://github.com/adamdruppe/adrdox.git; fi
+       cd adrdox && make && cd;
+       ./adrdox/doc2 source;
+       mv generated-docs docs;
+       bash <(curl -s https://codecov.io/bash) -s "source-grain-*.lst";
+    fi
 
 deploy:
-  d: ldc
+  d: dmd
   provider: pages
   skip_cleanup: true
   github_token: $GITHUB_TOKEN # Set in travis-ci.org dashboard

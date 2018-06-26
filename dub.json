@@ -43,7 +43,7 @@
             "buildOptions": ["unittests", "releaseMode", "optimize", "inline", "noBoundsCheck", "debugInfo"],
         },
         "cuda-release": {
-            "buildOptions":  ["releaseMode", "inline"],
+            "buildOptions":  ["releaseMode", "inline", "noBoundsCheck"],
             "versions": ["grain_cuda"],
             "preBuildCommands": ["make --silent cuda-deps"],
             "libs": ["cublas"]
