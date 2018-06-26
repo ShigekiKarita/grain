@@ -25,7 +25,7 @@ after_success:
   - if [ "$DC" = dmd ]; then
        git clone https://github.com/adamdruppe/adrdox.git;
        cd adrdox && make && cd -;
-       ./adrdox/doc2 source;
+       ./adrdox/doc2 -u -i source;
        mv generated-docs docs;
        bash <(curl -s https://codecov.io/bash) -s "source-grain-*.lst";
     else
