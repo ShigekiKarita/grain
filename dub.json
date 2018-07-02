@@ -9,9 +9,8 @@
         "lubeck": "~>0.0.5"
     },
     "targetType": "library",
-    "dflags-ldc": ["-relocation-model=pic"],
     "libs": ["openblas"],
-    "sourceFiles": ["libhdf5.a"],
+    "sourceFiles": ["libhdf5.a", "libsz.a"],
     "preBuildCommands": ["make --silent install-hdf5"],
     "buildTypes": {
         "cuda-unittest": {
