@@ -77,8 +77,8 @@ struct NegativeLogLikelihood(F, I=long) {
 
             import grain.kernel : nll;
             this._nClass = logP.shape[1];
-            auto dresult = CuPtr!F([0]); // [result].variable.to!DeviceStorage; <- FIXME
-            auto dcount = CuPtr!int([0]); // [count].variable.to!DeviceStorage;
+            auto dresult = CuArray!F([0]); // [result].variable.to!DeviceStorage; <- FIXME
+            auto dcount = CuArray!int([0]); // [count].variable.to!DeviceStorage;
 
             auto batchSize = targetId.shape[0];
             Global.kernel!nll
@@ -105,9 +105,9 @@ struct NegativeLogLikelihood(F, I=long) {
             static assert(is(I == int), "only int is supported now");
 
             import grain.kernel;
-            import std.typecons : tuple, RefCounted;
+            import std.typecons : tuple;
             auto nBatch = this._dtargetId.shape[0];
-            RefCounted!(CuPtr!F) glogP = CuPtr!F(nBatch * this._nClass);
+            auto glogP = CuArray!F(nBatch * this._nClass);
             glogP.zero_();
             auto coeff = gy.to!HostStorage.data[0] * this._normalize;
             Global.kernel!nllGrad

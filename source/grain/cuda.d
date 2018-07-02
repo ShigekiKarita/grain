@@ -313,14 +313,39 @@ struct CuArray(T) {
     CUdeviceptr ptr;
     alias ptr this;
 
-    this(CuPtr!T storage, size_t offset=0) {
+    this(CuPtr!T storage) {
+        import std.algorithm : move;
+        this.storage = move(storage);
+        this.ptr = this.storage.ptr;
+    }
+
+    this(CuPtr!T storage, size_t offset) {
         import std.algorithm : move;
         this.storage = move(storage);
         this.ptr = this.storage.ptr + offset;
     }
 
+    this(RefCounted!(CuPtr!T) storage, size_t offset=0) {
+        this.storage = storage;
+        this.ptr = this.storage.ptr + offset;
+    }
+
+    this(T[] host) {
+        this.storage = CuPtr!T(host);
+        this.ptr = this.storage.ptr;
+    }
+
+    @disable new(size_t); // not allocatable on heap
+
+    /// create uninitialized T.sizeof * n array in device
+    this(size_t n) {
+        this.storage = CuPtr!T(n);
+        this.ptr = this.storage.ptr;
+    }
+
     @property
     const length() {
+        if (this.ptr == 0) return 0;
         auto end = this.storage.ptr + this.storage.length;
         assert(end >= this.ptr);
         return end - this.ptr;
@@ -474,7 +499,7 @@ unittest {
 
 
 /// high-level axpy (y = alpha * x + y) wrapper for CuPtr
-void axpy(T)(const ref CuPtr!T x, ref CuPtr!T y, T alpha=1, int incx=1, int incy=1)  {
+void axpy(T)(const ref CuArray!T x, ref CuArray!T y, T alpha=1, int incx=1, int incy=1)  {
     static if (is(T == float)) {
         alias axpy_ = cublasSaxpy_v2;
     } else static if (is(T == double)) {
@@ -490,8 +515,8 @@ void axpy(T)(const ref CuPtr!T x, ref CuPtr!T y, T alpha=1, int incx=1, int incy
 
 /// cublas tests
 unittest {
-    auto a = CuPtr!float([3, 4, 5]);
-    auto b = CuPtr!float([1, 2, 3]);
+    auto a = CuArray!float([3, 4, 5]);
+    auto b = CuArray!float([1, 2, 3]);
     axpy(a, b, 2.0);
     assert(a.toHost() == [3, 4, 5]);
     assert(b.toHost() == [7, 10, 13]);

@@ -319,9 +319,10 @@ struct MatMul(T) {
 
             import std.typecons : RefCounted;
             assert(a.shape[1] == b.shape[0]);
-            auto cdata = RefCounted!(CuPtr!T)(a.shape[0] * b.shape[1]);
+            auto cdata = CuArray!T(a.shape[0] * b.shape[1]);
             auto c = Variable!(T, 2, DeviceStorage)(
-                                                    a.requiresGrad || b.requiresGrad, [a.shape[0], b.shape[1]], [b.shape[1], 1], cdata);
+                a.requiresGrad || b.requiresGrad,
+                [a.shape[0], b.shape[1]], [b.shape[1], 1], cdata);
             // C = A x B = (BT x AT)T
             // TODO support transposed (CUBLAS_OP_T)
             // see https://github.com/libmir/mir-blas/blob/master/source/mir/blas.d#L299
@@ -431,7 +432,7 @@ struct AddBias(T) {
     mixin FunctionCommon;
 
     import mir.ndslice : map, slice;
-    import std.typecons : tuple, RefCounted;
+    import std.typecons : tuple;
     auto forward(Variable!(T, 2, HostStorage) a, Variable!(T, 1, HostStorage) b) {
         assert(a.shape[1] == b.shape[0]);
         auto ret = a.dup;
@@ -462,7 +463,7 @@ struct AddBias(T) {
         }
 
         auto backward(Variable!(T, 2, DeviceStorage) gy) {
-            RefCounted!(CuPtr!T) gb = CuPtr!T(gy.shape[1]);
+            auto gb = CuArray!T(gy.shape[1]);
             gb.zero_();
             auto n = cast(uint) gy.data.length;
             auto blen = cast(uint) gb.length;

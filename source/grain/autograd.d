@@ -41,7 +41,7 @@ unittest {
 
 /// create new variable with uninitialized array and the same shape/strides to v on CPU
 auto uninit(T, size_t dim)(Variable!(T, dim, HostStorage) v) {
-    RefCounted!(T[]) data = new T[v.length];
+    auto data = new T[v.length];
     return Variable!(T, dim, HostStorage)(v.requiresGrad, v.shape, v.strides, data);
 }
 
@@ -50,11 +50,11 @@ auto uninitVariable(T, alias S = HostStorage, size_t dim)(uint[dim] shape, bool 
     import std.algorithm :reduce;
     const length = shape.reduce!"a * b";
     static if (is(S!T == HostStorage!T)) {
-        RefCounted!(T[]) data = new T[length];
+        auto data = new T[length];
     }
     version(grain_cuda) {
         static if (is(S!T == DeviceStorage!T)) {
-            RefCounted!(CuPtr!T) data = CuPtr!T(length);
+            auto data = CuArray!T(CuPtr!T(length));
         }
     }
     int[dim] strides;
@@ -83,7 +83,7 @@ version(grain_cuda) {
     }
 
 
-    alias DeviceStorage(T) = CuPtr!T;
+    alias DeviceStorage(T) = CuArray!T;
 
     // enum bool isDevice(T) = isDeviceMemory(typeof(T.data)); // is(typeof({T.init.toHost();}));
     alias isDevice = isDeviceMemory;
@@ -135,17 +135,17 @@ struct UntypedVariable {
     }
 
     auto get(T)() {
-        return this.data.get!(RefCounted!T);
+        return this.data.get!T;
     }
 
     auto to(V : Variable!(T, dim, Storage), T, size_t dim, alias Storage)() {
-        auto d = this.data.get!(RefCounted!(Storage!T));
+        auto d = this.data.get!(Storage!T);
         return Variable!(T, dim, Storage)(
             this.requiresGrad, this.shape[0..dim], this.strides[0..dim], d);
     }
 
     auto gradTo(V : Variable!(T, dim, Storage), T, size_t dim, alias Storage)() {
-        auto d = this.data.get!(RefCounted!(Storage!T));
+        auto d = this.data.get!(Storage!T);
         return Variable!(T, dim, Storage)(
             this.requiresGrad, this.shape[0..dim], this.strides[0..dim], d);
     }
@@ -232,14 +232,14 @@ struct Variable(T, size_t dim, alias Storage = HostStorage, SliceKind kind = Con
     uint[dim] shape;
     // ptrdiff_t[dim]
     int[dim] strides;
-    RefCounted!(Storage!T) data;
-    RefCounted!(Storage!T) grad;
+    Storage!T data;
+    Storage!T grad;
     // RefCounted!
     BackProp bprop;
     enum isHost = is(Storage!T == HostStorage!T);
     uint offset = 0;
 
-    this(bool requiresGrad, uint[dim] shape, int[dim] strides, RefCounted!(Storage!T) data) {
+    this(bool requiresGrad, uint[dim] shape, int[dim] strides, Storage!T data) {
         this.requiresGrad = requiresGrad;
         this.shape = shape;
         this.strides = strides;
@@ -274,10 +274,10 @@ struct Variable(T, size_t dim, alias Storage = HostStorage, SliceKind kind = Con
 
     auto dup() {
         static if (is(Storage!T == HostStorage!T)) {
-            RefCounted!(Storage!T) d = new T[data.length];
+            auto d = new T[data.length];
             d[] = data[];
         } else {
-            RefCounted!(Storage!T) d = data.dup;
+            auto d = CuArray!T(data.dup);
         }
         auto y = Variable(this.requiresGrad, this.shape, this.strides, d);
         return y;
@@ -487,7 +487,7 @@ auto variable(Sl)(Sl sl, bool requiresGrad = false) if (isSlice!Sl) {
     alias S = typeof(s);
     alias E = DeepElementType!S;
     auto size = s._lengths.reduce!"a * b";
-    RefCounted!(E[]) data = s._iterator[0..size];
+    auto data = s._iterator[0..size];
     uint[Ndim!S] shape;
     int[Ndim!S] strides;
     static foreach (i; 0 .. Ndim!S) {
@@ -503,8 +503,7 @@ auto variable(Sl)(Sl sl, bool requiresGrad = false) if (isSlice!Sl) {
 import std.traits : isNumeric;
 /// a helper function to create variable object from CPU/CUDA array
 auto variable(alias Storage=HostStorage, bool requiresGrad=false, T)(T x) if (isNumeric!T) {
-    RefCounted!(T[]) data = [x];
-    return Variable!(T, 0, Storage)(requiresGrad, [], [], data);
+    return Variable!(T, 0, Storage)(requiresGrad, [], [], [x]);
 }
 
 /// ditto
@@ -525,8 +524,8 @@ Variable!(T, dim, Dst) to(alias Dst, T, size_t dim, alias Src)(Variable!(T, dim,
     static if (is(Dst!T == Src!T)) return src;
     else {
         import std.range :empty;
-        RefCounted!(Dst!T) d = src.data.to!Dst;
-        RefCounted!(Dst!T) g = src.grad.to!Dst;
+        auto d = src.data.to!Dst;
+        auto g = src.grad.to!Dst;
         // FIXME: consider grad
         auto ret = typeof(return)(src.requiresGrad, src.shape, src.strides, d);
         ret.grad = g;
