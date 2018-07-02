@@ -2,7 +2,9 @@ module grain.serializer;
 
 import std.stdio;
 import grain.autograd;
-import hdf5.hdf5;
+// import hdf5.hdf5;
+import grain.hdf5;
+import std.string : toStringz;
 
 /// enumerate the parameter names inside chain C
 enum variableNames(C) = {
@@ -76,23 +78,34 @@ void save(bool verbose = true, C)(C chain, string path) {
     import std.string : replace, endsWith;
     import mir.ndslice : slice;
     import grain.utility : castArray;
-    auto file = H5F.create(path,
-                           H5F_ACC_TRUNC,
-                           H5P_DEFAULT, H5P_DEFAULT);
-    scope(exit) H5F.close(file);
+    // auto file = H5F.create(path,
+    //                        H5F_ACC_TRUNC,
+    //                        H5P_DEFAULT, H5P_DEFAULT);
+    // scope(exit) H5F.close(file);
+    auto file = H5Fcreate(path.toStringz, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    scope(exit) H5Fclose(file);
 
     void register(T, size_t dim, alias Storage)(string k, Variable!(T, dim, Storage) v) {
         auto h = v.to!HostStorage;
         // FIXME support check contiguous
         // auto s = h.sliced.slice;
         auto data = v.to!HostStorage.data;
-        auto space = H5S.create_simple(h.shape.castArray!hsize_t);
-        scope(exit) H5S.close(space);
-        auto dataset = H5D.create2(file, "/" ~ k, toH5Type!T, space,
-                                   H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-        scope(exit) H5D.close(dataset);
-        H5D.write(dataset, toH5Type!T, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-                  cast(ubyte*) data.ptr);
+        // auto space = H5S.create_simple(h.shape.castArray!hsize_t);
+        // scope(exit) H5S.close(space);
+        auto dims = h.shape.castArray!hsize_t;
+        auto space = H5Screate_simple(cast(int) dims.length, dims.ptr, dims.ptr);
+        scope(exit) H5Sclose(space);
+
+        // auto dataset = H5D.create2(file, "/" ~ k, toH5Type!T, space,
+        //                            H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        // scope(exit) H5D.close(dataset);
+        // H5D.write(dataset, toH5Type!T, H5S_ALL, H5S_ALL, H5P_DEFAULT,
+        //           cast(ubyte*) data.ptr);
+        auto dataset = H5Dcreate2(file, toStringz("/" ~ k), toH5Type!T, space,
+                                  H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        scope(exit) H5Dclose(dataset);
+        H5Dwrite(dataset, toH5Type!T, H5S_ALL, H5S_ALL, H5P_DEFAULT,
+                 cast(void*) data.ptr);
     }
     iterVariables!( (k, v) { register(k, v); })(&chain, "");
 }
@@ -101,23 +114,29 @@ void save(bool verbose = true, C)(C chain, string path) {
 void load(C)(ref C chain, string path) {
     import std.string : replace, endsWith;
     import mir.ndslice : slice, sliced;
-    import hdf5.hdf5;
+    // import hdf5.hdf5;
     import grain.utility : castArray;
-    auto file = H5F.open(path,
+    auto file = H5Fopen(path.toStringz,
                          // path.exists ? H5F_ACC_RDWR :
                          H5F_ACC_RDONLY, //
                          // H5F_ACC_RDWR,
                          H5P_DEFAULT);
-    scope(exit) H5F.close(file);
+    scope(exit) H5Fclose(file);
 
     void register(T, size_t dim, alias Storage)(string k, ref Variable!(T, dim, Storage) v) {
         // writeln(k, v.sliced);
         // writeln(h5key);
-        auto dataset = H5D.open2(file, "/" ~ k, H5P_DEFAULT);
-        scope(exit) H5D.close(dataset);
+        // auto dataset = H5D.open2(file, "/" ~ k, H5P_DEFAULT);
+        // scope(exit) H5D.close(dataset);
+        auto dataset = H5Dopen2(file, toStringz("/" ~ k), H5P_DEFAULT);
+        scope(exit) H5Dclose(dataset);
+
         auto raw = new T[v.data.length];
-        H5D.read(dataset, toH5Type!T, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-                 cast(ubyte*) &raw[0]);
+        // H5D.read(dataset, toH5Type!T, H5S_ALL, H5S_ALL, H5P_DEFAULT,
+        //          cast(ubyte*) &raw[0]);
+        H5Dread(dataset, toH5Type!T, H5S_ALL, H5S_ALL, H5P_DEFAULT,
+                cast(void*) &raw[0]);
+
         auto src = raw.sliced(v.shape.castArray!size_t).variable;
         // TODO cuda support
         static if (is(Storage!T == HostStorage!T)) {
