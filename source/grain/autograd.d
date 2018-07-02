@@ -8,7 +8,7 @@ module grain.autograd;
 
 import std.traits : isArray, isBasicType;
 import std.typecons : RefCounted, RefCountedAutoInitialize;
-import mir.ndslice : isSlice;
+import mir.ndslice : isSlice, SliceKind, Contiguous, Universal;
 import std.range : ElementType;
 
 import grain.cuda;
@@ -226,7 +226,7 @@ unittest {
 
    TODO: add SliceKind
 */
-struct Variable(T, size_t dim, alias Storage = HostStorage) {
+struct Variable(T, size_t dim, alias Storage = HostStorage, SliceKind kind = Contiguous) {
     bool requiresGrad = true;
     // size_t[dim]
     uint[dim] shape;

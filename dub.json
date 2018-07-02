@@ -9,6 +9,7 @@
         "lubeck": "~>0.0.5"
     },
     "targetType": "library",
+    "dflags-ldc": ["-relocation-model=pic"],
     "libs": ["openblas"],
     "sourceFiles": ["libhdf5.a"],
     "preBuildCommands": ["make --silent install-hdf5"],

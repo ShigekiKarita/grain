@@ -82,7 +82,10 @@ void save(bool verbose = true, C)(C chain, string path) {
     //                        H5F_ACC_TRUNC,
     //                        H5P_DEFAULT, H5P_DEFAULT);
     // scope(exit) H5F.close(file);
-    auto file = H5Fcreate(path.toStringz, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    auto file = H5Fcreate(path.toStringz,
+                          // path.exists ? H5F_ACC_TRUNC :
+                          H5F_ACC_TRUNC,
+                          H5P_DEFAULT, H5P_DEFAULT);
     scope(exit) H5Fclose(file);
 
     void register(T, size_t dim, alias Storage)(string k, Variable!(T, dim, Storage) v) {
