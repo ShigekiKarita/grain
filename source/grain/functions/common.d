@@ -152,7 +152,22 @@ mixin template FunctionCommon() {
                     import std.traits : isFloatingPoint;
                     // TODO support integral types
                     static if (isFloatingPoint!(ElementType!V)) {
-                        axpy(vgradInputs[i].data, data);
+                        // FIXME if contiguous
+                        import grain.cuda;
+                        grain.cuda.axpy(vgradInputs[i].data, data);
+
+                        /*
+                        import grain.cudnn;
+                        auto shape = vgradInputs[i].shape;
+                        auto strides = vgradInputs[i].strides;
+                        auto x = V(false, shape, strides, data);
+                        auto gx = V(false, shape, strides, vgradInputs[i].data);
+                        grain.cudnn.tensorOp!CUDNN_OP_TENSOR_ADD(
+                            // FIXME grad can have different strides
+                            gx,
+                            x,
+                            x);
+                        */
                     }
                 }
             }

@@ -66,6 +66,15 @@
             }
         },
         {
+            "name": "example-mnist-cnn",
+            "targetName": "grain-example-mnist-cnn",
+            "targetType": "executable",
+            "mainSourceFile": "example/mnist_cnn.d",
+            "dependencies": {
+                "snck": "~>0.0.4"
+            }
+        },
+        {
             "name": "example-char-rnn",
             "targetName": "grain-example-char-rnn",
             "targetType": "executable",

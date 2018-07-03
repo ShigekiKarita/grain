@@ -414,8 +414,12 @@ struct Embedding(T, alias Storage) if (isFloatingPoint!T) {
 
 
 //// Topology functions
+
+/// reorganizing shape while it hold total elements a.k.a. reshape.
+/// At most one dimension of the new shape can be -1.
+/// In this case, the value is inferred from the size of the tensor and the remaining dimensions.
 auto view(T, size_t sdim, size_t tdim, alias Storage)(
-    Variable!(T, sdim, Storage) x, ptrdiff_t[tdim] shape) {
+    Variable!(T, sdim, Storage) x, ptrdiff_t[tdim] shape...) {
     import grain.functions;
     auto func = new grain.functions.View!(T, sdim, tdim, Storage)(shape);
     return func.applyForward(x);
