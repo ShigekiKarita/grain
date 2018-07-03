@@ -305,6 +305,20 @@ struct Variable(T, size_t dim, alias Storage = HostStorage, SliceKind kind = Con
                     this.strides.castArray!ptrdiff_t, grad.ptr);
             }
         }
+    } else {
+        auto sliced() {
+            import mir.ndslice; // .slice : Slice, Universal;
+            static if (dim == 0) {
+                return
+                    Slice!(Universal, [1], T*)([1], [1], cast(T*) data.ptr);
+            } else {
+                return Slice!(Universal, [dim], T*)(
+                    this.shape.castArray!size_t,
+                    this.strides.castArray!ptrdiff_t, cast(T*) data.ptr);
+            }
+        }
+
+        // TODO gradSliced?
     }
 
     /// computes gradients of creator variables w.r.t. the arg grad

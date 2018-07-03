@@ -27,7 +27,7 @@ auto fromTuple(T)(T t) {
 Dst[N] castArray(Dst, Src, size_t N)(Src[N] src) {
     Dst[N] dst;
     static foreach (i; 0 .. N) {
-        dst[i] = src[i];
+        dst[i] = cast(Dst) src[i];
     }
     return dst;
 }

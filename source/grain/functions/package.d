@@ -8,3 +8,4 @@ public import grain.functions.common;
 public import grain.functions.unary;
 public import grain.functions.binary;
 public import grain.functions.loss;
+public import grain.functions.topology;

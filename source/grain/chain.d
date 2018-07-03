@@ -411,3 +411,28 @@ struct Embedding(T, alias Storage) if (isFloatingPoint!T) {
         return func.applyForward(this.weight, ids);
     }
 }
+
+
+//// Topology functions
+auto view(T, size_t sdim, size_t tdim, alias Storage)(
+    Variable!(T, sdim, Storage) x, ptrdiff_t[tdim] shape) {
+    import grain.functions;
+    auto func = new grain.functions.View!(T, sdim, tdim, Storage)(shape);
+    return func.applyForward(x);
+}
+
+///
+unittest {
+    import numir;
+    import mir.ndslice;
+    import grain.testing;
+
+    auto hx = uniform!float(6, 4).slice.variable(true);
+    auto hgy = uniform!float(2, 3, 4).slice.variable;
+    auto ugy = UntypedVariable(hgy);
+    auto hy = hx.view([2, 3, -1]);
+    assert(hy.sliced == numir.view(hx.sliced, [2, 3, -1]));
+    hy.backward(&ugy);
+    assert(hx.gradSliced == numir.view(hgy.sliced, [6, 4]));
+    // gradCheckChain!(x => x.view([2, 3, -1]))(hx, hgy, 1e-3, 5e-2, 5e-2);
+}
