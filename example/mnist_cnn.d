@@ -76,8 +76,12 @@ struct Model(T, alias Storage) {
     L fc1, fc2, fc3;
 
     this(int nin, int nhidden, int nout) {
-        this.conv = Convolution!(float, 2, Storage)(1, 64, [3, 3], [3, 3], [0, 0], [1, 1], false);
-        writeln(this.conv.weight.to!HostStorage.sliced);
+        this.conv = Convolution!(float, 2, Storage)(1, 32, // in-out channels
+                                                    [3, 3], // kernel size
+                                                    [3, 3], // stride size
+                                                    [0, 0], // pad size
+                                                    [1, 1], // dilation size
+                                                    true); // use bias
         auto x = numir.empty!float(1, 1, nin, nin).variable.to!Storage;
         auto hshape = this.conv.outShape([1, 1, nin, nin]);
         import std.algorithm;
@@ -92,7 +96,7 @@ struct Model(T, alias Storage) {
         auto xs = x.cview(x.shape[0], 1, 28, 28);
         // writeln(xs.to!HostStorage.sliced);
         auto hs = this.conv(xs);
-        writeln(hs.to!HostStorage.sliced);
+        // writeln(hs.to!HostStorage.sliced);
         auto h0 = relu(hs);
         // TODO implement view
         // writeln(h0.to!HostStorage.sliced);
@@ -134,9 +138,9 @@ void main() {
     auto trainBatch = datasets.train.makeBatch(batchSize);
     auto testBatch = datasets.test.makeBatch(batchSize);
     auto model = Model!(float, S)(inSize, 256, 10);
-    auto optimizer = SGD!(typeof(model))(model, 1e-6);
-    if ("mnist.h5".exists) {
-        model.load("mnist.h5");
+    auto optimizer = SGD!(typeof(model))(model, 1e-2);
+    if ("mnist_cnn.h5".exists) {
+        model.load("mnist_cnn.h5");
     }
 
     foreach (epoch; 0 .. 10) {
@@ -174,6 +178,6 @@ void main() {
             }
             writefln!"test loss: %f, acc: %f"(lossSum / niter, accSum / niter);
         }
-        model.save("mnist.h5");
+        model.save("mnist_cnn.h5");
     }
 }
