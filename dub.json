@@ -45,6 +45,11 @@
             "versions": ["grain_cuda"],
             "preBuildCommands": ["make --silent cuda-deps"],
             "libs": ["cublas"]
+        },
+        "grain-docs": {
+            "buildOptions": ["syntaxOnly"],
+            "dflags": ["-c", "-Dddocs"],
+            "versions": ["grain_cuda"]
         }
     },
     "configurations": [
@@ -93,7 +98,7 @@
         "--ex", "derelict.",
         "--unittest-examples"
     ],
-    "description": "CUDA library for D",
+    "description": "autograd and dynamic neural networks library for D",
     "copyright": "Copyright © 2018, karita",
     "license": "BSL-1.0"
 }
