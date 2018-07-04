@@ -92,15 +92,10 @@ struct Model(T, alias Storage) {
     }
 
     auto opCall(Variable!(T, 2, Storage) x) {
-        import grain.chain : cview = view;
-        auto xs = x.cview(x.shape[0], 1, 28, 28);
-        // writeln(xs.to!HostStorage.sliced);
-        auto hs = this.conv(xs);
-        // writeln(hs.to!HostStorage.sliced);
-        auto h0 = relu(hs);
-        // TODO implement view
-        // writeln(h0.to!HostStorage.sliced);
-        auto h1 = relu(this.fc1(h0.cview(x.shape[0], -1)));
+        import grain.chain : view;
+        auto xs = x.view(x.shape[0], 1, 28, 28);
+        auto h0 = relu(this.conv(xs)).view(x.shape[0], -1);
+        auto h1 = relu(this.fc1(h0));
         auto h2 = relu(this.fc2(h1));
         auto h3 = this.fc3(h2);
         return h3;
