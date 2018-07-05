@@ -1231,11 +1231,63 @@ auto ndStrided(size_t d=0, S, size_t dim)(S s, ptrdiff_t[dim] strides ...)
 
 ///
 unittest {
-    import std.stdio;
     import mir.ndslice;
     auto s = iota(3, 4);
     assert(s.ndStrided(2, 3) == s.strided(0, 2).strided(1, 3));
 }
+
+/// only both is supported
+auto unpad(size_t d = 0, S, size_t N)(S s, size_t[N] lengths...) if (isSlice!S && Ndim!S == N) {
+    import mir.ndslice;
+    static if (d == N) {
+        return s;
+    } else {
+        immutable p = lengths[d];
+        auto s_ = s.swapped!(0, d)[p..$-p].swapped!(0, d);
+        return unpad!(d + 1)(s_, lengths);
+    }
+}
+
+///
+unittest {
+    import mir.ndslice;
+    auto s = iota(3, 4);
+    assert(s.pad(0, [2, 1]).slicedNdField.unpad(2, 1) == s);
+}
+
+
+void sumNdStrided(size_t d=0, S, D, size_t dim)(S src, D dst, ptrdiff_t[dim] strides ...)
+    if (isSlice!S && isSlice!D && Ndim!S == Ndim!D)
+{
+    static if (d == 0) {
+        static assert(dim == Ndim!S);
+    }
+    foreach (i; 0 .. src.length!0) {
+        immutable j = i * strides[d];
+        foreach (k; i .. i + strides[d]) {
+            if (j >= dst.length!0 || k >= src.length!0) {
+                break;
+            }
+            static if (d + 1 == dim) {
+                dst[j] += src[k];
+            } else {
+                sumNdStrided!(d+1)(src[k], dst[j], strides);
+            }
+        }
+    }
+}
+
+///
+unittest {
+    import numir;
+    import mir.ndslice;
+    auto s = iota(3, 4);
+    auto t = s.ndStrided(2, 3); // [[[[1, 2, 2]], [[4, 5, 5]]], [[[7, 8, 8]], [[10, 11, 11]]]]
+    auto d = s.slice.zeros_like;
+    sumNdStrided(s.ndStrided(2, 3).slice, d, [2, 3]);
+    assert(d == [[22, 0, 0, 14], [0, 0, 0, 0], [19, 0, 0, 11]]);
+}
+
 
 /// reference implementaion of pooling function
 struct PoolRefImpl(alias poolFun) {
@@ -1256,7 +1308,7 @@ struct PoolRefImpl(alias poolFun) {
         s[2 .. $] = strideA.castArray!ptrdiff_t[];
         auto expanded = x.sliced
             .pad(0, p)
-            .slice            // TODO how can i avoid this allocation
+            .slicedNdField
             .windows(w)       // [wb=1, wc=1, wx, wy, ..., [b, c, kx, ky, ...]]
             .ndStrided(s)     // [wb=1, wc=1, sx, sy, ..., [b, c, kx, ky, ...]]
             .unpack;          // [wb=1, wc=1, sx, sy, ..., b, c, kx, ky, ...]
@@ -1269,6 +1321,7 @@ struct PoolRefImpl(alias poolFun) {
         e[poolDims+1] = x.shape[1];
         e[poolDims+2] = -1;
         return expanded
+            .slice            // TODO how can i avoid this allocation
             .view(e)
             .alongDim!(-1) // [wx, wy, b, c, kx * ky]
             .map!poolFun
@@ -1277,13 +1330,40 @@ struct PoolRefImpl(alias poolFun) {
             .slice.variable(x.requiresGrad);
     }
 
-    static void backward(T, size_t poolDims)(
-        ref Variable!(T, poolDims+2, HostStorage) gx,
-        Variable!(T, poolDims+2, HostStorage) x,
-        Variable!(T, poolDims+2, HostStorage) gy,
-        Variable!(T, poolDims+2, HostStorage) y,
-        int[poolDims] window, int[poolDims] pad, int[poolDims] stride) {
-        
+    static void backward(T, size_t poolDims, size_t tensorDims)(
+        ref Variable!(T, tensorDims, HostStorage) gx,
+        Variable!(T, tensorDims, HostStorage) x,
+        Variable!(T, tensorDims, HostStorage) gy,
+        Variable!(T, tensorDims, HostStorage) y,
+        int[poolDims] windowA, int[poolDims] padA, int[poolDims] strideA) {
+
+        static assert(poolDims + 2 == tensorDims);
+        size_t[tensorDims] p, w;
+        p[2 .. $] = padA.castArray!size_t[];
+        w[0 .. 2] = x.shape[0 .. 2].castArray!size_t[];
+        w[2 .. $] = windowA.castArray!size_t[];
+        ptrdiff_t[tensorDims] s;
+        s[0 .. 2] = 1;
+        s[2 .. $] = strideA.castArray!ptrdiff_t[];
+        auto expanded = x.sliced
+            .pad(0, p)
+            .slice            // TODO how can i avoid this allocation
+            .windows(w)       // [wb=1, wc=1, wx, wy, ..., [b, c, kx, ky, ...]]
+            .ndStrided(s)     // [wb=1, wc=1, sx, sy, ..., [b, c, kx, ky, ...]]
+            .unpack;          // [wb=1, wc=1, sx, sy, ..., b, c, kx, ky, ...]
+
+        ptrdiff_t[poolDims+3] e;
+        size_t kernelSize = 1;
+        static foreach (i; 0 .. poolDims) {
+            e[i] = cast(ptrdiff_t) expanded.length!(i + 2);
+            kernelSize *= windowA[i];
+        }
+        e[poolDims] = x.shape[0];
+        e[poolDims+1] = x.shape[1];
+        e[poolDims+2] = -1;
+        auto gxpad = x.uninit.sliced.pad(0, p).slice;
+        gxpad[] = 0;
+        auto xe = expanded.view(e); // [wx, wy, ..., b, c, kx * ky * ...]
     }
 
 }
@@ -1311,6 +1391,12 @@ struct Pool(bool isMax, T, size_t poolDims) {
         this.hx = x;
         this.hy = y;
         return y;
+    }
+
+    auto backward(Variable!(T, dim, HostStorage) gy) {
+        auto gx = this.hx.uninit;
+        CpuImpl.backward(gx, this.hx, gy, this.hy, this.window, this.pad, this.stride);
+        return gx;
     }
 
     version (grain_cuda) {
@@ -1354,7 +1440,7 @@ unittest {
     version (grain_cuda) {
         auto y = f.forward(x.to!DeviceStorage);
         assert(y.to!HostStorage.sliced == yex);
-        writeln(y.to!HostStorage.sliced);
+        // writeln(y.to!HostStorage.sliced);
         auto gx = f.backward(y);
         enum gxex = [[[[0, 1, 4]], [[0, 4, 10]]], [[[0, 7, 16]], [[0, 10, 22]]]];
         assert(gx.to!HostStorage.sliced == gxex);
