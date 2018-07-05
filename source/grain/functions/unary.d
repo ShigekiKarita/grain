@@ -1238,13 +1238,14 @@ unittest {
 }
 
 /// reference implementaion of pooling function
-struct PoolRefImpl { // (alias reduceFun) {
+struct PoolRefImpl(alias poolFun) {
+    import mir.ndslice;
+    import numir;
+
     static auto forward(T, size_t poolDims, size_t tensorDims)(
         Variable!(T, tensorDims, HostStorage) x,
         // ref Variable!(T, poolDims+2, HostStorage) y,
         int[poolDims] windowA, int[poolDims] padA, int[poolDims] strideA) {
-        import mir.ndslice;
-        import numir;
         static assert(poolDims + 2 == tensorDims);
         size_t[tensorDims] p, w;
         p[2 .. $] = padA.castArray!size_t[];
@@ -1270,7 +1271,7 @@ struct PoolRefImpl { // (alias reduceFun) {
         return expanded
             .view(e)
             .alongDim!(-1) // [wx, wy, b, c, kx * ky]
-            .map!(a => maxPos(a).first)
+            .map!poolFun
             .transposed!(tensorDims-1)
             .transposed!(tensorDims-1)
             .slice.variable(x.requiresGrad);
@@ -1298,7 +1299,10 @@ struct Pool(bool isMax, T, size_t poolDims) {
     static if (isMax) {
         // import std.algorithm : max;
         import mir.ndslice;
-        alias CpuImpl = PoolRefImpl;// !(a => a.maxPos.first);
+        static auto pool(S)(S s) if (isSlice!S) {
+            return maxPos(s).first;
+        }
+        alias CpuImpl = PoolRefImpl!pool;
     }
 
     auto forward(Variable!(T, dim, HostStorage) x) {
