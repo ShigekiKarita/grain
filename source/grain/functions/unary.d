@@ -1218,16 +1218,96 @@ unittest {
     }
 }
 
+/// n-dimensional strided
+auto ndStrided(size_t d=0, S, size_t dim)(S s, ptrdiff_t[dim] strides ...)
+    if (isSlice!S && Ndim!S >= dim) {
+    static if (d == dim) {
+        return s;
+    } else {
+        import mir.ndslice.dynamic : strided;
+        return ndStrided!(d+1)(s.strided!d(strides[d]), strides);
+    }
+}
+
+///
+unittest {
+    import std.stdio;
+    import mir.ndslice;
+    auto s = iota(3, 4);
+    assert(s.ndStrided(2, 3) == s.strided(0, 2).strided(1, 3));
+}
+
 /// reference implementaion of pooling function
-struct PoolRefImpl(alias fun) {
-    
+struct PoolRefImpl { // (alias reduceFun) {
+    static auto forward(T, size_t poolDims, size_t tensorDims)(
+        Variable!(T, tensorDims, HostStorage) x,
+        // ref Variable!(T, poolDims+2, HostStorage) y,
+        int[poolDims] windowA, int[poolDims] padA, int[poolDims] strideA) {
+        import mir.ndslice;
+        import numir;
+        static assert(poolDims + 2 == tensorDims);
+        size_t[tensorDims] p, w;
+        p[2 .. $] = padA.castArray!size_t[];
+        w[0 .. 2] = x.shape[0 .. 2].castArray!size_t[];
+        w[2 .. $] = windowA.castArray!size_t[];
+        ptrdiff_t[tensorDims] s;
+        s[0 .. 2] = 1;
+        s[2 .. $] = strideA.castArray!ptrdiff_t[];
+        auto expanded = x.sliced
+            .pad(0, p)
+            .slice            // TODO how can i avoid this allocation
+            .windows(w)       // [wb=1, wc=1, wx, wy, ..., [b, c, kx, ky, ...]]
+            .ndStrided(s)     // [wb=1, wc=1, sx, sy, ..., [b, c, kx, ky, ...]]
+            .unpack;          // [wb=1, wc=1, sx, sy, ..., b, c, kx, ky, ...]
+
+        ptrdiff_t[poolDims+3] e;
+        static foreach (i; 0 .. poolDims) {
+            e[i] = cast(ptrdiff_t) expanded.length!(i + 2);
+        }
+        e[poolDims] = x.shape[0];
+        e[poolDims+1] = x.shape[1];
+        e[poolDims+2] = -1;
+        return expanded
+            .view(e)
+            .alongDim!(-1) // [wx, wy, b, c, kx * ky]
+            .map!(a => maxPos(a).first)
+            .transposed!(tensorDims-1)
+            .transposed!(tensorDims-1)
+            .slice.variable(x.requiresGrad);
+    }
+
+    static void backward(T, size_t poolDims)(
+        ref Variable!(T, poolDims+2, HostStorage) gx,
+        Variable!(T, poolDims+2, HostStorage) x,
+        Variable!(T, poolDims+2, HostStorage) gy,
+        Variable!(T, poolDims+2, HostStorage) y,
+        int[poolDims] window, int[poolDims] pad, int[poolDims] stride) {
+        
+    }
+
 }
 
 /// max pooling function
-struct MaxPool(T, size_t poolDims) {
+struct Pool(bool isMax, T, size_t poolDims) {
     static assert(poolDims > 0);
     enum dim = poolDims + 2;
     int[poolDims] window, pad, stride;
+
+    Variable!(T, dim, HostStorage) hx, hy;
+
+    static if (isMax) {
+        // import std.algorithm : max;
+        import mir.ndslice;
+        alias CpuImpl = PoolRefImpl;// !(a => a.maxPos.first);
+    }
+
+    auto forward(Variable!(T, dim, HostStorage) x) {
+        auto y = CpuImpl.forward(x, this.window, this.pad, this.stride);
+        // TODO if train
+        this.hx = x;
+        this.hy = y;
+        return y;
+    }
 
     version (grain_cuda) {
         Variable!(T, dim, DeviceStorage) dx, dy;
@@ -1249,9 +1329,11 @@ struct MaxPool(T, size_t poolDims) {
     }
 }
 
+alias MaxPool(T, size_t poolDims) = Pool!(true, T, poolDims);
+alias AvgPool(T, size_t poolDims) = Pool!(false, T, poolDims);
 
 ///
-version (grain_cuda) unittest {
+unittest {
     import std.stdio;
     import mir.ndslice;
     import numir;
@@ -1259,10 +1341,18 @@ version (grain_cuda) unittest {
     auto x = iota(2, 2, 1, 3).as!float.slice.variable;
     // [[[[0, 1, 2]], [[3, 4, 5]]],
     //  [[[6, 7, 8]], [[9, 10, 11]]]]
-    auto y = f.forward(x.to!DeviceStorage);
     enum yex = [[[[1, 2, 2]], [[4, 5, 5]]], [[[7, 8, 8]], [[10, 11, 11]]]];
-    assert(y.to!HostStorage.sliced == yex);
-    auto gx = f.backward(y);
-    enum gxex = [[[[0, 1, 4]], [[0, 4, 10]]], [[[0, 7, 16]], [[0, 10, 22]]]];
-    assert(gx.to!HostStorage.sliced == gxex);
+
+    // mir implementation
+    auto hy = f.forward(x);
+    assert(hy.sliced == yex);
+
+    version (grain_cuda) {
+        auto y = f.forward(x.to!DeviceStorage);
+        assert(y.to!HostStorage.sliced == yex);
+        writeln(y.to!HostStorage.sliced);
+        auto gx = f.backward(y);
+        enum gxex = [[[[0, 1, 4]], [[0, 4, 10]]], [[[0, 7, 16]], [[0, 10, 22]]]];
+        assert(gx.to!HostStorage.sliced == gxex);
+    }
 }
