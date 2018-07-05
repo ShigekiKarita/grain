@@ -1,4 +1,4 @@
-.PHONY: test clean kernel example-mnist example-char-rnn cuda-deps install-hdf5
+.PHONY: test clean kernel example-mnist example-char-rnn cuda-deps install-hdf5 doc
 
 HDF5_URL := https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.8/hdf5-1.8.15-patch1/bin/linux-centos7-x86_64/hdf5-1.8.15-patch1-linux-centos7-x86_64-static.tar.gz
 HDF5_ROOT := $(shell basename $(HDF5_URL) .tar.gz)
@@ -60,6 +60,9 @@ clean:
 example-mnist:
 	dub --config=example-mnist --compiler=ldc2 $(DUB_OPTS)
 
+example-mnist-cnn:
+	dub --config=example-mnist-cnn --compiler=ldc2 $(DUB_OPTS)
+
 example-char-rnn:
 	dub --config=example-char-rnn --compiler=ldc2 $(DUB_OPTS)
 
@@ -77,3 +80,13 @@ libhdf5_hl.a: $(HDF5_ROOT)
 	cp -f $(HDF5_ROOT)/lib/libhdf5_hl.a .
 
 install-hdf5: libhdf5.a libhdf5_hl.a libsz.a
+
+adrdox:
+	git clone https://github.com/adamdruppe/adrdox.git --depth 1
+
+adrdox/doc2: adrdox
+	cd adrdox; make
+
+doc: adrdox/doc2
+	./adrdox/doc2 -u -i source
+	# mv generated-docs docs

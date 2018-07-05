@@ -1218,71 +1218,51 @@ unittest {
     }
 }
 
-import std.traits : isIntegral;
-auto toLength(I, size_t N)(I[N] shape) if (isIntegral!I) {
-    import std.algorithm : reduce;
-    return shape.reduce!"a * b";
+/// reference implementaion of pooling function
+struct PoolRefImpl(alias fun) {
+    
 }
 
-// /// change the shape of tensors
-// struct View(T, size_t srcDim, size_t dstDim) {
-//     import numir.core : view;
-//     ptrdiff_t[dstDim] yshape;
-//     ptrdiff_t[srcDim] xshape;
+/// max pooling function
+struct MaxPool(T, size_t poolDims) {
+    static assert(poolDims > 0);
+    enum dim = poolDims + 2;
+    int[poolDims] window, pad, stride;
 
-//     void checkLength() {
-//         import std.algorithm : count;
-//         // allow -1 to be reminder
-//         auto xlen = this.xshape.toLength;
-//         auto ylen = this.yshape.toLength;
-//         assert(this.yshape[0..$].count!"a < 0" <= 1);
-//         assert(ylen >= 0 ? xlen == ylen : xlen % ylen == 0);
-//     }
+    version (grain_cuda) {
+        Variable!(T, dim, DeviceStorage) dx, dy;
 
-//     auto forward(Variable!(T, srcDim, HostStorage) x) {
-//         this.xshape = x.shape.castArray!ptrdiff_t;
-//         this.checkLength();
-//         // FIXME is this dup required?
-//         return x.dup.sliced.view(this.yshape).variable(x.requiresGrad);
-//     }
+        import grain.cudnn;
+        auto forward(Variable!(T, dim, DeviceStorage) x) {
+            auto y = grain.cudnn.poolForward(x, this.window, this.pad, this.stride);
+            // TODO if train
+            this.dx = x;
+            this.dy = y;
+            return y;
+        }
 
-//     auto backward(Variable!(T, dstDim, HostStorage) gy) {
-//         return gy.sliced.view(this.xshape).variable(gy.requiresGrad);
-//     }
+        auto backward(Variable!(T, dim, DeviceStorage) gy) {
+            auto gx = this.dx.uninit;
+            grain.cudnn.poolBackward(gx, this.dx, gy, this.dy, this.window, this.pad, this.stride);
+            return gx;
+        }
+    }
+}
 
-//     // version (grain_cuda) {
-//     //     auto forward(Variable!(T, srcDim, DeviceStorage) x) {
-//     //         this.xshape = x.shape.castArray!ptrdiff_t;
-//     //         this.checkLength();
-//     //         // FIXME is this dup required?
-//     //         int[dstDim] strides = this.yshape
-//     //         return Variable!(T, dstDim, DeviceStorage)(x.requiresGrad, this.yshape, this.yshape x.data); // x.dup.sliced.view(this.yshape).variable(x.requiresGrad);
-//     //     }
-//     // }
-// }
 
-// ///
-// unittest {
-//     import grain.testing;
-//     import std.typecons;
-//     import numir;
-//     import mir.ndslice;
-//     import mir.math : pow;
-
-//     ptrdiff_t[3] shape = [1, 3, -1];
-//     auto hfunc = View!(float, 2, 3)(shape);
-//     auto hx = uniform!float(2, 3).slice.variable;
-//     auto hy = hfunc.forward(hx);
-//     auto hgy = uniform!float(1, 3, 2).slice.variable;
-//     auto hgx = hfunc.backward(hgy);
-//     gradCheck(hfunc, hx, hgy);
-//     // assert(approxEqual(hy.sliced, hx.sliced.map!(a => pow(a, p))));
-
-//     // version (grain_cuda) {
-//     //     auto dfunc = Pow!(float, 2)(p);
-//     //     auto dy = dfunc.forward(hx.to!DeviceStorage);
-//     //     assert(approxEqual(dy.to!HostStorage.sliced, hy.sliced));
-//     //     auto dgx = dfunc.backward(hgy.to!DeviceStorage);
-//     //     assert(approxEqual(dgx.to!HostStorage.sliced, hgx.sliced));
-//     // }
-// }
+///
+version (grain_cuda) unittest {
+    import std.stdio;
+    import mir.ndslice;
+    import numir;
+    auto f = MaxPool!(float, 2)([3, 3], [1, 1], [1, 1]);
+    auto x = iota(2, 2, 1, 3).as!float.slice.variable;
+    // [[[[0, 1, 2]], [[3, 4, 5]]],
+    //  [[[6, 7, 8]], [[9, 10, 11]]]]
+    auto y = f.forward(x.to!DeviceStorage);
+    enum yex = [[[[1, 2, 2]], [[4, 5, 5]]], [[[7, 8, 8]], [[10, 11, 11]]]];
+    assert(y.to!HostStorage.sliced == yex);
+    auto gx = f.backward(y);
+    enum gxex = [[[[0, 1, 4]], [[0, 4, 10]]], [[[0, 7, 16]], [[0, 10, 22]]]];
+    assert(gx.to!HostStorage.sliced == gxex);
+}

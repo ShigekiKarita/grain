@@ -645,7 +645,8 @@ enum : cudnnPoolingMode_t
 {
     CUDNN_POOLING_MAX     = 0,
     CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING = 1, // count for average includes padded values
-    CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING = 2
+    CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING = 2,
+    CUDNN_POOLING_MAX_DETERMINISTIC     = 3,
 }
 
 alias cudnnActivationMode_t = int;

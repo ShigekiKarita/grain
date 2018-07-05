@@ -584,5 +584,140 @@ void convBackward(bool isConv, bool isNchw, T, size_t dim, size_t imDims
                                                     cudnnFdesc, cast(void*) gradFilter.data.ptr) );
 }
 
-// TODO setup convolutionBias or find other way (just use add)
 
+/// wrapper of cudnnPoolingForward for Variable
+auto poolForward(bool isMax = true, bool isAveragePad = false,
+                 T, size_t _tensorDims, size_t _poolDims)
+    (Variable!(T, _tensorDims, DeviceStorage) input,      // [N, C, HI, WI]
+     int[_poolDims] windowDim,
+     int[_poolDims] padding,
+     int[_poolDims] stride,
+     T alpha = 1,
+     T beta = 0
+        ) {
+    static assert(_tensorDims < CUDNN_DIM_MAX);
+    static assert(_tensorDims == _poolDims + 2);
+
+    static if (_poolDims == 1) {
+        enum tensorDims = 4;
+        enum poolDims = 2;
+        const strideA = stride ~ [1];
+        const paddingA = padding ~ [0];
+        const windowDimA = windowDim ~ [1];
+    } else {
+        enum tensorDims = _tensorDims;
+        enum poolDims = _poolDims;
+        const strideA = stride;
+        const paddingA = padding;
+        const windowDimA = windowDim;
+    }
+
+    cudnnPoolingDescriptor_t     poolingDesc;
+    checkCUDNN( cudnnCreatePoolingDescriptor(&poolingDesc) );
+    scope(exit) checkCUDNN( cudnnDestroyPoolingDescriptor(poolingDesc) );
+
+    static if (isMax) {
+        immutable mode = isDeterministic() == CUDNN_DETERMINISTIC
+            ? CUDNN_POOLING_MAX_DETERMINISTIC
+            : CUDNN_POOLING_MAX;
+    } else {
+        enum mode = isAveragePad
+            ? CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING
+            : CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING;
+    }
+    checkCUDNN( cudnnSetPoolingNdDescriptor(poolingDesc,
+                                            mode,
+                                            isNanProp(),
+                                            cast(int) poolDims,
+                                            windowDimA.ptr,
+                                            paddingA.ptr,
+                                            strideA.ptr ) );
+
+    const inputDesc = input.makeCudnnTensor;
+    int[tensorDims] tensorOutputDimA;
+    checkCUDNN( cudnnGetPoolingNdForwardOutputDim(poolingDesc,
+                                                  inputDesc,
+                                                  cast(int) tensorDims,
+                                                  tensorOutputDimA.ptr) );
+    // resize output if shape is not met
+    // if (tensorOutputDimA != output.shape.castArray!int) {
+    auto output = uninitVariable!(T, DeviceStorage, tensorDims)(tensorOutputDimA.castArray!uint, input.requiresGrad);
+
+    checkCUDNN( cudnnPoolingForward(cudnnHandle,
+                                    poolingDesc,
+                                    cast(const void*) &alpha,
+                                    inputDesc,
+                                    cast(const void*) input.data.ptr,
+                                    cast(const void*) &beta,
+                                    output.makeCudnnTensor,
+                                    cast(void*) output.data.ptr) );
+    return output;
+}
+
+
+/// wrapper of cudnnPoolingBackward for Variable
+void poolBackward(bool isMax = true, bool isAveragePad = false,
+                  T, size_t _tensorDims, size_t _poolDims)
+    (ref Variable!(T, _tensorDims, DeviceStorage) gradInput,
+     Variable!(T, _tensorDims, DeviceStorage) input,
+     Variable!(T, _tensorDims, DeviceStorage) gradOutput,
+     Variable!(T, _tensorDims, DeviceStorage) output,
+     int[_poolDims] windowDim,
+     int[_poolDims] padding,
+     int[_poolDims] stride,
+     T alpha = 1,
+     T beta = 0
+        ) {
+    static assert(_tensorDims < CUDNN_DIM_MAX);
+    static assert(_tensorDims == _poolDims + 2);
+
+    static if (_poolDims == 1) {
+        enum tensorDims = 4;
+        enum poolDims = 2;
+        const strideA = stride ~ [1];
+        const paddingA = padding ~ [0];
+        const windowDimA = windowDim ~ [1];
+    } else {
+        enum tensorDims = _tensorDims;
+        enum poolDims = _poolDims;
+        const strideA = stride;
+        const paddingA = padding;
+        const windowDimA = windowDim;
+    }
+
+    cudnnPoolingDescriptor_t     poolingDesc;
+    checkCUDNN( cudnnCreatePoolingDescriptor(&poolingDesc) );
+    scope(exit) checkCUDNN( cudnnDestroyPoolingDescriptor(poolingDesc) );
+
+    static if (isMax) {
+        immutable mode = isDeterministic() == CUDNN_DETERMINISTIC
+            ? CUDNN_POOLING_MAX_DETERMINISTIC
+            : CUDNN_POOLING_MAX;
+    } else {
+        enum mode = isAveragePad
+            ? CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING
+            : CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING;
+    }
+    checkCUDNN( cudnnSetPoolingNdDescriptor(poolingDesc,
+                                            mode,
+                                            isNanProp(),
+                                            cast(int) poolDims,
+                                            windowDimA.ptr,
+                                            paddingA.ptr,
+                                            strideA.ptr ) );
+
+    checkCUDNN( cudnnPoolingBackward(cudnnHandle,
+                                     poolingDesc,
+
+                                     cast(const void*) &alpha,
+                                     output.makeCudnnTensor,
+                                     cast(const void*) output.data.ptr,
+                                     gradOutput.makeCudnnTensor,
+                                     cast(const void*) gradOutput.data.ptr,
+                                     input.makeCudnnTensor,
+                                     cast(const void*) input.data.ptr,
+
+                                     cast(const void*) &beta,
+                                     gradInput.makeCudnnTensor,
+                                     cast(void*) gradInput.data.ptr) );
+}

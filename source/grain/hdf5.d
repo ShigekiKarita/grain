@@ -32,43 +32,37 @@ alias herr_t = int;
 
 /** Define atomic datatypes */
 enum H5S_ALL = 0;
+///
 enum H5S_UNLIMITED = (cast(hsize_t)cast(hssize_t)(-1));
-
 /** Define user-level maximum number of dimensions */
 enum H5S_MAX_RANK = 32;
 
 
 
+// this ddoc make adrdox die
 
-/**
- * These are the bits that can be passed to the `flags' argument of
- * H5Fcreate() and H5Fopen(). Use the bit-wise OR operator (|) to combine
- * them as needed.  As a side effect, they call H5check_version() to make sure
- * that the application is compiled with a version of the hdf5 header files
- * which are compatible with the library to which the application is linked.
- * We're assuming that these constants are used rather early in the hdf5
- * session.
- *
- */
-enum H5F_ACC_RDONLY  = 0x0000u; /*absence of rdwr => rd-only */
-enum H5F_ACC_RDWR    = 0x0001u; /*open for read and write    */
-enum H5F_ACC_TRUNC   = 0x0002u; /*overwrite existing files   */
-enum H5F_ACC_EXCL    = 0x0004u; /*fail if file already exists*/
-enum H5F_ACC_DEBUG   = 0x0008u; /*print debug info       */
-enum H5F_ACC_CREAT   = 0x0010u; /*create non-existing files  */
+// absence of rdwr => rd-only
+enum H5F_ACC_RDONLY  = 0x0000u;
+// open for read and write
+enum H5F_ACC_RDWR    = 0x0001u;
+// overwrite existing files
+enum H5F_ACC_TRUNC   = 0x0002u;
+// fail if file already exists
+enum H5F_ACC_EXCL    = 0x0004u;
+// print debug info
+enum H5F_ACC_DEBUG   = 0x0008u;
+// create non-existing files
+enum H5F_ACC_CREAT   = 0x0010u;
 
-/** Value passed to H5Pset_elink_acc_flags to cause flags to be taken from the
- * parent file. */
+// Value passed to H5Pset_elink_acc_flags to cause flags to be taken from the parent file.
 enum H5F_ACC_DEFAULT = 0xffffu; /*ignore setting on lapl     */
 
 
-/** Default value for all property list classes */
+// Default value for all property list classes 
 enum H5P_DEFAULT = 0;
 
 
-/**
- * The IEEE floating point types in various byte orders.
- */
+/* The IEEE floating point types in various byte orders. */
 alias H5T_IEEE_F32BE = H5T_IEEE_F32BE_g;
 alias H5T_IEEE_F32LE = H5T_IEEE_F32LE_g;
 alias H5T_IEEE_F64BE = H5T_IEEE_F64BE_g;
@@ -78,7 +72,7 @@ extern __gshared hid_t H5T_IEEE_F32LE_g;
 extern __gshared hid_t H5T_IEEE_F64BE_g;
 extern __gshared hid_t H5T_IEEE_F64LE_g;
 
-/**
+/*
  * These are "standard" types.  For instance, signed (2's complement) and
  * unsigned integers of various sizes and byte orders.
  */
@@ -135,45 +129,26 @@ extern __gshared hid_t H5T_STD_B64LE_g;
 extern __gshared hid_t H5T_STD_REF_OBJ_g;
 extern __gshared hid_t H5T_STD_REF_DSETREG_g;
 
-// /// TODO check error
-// static H5 {
-//     import std.string : toStringz;
-
-//     struct H5F {
-//         string filename;
-//         this~{
-//             H5Fclose(this.filename.toStringz);
-//         }
-//         @disable this(this);
-//         @disable new(size_t);
-//     };
-
-//     auto fileCreate(string filename, uint flags, hid_t create_plist, hid_t access_plist) {
-//         H5Fcreate(file.toStringz, flags, create_plist, access_plist);
-//         return H5F(filename);
-//     }
-// }
-
-//
+///
 hid_t  H5Fcreate(const char *filename, uint flags, hid_t create_plist, hid_t access_plist);
-//
+///
 hid_t  H5Fopen(const char *filename, uint flags, hid_t access_plist);
-//
+///
 herr_t H5Fclose(hid_t file_id);
 
-//
+///
 hid_t H5Screate_simple(int rank, const hsize_t *dims, const hsize_t *maxdims);
-//
+///
 herr_t H5Sclose(hid_t space_id);
 
-//
+///
 hid_t H5Dopen2(hid_t file_id, const char *name, hid_t dapl_id);
-//
+///
 hid_t H5Dcreate2(hid_t loc_id, const char *name, hid_t type_id,
                  hid_t space_id, hid_t lcpl_id, hid_t dcpl_id, hid_t dapl_id);//
-//
+///
 herr_t H5Dclose(hid_t dset_id);
-//
+///
 herr_t H5Dread(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id, hid_t file_space_id, hid_t plist_id, void *buf/*out*/);
-//
+///
 herr_t H5Dwrite(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id, hid_t file_space_id, hid_t plist_id, const void *buf);
