@@ -155,10 +155,10 @@ void load(C)(ref C chain, string path) {
 ///
 unittest {
     auto model1 = MLP!(float, HostStorage)(3);
-    model1.save("test_grain.h5");
+    model1.save("/tmp/test_grain0.h5");
 
     auto model2 = MLP!(float, HostStorage)(3);
-    model2.load("test_grain.h5");
+    model2.load("/tmp/test_grain0.h5");
     assert(model1.fc1.bias.sliced == model2.fc1.bias.sliced);
 
     import numir;
@@ -170,10 +170,10 @@ unittest {
 ///
 version (grain_cuda) unittest {
     auto model1 = MLP!(float, DeviceStorage)(3);
-    model1.save("test_grain.h5");
+    model1.save("/tmp/test_grain1.h5");
 
     auto model2 = MLP!(float, DeviceStorage)(3);
-    model2.load("test_grain.h5");
+    model2.load("/tmp/test_grain1.h5");
     assert(model1.fc1.bias.to!HostStorage.sliced == model2.fc1.bias.to!HostStorage.sliced);
 
     import numir;
@@ -185,19 +185,19 @@ version (grain_cuda) unittest {
 ///
 version (grain_cuda) unittest {
     auto model1 = MLP!(float, HostStorage)(3);
-    model1.save("test_grain.h5");
+    model1.save("/tmp/test_grain2.h5");
 
     auto model2 = MLP!(float, DeviceStorage)(3);
-    model2.load("test_grain.h5");
+    model2.load("/tmp/test_grain2.h5");
     assert(model1.fc1.bias.to!HostStorage.sliced == model2.fc1.bias.to!HostStorage.sliced);
 }
 
 ///
 version (grain_cuda) unittest {
     auto model1 = MLP!(float, DeviceStorage)(3);
-    model1.save("test_grain.h5");
+    model1.save("/tmp/test_grain3.h5");
 
     auto model2 = MLP!(float, HostStorage)(3);
-    model2.load("test_grain.h5");
+    model2.load("/tmp/test_grain3.h5");
     assert(model1.fc1.bias.to!HostStorage.sliced == model2.fc1.bias.to!HostStorage.sliced);
 }
