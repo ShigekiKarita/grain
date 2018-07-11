@@ -17,10 +17,12 @@ public import derelict.cudnn7;
 __gshared bool deterministic = false;
 __gshared bool nanProp = true;
 
+/// return global cudnn option
 auto isDeterministic() {
     return deterministic ? CUDNN_DETERMINISTIC : CUDNN_NON_DETERMINISTIC;
 }
 
+/// ditto
 auto isNanProp() {
     return nanProp ? CUDNN_PROPAGATE_NAN : CUDNN_NOT_PROPAGATE_NAN;
 }
@@ -34,14 +36,16 @@ auto cudnnDataType(T)() {
     else static assert(false, "unsupported type");
 }
 
-///
+/// cudnn data type of variable like struct
 struct TensorDesc {
     cudnnTensorDescriptor_t desc;
     CUdeviceptr ptr;
     alias desc this;
 
-    @disable this(this); // no copy
-    @disable new(size_t); // no allocation on heap
+    /// no copy
+    @disable this(this);
+    /// no allocation on heap
+    @disable new(size_t);
 
     ~this() {
         checkCUDNN( cudnnDestroyTensorDescriptor(desc) );
@@ -128,7 +132,7 @@ void activationForward(cudnnActivationMode_t A, T, size_t dim)(
                                        cast(void*) ty.ptr) );
 }
 
-///
+/// grad function of sigmoid/tanh ... etc wrapper
 void activationBackward(cudnnActivationMode_t A, T, size_t dim)(
     Variable!(T, dim, DeviceStorage) gx, Variable!(T, dim, DeviceStorage) gy,
     Variable!(T, dim, DeviceStorage) x, Variable!(T, dim, DeviceStorage) y,
@@ -176,7 +180,7 @@ void softmaxForward(cudnnSoftmaxAlgorithm_t A, T, size_t dim)(
                                     cast(void*) y.data.ptr));
 }
 
-///
+/// grad of softmax
 void softmaxBackward(cudnnSoftmaxAlgorithm_t A, T, size_t dim)(
     Variable!(T, dim, DeviceStorage) gx, Variable!(T, dim, DeviceStorage) gy,
     Variable!(T, dim, DeviceStorage) y, T alpha=1.0, T beta=0.0) {
@@ -224,6 +228,7 @@ void tensorOp(cudnnOpTensorOp_t op, T, size_t dim)(
                               &beta, c.makeCudnnTensor, cast(void*) c.data.ptr) );
 }
 
+/// x = alpha x
 void scale(T, size_t dim)(Variable!(T, dim, DeviceStorage) x, T alpha) {
     checkCUDNN( cudnnScaleTensor(cudnnHandle, x.makeCudnnTensor, cast(void*) x.data.ptr, &alpha) );
 }
@@ -282,11 +287,12 @@ void reduce(cudnnReduceTensorOp_t op, T, size_t dim)(
                     ) );
 }
 
+/// x[] = value (WARNING: not tested)
 void fill(T, size_t dim)(Variable!(T, dim, DeviceStorage) x, T value) {
     checkCUDNN( cudnnSetTensor(cudnnHandle, x.makeCudnnTensor, cast(void*) x.data.ptr, cast(const void*) &value) );
 }
 
-///
+/// WIP
 bool isContiguous(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
     // FIXME reconsider this when I support reshape, reversed and transposed
     bool ret = x.strides[$-1] == 1;
@@ -313,7 +319,7 @@ unittest {
     }
 }
 
-
+/// copy src to dst with broadcasting
 void transform(T, size_t dim)(Variable!(T, dim, DeviceStorage) src, ref Variable!(T, dim, DeviceStorage) dst, T alpha=1, T beta=0) {
     assert(src.shape == dst.shape);
 

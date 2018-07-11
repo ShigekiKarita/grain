@@ -4,8 +4,6 @@ Chainer like autograd and neural networks library
 
  +/
 
-
-
 /**
    License: $(LINK2 http://boost.org/LICENSE_1_0.txt, Boost License 1.0).
    Authors:

@@ -4,14 +4,15 @@
 module grain.optim;
 
 import std.stdio;
-import grain.autograd : isVariable, zero_, isHost, UntypedVariable, Variable, HostStorage, iterVariables;
+import grain.autograd : isVariable, zero_, isHost, UntypedVariable, Variable,
+    HostStorage, iterVariables;
 import std.traits : hasMember;
 import std.stdio;
+
 version (grain_cuda) {
     import grain.cuda : zero_;
     import grain.cudnn : transform;
 }
-
 
 /// fill gradient arrays with zero
 void zeroGrad(C)(ref C chain) {
@@ -19,56 +20,39 @@ void zeroGrad(C)(ref C chain) {
         alias F = typeof(field);
         static if (isVariable!F) {
             field.grad.zero_();
-        } else static if (hasMember!(F, "tupleof")) {// static if (isChain!F) {
+        }
+        else static if (hasMember!(F, "tupleof")) { // static if (isChain!F) {
             field.zeroGrad();
         }
     }
 }
 
+/// trait to identify optimizer
 enum bool isOptimizer(T) = is(typeof({
             import grain.autograd;
+
             Variable!(float, 2) v;
             T.init.step("", v);
         }));
 
+/// structure to memorize the stats e.g., momentum
 alias StateDict = UntypedVariable[string];
 
+/// public api to update a target model
 void update(O)(ref O optimizer) { // if (isOptimizer!O) {
-    iterVariables!( (k, v) {optimizer.step(k, v);} )(optimizer.target, "");
+    iterVariables!((k, v) { optimizer.step(k, v); })(optimizer.target, "");
 }
 
-void transform(T, size_t dim)(Variable!(T, dim, HostStorage) src, ref Variable!(T, dim, HostStorage) dst, T alpha=1, T beta=0) {
+/// CPU version of cudnn.transform
+void transform(T, size_t dim)(Variable!(T, dim, HostStorage) src,
+        ref Variable!(T, dim, HostStorage) dst, T alpha = 1, T beta = 0) {
     if (beta == 0) {
         dst.sliced[] = alpha * src.sliced;
         return;
     }
-    if (beta != 1) dst.sliced[] = beta * dst.sliced;
+    if (beta != 1)
+        dst.sliced[] = beta * dst.sliced;
     dst.sliced[] += alpha * src.sliced;
-}
-
-
-/// stochastic gradient descent optimizer
-struct SGD(Chain) {
-    Chain* target;
-    float lr = 1.0;
-    // float momentum = 0.0;
-    // float weightDecay = 0.0;
-    this(ref Chain target, float lr=1.0) {
-        this.target = &target;
-        this.lr = lr;
-    }
-
-    void step(V)(string name, ref V field) if (isVariable!V) {
-        // transform(field.gradVariable, field, -this.lr, 1.0);
-
-        // FIXME : this code is much faster than above (250fps -> 300fps in example/mnist.d)
-        static if (isHost!V) {
-            field.sliced[] -= this.lr * field.gradSliced[];
-        } else {
-            import grain.cuda : axpy;
-            axpy(field.grad, field.data, -this.lr);
-        }
-    }
 }
 
 version (unittest) {
@@ -94,6 +78,32 @@ version (unittest) {
     }
 }
 
+/// stochastic gradient descent optimizer
+struct SGD(Chain) {
+    Chain* target;
+    float lr = 1.0;
+    // float momentum = 0.0;
+    // float weightDecay = 0.0;
+    this(ref Chain target, float lr = 1.0) {
+        this.target = &target;
+        this.lr = lr;
+    }
+
+    ///
+    void step(V)(string name, ref V field) if (isVariable!V) {
+        // transform(field.gradVariable, field, -this.lr, 1.0);
+
+        // FIXME : this code is much faster than above (250fps -> 300fps in example/mnist.d)
+        static if (isHost!V) {
+            field.sliced[] -= this.lr * field.gradSliced[];
+        }
+        else {
+            import grain.cuda : axpy;
+
+            axpy(field.grad, field.data, -this.lr);
+        }
+    }
+}
 
 ///
 unittest {
@@ -109,24 +119,28 @@ unittest {
 
         auto sgd = SGD!(typeof(mlp))(mlp, 0.5);
         mlp.fc1.weight.data.zero_();
-        mlp.fc1.weight.grad = [[1.0f, 0.0f, 0.0f], [0.0f, 0.0f, 0.0f]].variable.data;
+        mlp.fc1.weight.grad = [[1.0f, 0.0f, 0.0f], [0.0f, 0.0f, 0.0f]].variable
+            .data;
         sgd.update();
         assert(mlp.fc1.weight.sliced == [[-0.5, 0.0, 0.0], [0.0, 0.0, 0.0]]);
     }
     version (grain_cuda) {
         auto mlp = MLP!(float, DeviceStorage)(3);
-        mlp.fc1.weight.grad = [[1.0f, 0.0f, 0.0f], [0.0f, 0.0f, 0.0f]].variable.to!DeviceStorage.data;
+        mlp.fc1.weight.grad = [[1.0f, 0.0f, 0.0f], [0.0f, 0.0f,
+            0.0f]].variable.to!DeviceStorage.data;
         mlp.zeroGrad();
-        assert(mlp.fc1.weight.to!HostStorage.gradSliced == [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]);
+        assert(mlp.fc1.weight.to!HostStorage.gradSliced == [[0.0, 0.0, 0.0], [0.0,
+                0.0, 0.0]]);
 
         auto sgd = SGD!(typeof(mlp))(mlp, 0.5);
         mlp.fc1.weight.data.zero_();
-        mlp.fc1.weight.grad = [[1.0f, 0.0f, 0.0f], [0.0f, 0.0f, 0.0f]].variable.to!DeviceStorage.data;
+        mlp.fc1.weight.grad = [[1.0f, 0.0f, 0.0f], [0.0f, 0.0f,
+            0.0f]].variable.to!DeviceStorage.data;
         sgd.update();
-        assert(mlp.fc1.weight.to!HostStorage.sliced == [[-0.5, 0.0, 0.0], [0.0, 0.0, 0.0]]);
+        assert(mlp.fc1.weight.to!HostStorage.sliced == [[-0.5, 0.0, 0.0], [0.0, 0.0,
+                0.0]]);
     }
 }
-
 
 /// http://jmlr.org/papers/v12/duchi11a.html
 struct AdaGrad(Chain) {
@@ -137,13 +151,15 @@ struct AdaGrad(Chain) {
     float eps = 1e-8;
     StateDict memory;
 
-    this(ref Chain target, float lr=1e-3, float eps=1e-8) {
+    ///
+    this(ref Chain target, float lr = 1e-3, float eps = 1e-8) {
         this.target = &target;
         this.lr = lr;
         this.eps = eps;
         iterVariables!((k, v) { this.initStates(k, v); })(this.target);
     }
 
+    ///
     void initStates(V)(string name, ref V field) if (isVariable!V) {
         if (name !in this.memory) {
             auto m = field.uninit();
@@ -152,6 +168,7 @@ struct AdaGrad(Chain) {
         }
     }
 
+    ///
     void step(V)(string name, ref V field) if (isVariable!V) {
         import grain.chain : pow;
 
@@ -168,6 +185,7 @@ struct AdaGrad(Chain) {
 unittest {
     import grain.autograd;
     import numir;
+
     {
         float lr = 0.1;
         float eps = 1e-8;
@@ -175,12 +193,15 @@ unittest {
         auto optim = AdaGrad!(typeof(model))(model, lr, eps);
         static assert(isOptimizer!(typeof(optim)));
         model.fc1.weight.data.zero_();
-        model.fc1.weight.grad = [[0.2f, 0.0f, 0.0f], [0.0f, 0.0f, 0.0f]].variable.data;
+        model.fc1.weight.grad = [[0.2f, 0.0f, 0.0f], [0.0f, 0.0f, 0.0f]].variable
+            .data;
         optim.update();
         auto w = model.fc1.weight;
-        assert(approxEqual(w.sliced, [[-lr * 0.2 / (0.2 * 0.2 + eps) ^^ 0.5, 0.0, 0.0], [0.0, 0.0, 0.0]].nparray));
+        assert(approxEqual(w.sliced, [[-lr * 0.2 / (0.2 * 0.2 + eps) ^^ 0.5, 0.0,
+                0.0], [0.0, 0.0, 0.0]].nparray));
         auto m = optim.memory[".fc1.weight"].to!(typeof(w));
-        assert(approxEqual(m.sliced, [[0.2 * 0.2, 0.0, 0.0], [0.0, 0.0, 0.0]].nparray));
+        assert(approxEqual(m.sliced, [[0.2 * 0.2, 0.0, 0.0], [0.0, 0.0, 0.0]]
+                .nparray));
     }
     version (grain_cuda) {
         auto model = MLP!(float, DeviceStorage)(3);
@@ -188,8 +209,6 @@ unittest {
         optim.update();
     }
 }
-
-
 
 /// https://arxiv.org/pdf/1412.6980v8.pdf
 struct Adam(Chain) {
@@ -200,16 +219,17 @@ struct Adam(Chain) {
     float beta1 = 0.9;
     float beta2 = 0.999;
     float eps = 1e-8;
-
     StateDict moment1, moment2;
 
-    this(ref Chain target, float lr, float eps=1e-8) {
+    ///
+    this(ref Chain target, float lr, float eps = 1e-8) {
         this.target = &target;
         this.lr = lr;
         this.eps = eps;
         iterVariables!((k, v) { this.initStates(k, v); })(this.target);
     }
 
+    ///
     void initStates(V)(string name, ref V field) if (isVariable!V) {
         if (name !in this.moment1) {
             auto m = field.uninit();
@@ -223,6 +243,7 @@ struct Adam(Chain) {
         }
     }
 
+    ///
     void step(V)(string name, ref V field) if (isVariable!V) {
         import grain.chain : pow;
 
@@ -242,17 +263,20 @@ struct Adam(Chain) {
 unittest {
     import grain.autograd;
     import numir;
+
     {
         auto model = MLP!(float, HostStorage)(3);
         auto optim = Adam!(typeof(model))(model, 1e-3);
         static assert(isOptimizer!(typeof(optim)));
         model.fc1.weight.data.zero_();
-        model.fc1.weight.grad = [[0.2f, 0.0f, 0.0f], [0.0f, 0.0f, 0.0f]].variable.data;
+        model.fc1.weight.grad = [[0.2f, 0.0f, 0.0f], [0.0f, 0.0f, 0.0f]].variable
+            .data;
         optim.update();
         auto w = model.fc1.weight;
         auto m1 = (1.0 - optim.beta1) * (0.2 - 0.0) + 0.0;
         auto m2 = (1.0 - optim.beta2) * (0.2 * 0.2 - 0.0) + 0.0;
-        assert(approxEqual(w.sliced, [[-optim.lr * m1 / (m2 + optim.eps) ^^ 0.5, 0.0, 0.0], [0.0, 0.0, 0.0]].nparray));
+        assert(approxEqual(w.sliced, [[-optim.lr * m1 / (m2 + optim.eps) ^^ 0.5,
+                0.0, 0.0], [0.0, 0.0, 0.0]].nparray));
         auto m1_ = optim.moment1[".fc1.weight"].to!(typeof(w));
         assert(approxEqual(m1_.sliced, [[m1, 0.0, 0.0], [0.0, 0.0, 0.0]].nparray));
         auto m2_ = optim.moment2[".fc1.weight"].to!(typeof(w));
@@ -265,7 +289,6 @@ unittest {
     }
 }
 
-
 /// http://www.matthewzeiler.com/pubs/googleTR2012/googleTR2012.pdf
 struct AdaDelta(Chain) {
     import grain.autograd;
@@ -277,7 +300,8 @@ struct AdaDelta(Chain) {
 
     StateDict den, num;
 
-    this(ref Chain target, float lr=1.0, float rho=0.95, float eps=1e-8) {
+    ///
+    this(ref Chain target, float lr = 1.0, float rho = 0.95, float eps = 1e-8) {
         this.target = &target;
         this.lr = lr;
         this.rho = rho;
@@ -285,6 +309,7 @@ struct AdaDelta(Chain) {
         iterVariables!((k, v) { this.initStates(k, v); })(this.target);
     }
 
+    ///
     void initStates(V)(string name, ref V field) if (isVariable!V) {
         if (name !in this.den) {
             auto m = field.uninit();
@@ -298,13 +323,14 @@ struct AdaDelta(Chain) {
         }
     }
 
+    ///
     void step(V)(string name, ref V field) if (isVariable!V) {
         import grain.chain : pow;
 
         auto g = field.gradVariable;
         auto d = this.den[name].to!V;
         auto n = this.num[name].to!V;
-        auto nextDen= (1.0 - this.rho) * g * g + this.rho * d;
+        auto nextDen = (1.0 - this.rho) * g * g + this.rho * d;
         auto diff = pow((n + this.eps) / (nextDen + this.eps), 0.5); // TODO implement sqrt
         auto nextNum = (1.0 - this.rho) * diff * diff + this.rho * n;
         this.den[name] = UntypedVariable(nextDen);
@@ -317,22 +343,25 @@ struct AdaDelta(Chain) {
 unittest {
     import grain.autograd;
     import numir;
+
     {
         auto model = MLP!(float, HostStorage)(3);
         auto optim = AdaDelta!(typeof(model))(model);
         // static assert(isOptimizer!(typeof(optim)));
         model.fc1.weight.data.zero_();
-        model.fc1.weight.grad = [[0.2f, 0.0f, 0.0f], [0.0f, 0.0f, 0.0f]].variable.data;
+        model.fc1.weight.grad = [[0.2f, 0.0f, 0.0f], [0.0f, 0.0f, 0.0f]].variable
+            .data;
         optim.update();
         auto w = model.fc1.weight;
         auto d = (1.0 - optim.rho) * 0.2 * 0.2;
-        auto diff = cast(float) ((0.0 + optim.eps) / (d + optim.eps)) ^^ 0.5;
+        auto diff = cast(float)((0.0 + optim.eps) / (d + optim.eps)) ^^ 0.5;
         auto n = (1.0 - optim.rho) * diff * diff;
-        assert(approxEqual(w.sliced, [[-optim.lr * diff, -optim.lr, -optim.lr], [-optim.lr, -optim.lr, -optim.lr]].nparray));
+        assert(approxEqual(w.sliced, [[-optim.lr * diff, -optim.lr,
+                -optim.lr], [-optim.lr, -optim.lr, -optim.lr]].nparray));
         auto d_ = optim.den[".fc1.weight"].to!(typeof(w));
         auto n_ = optim.num[".fc1.weight"].to!(typeof(w));
         assert(approxEqual(d_.sliced, [[d, 0.0, 0.0], [0.0, 0.0, 0.0]].nparray));
-        assert(approxEqual(n_.sliced[0, 0..1], [n].nparray));
+        assert(approxEqual(n_.sliced[0, 0 .. 1], [n].nparray));
     }
     version (grain_cuda) {
         auto model = MLP!(float, DeviceStorage)(3);

@@ -53,15 +53,18 @@ shared static ~this() {
 struct CuModule {
     CUmodule cuModule;
 
+    ///
     this(string ptxstr) {
         // JIT compile a null-terminated PTX string
         checkCudaErrors(cuModuleLoadData(&cuModule, cast(void*) ptxstr.toStringz));
     }
 
+    ///
     ~this() {
         checkCudaErrors(cuModuleUnload(cuModule));
     }
 
+    ///
     auto kernel(alias F)() {
         return Kernel!F(cuModule);
     }
@@ -79,26 +82,21 @@ class Global {
     // Thread global
     private __gshared CuModule* module_, cxxModule_;
 
-    static get()
-    {
-        if (!instantiated_)
-        {
-            synchronized(Global.classinfo)
-            {
+    ///
+    static get() {
+        if (!instantiated_) {
+            synchronized(Global.classinfo) {
                 module_ = new CuModule(K.cxxptx);
                 instantiated_ = true;
             }
         }
-
         return module_;
     }
 
-    static getCxx()
-    {
-        if (!cxxInstantiated_)
-        {
-            synchronized(Global.classinfo)
-            {
+    ///
+    static getCxx() {
+        if (!cxxInstantiated_) {
+            synchronized(Global.classinfo) {
                 cxxModule_ = new CuModule(K.cxxptx);
                 cxxInstantiated_ = true;
             }
@@ -106,8 +104,8 @@ class Global {
         return cxxModule_;
     }
 
-    static cxxKernel(T...)(string name, T args)
-    {
+    ///
+    static cxxKernel(T...)(string name, T args) {
         CUfunction cuFunction;
         writeln("getFunction...");
         checkCudaErrors(cuModuleGetFunction(&cuFunction, getCxx(), name.toStringz));
@@ -115,11 +113,10 @@ class Global {
         return Launcher!T(cuFunction, args);
     }
 
-
+    ///
     static kernel(alias F)() {
         return get().kernel!F;
     }
-
 }
 
 /// ditto
@@ -183,6 +180,7 @@ struct Kernel(alias F) if (is(ReturnType!F == void)) {
     enum name = F.mangleof;
     CUfunction cuFunction;
 
+    ///
     this(CUmodule m) {
         // writeln("mangled: ", name);
         checkCudaErrors(cuModuleGetFunction(&cuFunction, m, name.toStringz));
@@ -198,18 +196,22 @@ struct Kernel(alias F) if (is(ReturnType!F == void)) {
     }
 }
 
-
+/// alias to element type of cuda storage
 alias CudaElementType(M : CuPtr!T, T) = T;
+/// ditto
 alias CudaElementType(M : CuArray!T, T) = T;
+/// ditto
 alias CudaElementType(M : RefCounted!(CuPtr!T), T) = T;
+/// ditto
 alias CudaElementType(M : RefCounted!(CuArray!T), T) = T;
 
-
+/// trait to identify cuda storage
 enum bool isDeviceMemory(T) = is(typeof({
             static assert(is(typeof(T.init.ptr) == CUdeviceptr));
             static assert(is(typeof(T.init.length) == const(size_t)));
         }));
 
+///
 unittest {
     static assert(is(typeof(CuArray!float.init.ptr) == CUdeviceptr));
     static assert(is(typeof(CuArray!float.init.length) == const(size_t)));
@@ -313,29 +315,34 @@ struct CuArray(T) {
     CUdeviceptr ptr;
     alias ptr this;
 
+    ///
     this(CuPtr!T storage) {
         import std.algorithm : move;
         this.storage = move(storage);
         this.ptr = this.storage.ptr;
     }
 
+    ///
     this(CuPtr!T storage, size_t offset) {
         import std.algorithm : move;
         this.storage = move(storage);
         this.ptr = this.storage.ptr + offset;
     }
 
+    ///
     this(RefCounted!(CuPtr!T) storage, size_t offset=0) {
         this.storage = storage;
         this.ptr = this.storage.ptr + offset;
     }
 
+    ///
     this(T[] host) {
         this.storage = CuPtr!T(host);
         this.ptr = this.storage.ptr;
     }
 
-    @disable new(size_t); // not allocatable on heap
+    /// not allocatable on heap
+    @disable new(size_t);
 
     /// create uninitialized T.sizeof * n array in device
     this(size_t n) {
@@ -343,6 +350,7 @@ struct CuArray(T) {
         this.ptr = this.storage.ptr;
     }
 
+    ///
     @property
     const length() {
         if (this.ptr == 0) return 0;
@@ -428,8 +436,7 @@ void checkCUDNN(string file = __FILE__, size_t line = __LINE__)(cudnnStatus_t er
 }
 
 /// example to launch kernel
-unittest
-{
+unittest {
     import grain.kernel; // : saxpy;
 
     // Populate input

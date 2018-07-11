@@ -20,6 +20,7 @@ alias HostStorage(T) = T[];
 /// fill CPU array with zero
 auto zero_(T)(T[] s) { // if (!isBasicType!T) {
     import std.algorithm.mutation : fill;
+
     fill(s, 0);
     return s;
 }
@@ -38,7 +39,6 @@ unittest {
     assert(zeros!(HostStorage!float)(3) == [0f, 0f, 0f]);
 }
 
-
 /// create new variable with uninitialized array and the same shape/strides to v on CPU
 auto uninit(T, size_t dim)(Variable!(T, dim, HostStorage) v) {
     auto data = new T[v.length];
@@ -47,21 +47,22 @@ auto uninit(T, size_t dim)(Variable!(T, dim, HostStorage) v) {
 
 /// create new variable with uninitialized array of shape on CPU/CUDA
 auto uninitVariable(T, alias S = HostStorage, size_t dim)(uint[dim] shape, bool requiresGrad = false) {
-    import std.algorithm :reduce;
+    import std.algorithm : reduce;
+
     const length = shape.reduce!"a * b";
     static if (is(S!T == HostStorage!T)) {
         auto data = new T[length];
     }
-    version(grain_cuda) {
+    version (grain_cuda) {
         static if (is(S!T == DeviceStorage!T)) {
             auto data = CuArray!T(CuPtr!T(length));
         }
     }
     int[dim] strides;
-    strides[dim-1] = 1;
-    foreach_reverse (i; 0 .. dim-1) {
-        assert(shape[i+1] < int.max);
-        strides[i] = cast(int) shape[i+1] * strides[i+1];
+    strides[dim - 1] = 1;
+    foreach_reverse (i; 0 .. dim - 1) {
+        assert(shape[i + 1] < int.max);
+        strides[i] = cast(int) shape[i + 1] * strides[i + 1];
     }
     return Variable!(T, dim, S)(requiresGrad, shape, strides, data);
 }
@@ -71,27 +72,27 @@ unittest {
     import std.stdio;
     import numir;
     import mir.ndslice;
+
     auto x = numir.zeros(2, 3, 4).universal;
     auto y = uninitVariable!float([2, 3, 4]);
     assert(x.strides == y.strides);
 }
 
-version(grain_cuda) {
+version (grain_cuda) {
     /// create new variable with uninitialized array and the same shape/strides to v on CUDA
     auto uninit(T, size_t dim)(Variable!(T, dim, DeviceStorage) v) {
         return uninitVariable!(T, DeviceStorage, dim)(v.shape, v.requiresGrad);
     }
-
 
     alias DeviceStorage(T) = CuArray!T;
 
     // enum bool isDevice(T) = isDeviceMemory(typeof(T.data)); // is(typeof({T.init.toHost();}));
     alias isDevice = isDeviceMemory;
 
-
     /// CUDA -> CPU memory conversion
     auto to(alias S : DeviceStorage, T)(T[] src) {
         import std.array : empty;
+
         return src.empty ? DeviceStorage!T() : DeviceStorage!T(src);
     }
 
@@ -108,10 +109,10 @@ version(grain_cuda) {
     }
 }
 
-
 /// type-erased variable used in BackProp object
 struct UntypedVariable {
     import std.variant;
+
     bool requiresGrad;
     size_t dim;
     // size_t[]
@@ -124,6 +125,7 @@ struct UntypedVariable {
     // RefCounted!
     BackProp bprop;
 
+    ///
     this(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) v) {
         this.elem = typeid(T);
         this.requiresGrad = v.requiresGrad;
@@ -134,46 +136,56 @@ struct UntypedVariable {
         this.grad = v.grad;
     }
 
+    /// variant.get
     auto get(T)() {
         return this.data.get!T;
     }
 
+    /// untyped to typed
     auto to(V : Variable!(T, dim, Storage), T, size_t dim, alias Storage)() {
         auto d = this.data.get!(Storage!T);
-        return Variable!(T, dim, Storage)(
-            this.requiresGrad, this.shape[0..dim], this.strides[0..dim], d);
+        return Variable!(T, dim, Storage)(this.requiresGrad,
+                this.shape[0 .. dim], this.strides[0 .. dim], d);
     }
 
+    /// untyped grad to typed
     auto gradTo(V : Variable!(T, dim, Storage), T, size_t dim, alias Storage)() {
         auto d = this.data.get!(Storage!T);
-        return Variable!(T, dim, Storage)(
-            this.requiresGrad, this.shape[0..dim], this.strides[0..dim], d);
+        return Variable!(T, dim, Storage)(this.requiresGrad,
+                this.shape[0 .. dim], this.strides[0 .. dim], d);
     }
 
-
+    ///
     string toString() const {
         import std.format : format;
-        return "UntypedVariable(%s, dim=%d, data=%s, shape=%s, strides=%s)".format(
-            elem, dim, data, shape, strides);
+
+        return "UntypedVariable(%s, dim=%d, data=%s, shape=%s, strides=%s)"
+            .format(elem, dim, data, shape, strides);
     }
 
+    ///
     auto gradSlice(V)() if (isVariable!V && isHost!V) {
         import mir.ndslice.slice : sliced;
-        return grad.get!(typeof(V.init.data)).ptr.sliced(this.shape[0 .. Ndim!V].castArray!size_t);
+
+        return grad.get!(typeof(V.init.data)).ptr.sliced(this.shape[0 .. Ndim!V]
+                .castArray!size_t);
     }
 
+    ///
     auto dataSlice(V)() if (isVariable!V && isHost!V) {
         import mir.ndslice.slice : sliced;
-        return data.get!(typeof(V.init.data)).ptr.sliced(this.shape[0 .. Ndim!V].castArray!size_t);
+
+        return data.get!(typeof(V.init.data)).ptr.sliced(this.shape[0 .. Ndim!V]
+                .castArray!size_t);
     }
 }
 
+///
 auto gradSlice(V)(V v) if (isVariable!V && isHost!V) {
     import mir.ndslice.slice : sliced;
+
     return v.grad.ptr.sliced(v.shape.castArray!size_t);
 }
-
-
 
 /// FIXME maybe singleton?
 shared bool backprop = false;
@@ -186,15 +198,19 @@ struct BackProp {
     UntypedVariable[] gradOutputs;
     size_t nGrad = 0;
 
-    void backward(UntypedVariable* grad=null, size_t pos=0) {
+    /// error backward propagation
+    void backward(UntypedVariable* grad = null, size_t pos = 0) {
         import std.exception : enforce;
         import std.range : empty;
+
         // enforce(!this.inputs.empty, "nothing to backprop");
-        if (this.inputs.empty) return;
+        if (this.inputs.empty)
+            return;
         ++this.nGrad;
         if (grad is null) {
             enforce(this.gradOutputs.length == 1, "this variable is not loss");
-        } else {
+        }
+        else {
             this.gradOutputs[pos] = *grad; // FIXME??
         }
         if (grad is null || this.nGrad == this.gradOutputs.length) {
@@ -213,6 +229,7 @@ struct BackProp {
 ///
 unittest {
     import std.stdio;
+
     UntypedVariable u;
     {
         auto v = [[0f, 1f], [2f, 3f]].variable;
@@ -239,6 +256,7 @@ struct Variable(T, size_t dim, alias Storage = HostStorage, SliceKind kind = Con
     enum isHost = is(Storage!T == HostStorage!T);
     uint offset = 0;
 
+    ///
     this(bool requiresGrad, uint[dim] shape, int[dim] strides, Storage!T data) {
         this.requiresGrad = requiresGrad;
         this.shape = shape;
@@ -246,37 +264,44 @@ struct Variable(T, size_t dim, alias Storage = HostStorage, SliceKind kind = Con
         this.data = data;
         // this.grad.isHost = is(Storage!T == HostStorage!T);
         // if (this.requiresGrad) { // TODO enable this
-            static if (is(Storage!T == HostStorage!T)) {
-                this.grad = zeros!(Storage!T)(this.data.length);
-            } else version (grain_cuda) {
-                // TODO why is grain.cuda. required?
-                this.grad = grain.cuda.zeros!(CuPtr!T)(this.data.length);
-            }
+        static if (is(Storage!T == HostStorage!T)) {
+            this.grad = zeros!(Storage!T)(this.data.length);
+        }
+        else version (grain_cuda) {
+            // TODO why is grain.cuda. required?
+            this.grad = grain.cuda.zeros!(CuPtr!T)(this.data.length);
+        }
         // }
     }
 
-    auto gradVariable(bool requiresGrad=false) {
+    /// get gradient as variable
+    auto gradVariable(bool requiresGrad = false) {
         return Variable(requiresGrad, this.shape, this.strides, this.grad);
     }
 
+    /// detach the computation graph used in backward
     ref detach() {
         this.bprop = BackProp();
         return this;
     }
 
-    @property
-    auto ptr() {
+    /// data pointer
+    @property auto ptr() {
         return this.data.ptr + offset;
     }
 
-    @property
-    bool defined() { return cast(size_t) data.ptr != 0; }
+    /// check data is not null
+    @property bool defined() {
+        return cast(size_t) data.ptr != 0;
+    }
 
+    /// duplicate (deep copy) variable
     auto dup() {
         static if (is(Storage!T == HostStorage!T)) {
             auto d = new T[data.length];
             d[] = data[];
-        } else {
+        }
+        else {
             auto d = CuArray!T(data.dup);
         }
         auto y = Variable(this.requiresGrad, this.shape, this.strides, d);
@@ -284,37 +309,43 @@ struct Variable(T, size_t dim, alias Storage = HostStorage, SliceKind kind = Con
     }
 
     static if (is(Storage!T == HostStorage!T)) {
+        ///
         auto sliced() {
             import mir.ndslice; // .slice : Slice, Universal;
             static if (dim == 0) {
                 return [this.data[0]].sliced.universal;
-            } else {
+            }
+            else {
                 return Slice!(Universal, [dim], T*)(
-                    this.shape.castArray!size_t,
-                    this.strides.castArray!ptrdiff_t, data.ptr);
+                        this.shape.castArray!size_t,
+                        this.strides.castArray!ptrdiff_t, data.ptr);
             }
         }
 
+        ///
         auto gradSliced() {
             import mir.ndslice; // .slice : Slice, Universal;
             static if (dim == 0) {
                 return [this.grad[0]].sliced.universal;
-            } else {
+            }
+            else {
                 return Slice!(Universal, [dim], T*)(
-                    this.shape.castArray!size_t,
-                    this.strides.castArray!ptrdiff_t, grad.ptr);
+                        this.shape.castArray!size_t,
+                        this.strides.castArray!ptrdiff_t, grad.ptr);
             }
         }
-    } else {
+    }
+    else {
+        ///
         auto sliced() {
             import mir.ndslice; // .slice : Slice, Universal;
             static if (dim == 0) {
-                return
-                    Slice!(Universal, [1], T*)([1], [1], cast(T*) data.ptr);
-            } else {
+                return Slice!(Universal, [1], T*)([1], [1], cast(T*) data.ptr);
+            }
+            else {
                 return Slice!(Universal, [dim], T*)(
-                    this.shape.castArray!size_t,
-                    this.strides.castArray!ptrdiff_t, cast(T*) data.ptr);
+                        this.shape.castArray!size_t,
+                        this.strides.castArray!ptrdiff_t, cast(T*) data.ptr);
             }
         }
 
@@ -322,50 +353,62 @@ struct Variable(T, size_t dim, alias Storage = HostStorage, SliceKind kind = Con
     }
 
     /// computes gradients of creator variables w.r.t. the arg grad
-    void backward(UntypedVariable* grad, size_t pos=0) {
+    void backward(UntypedVariable* grad, size_t pos = 0) {
         this.bprop.backward(grad, pos);
     }
 
     /// computes gradients of creator variables w.r.t. this variable
-    static if (dim == 0) void backward() {
-        auto grad = UntypedVariable(1.0f.variable.to!Storage);
-        this.bprop.backward(&grad, 0);
+    static if (dim == 0) {
+        void backward() {
+            auto grad = UntypedVariable(1.0f.variable.to!Storage);
+            this.bprop.backward(&grad, 0);
+        }
     }
 
+    ///
     string toString() const {
         import std.format : format;
-        return "Variable!(%s, dim=%d, %s)(data=%s, shape=%s, strides=%s)"
-            .format(T.stringof, dim, Storage.stringof,
-                    data, shape, strides);
-    }
-    /// TODO implement contiguous with mir.ndslice and cudnnTransformTensor
 
+        return "Variable!(%s, dim=%d, %s)(data=%s, shape=%s, strides=%s)"
+            .format(T.stringof, dim, Storage.stringof, data, shape, strides);
+    }
+
+    /// binary ops: b * this
+    /// TODO implement contiguous with mir.ndslice and cudnnTransformTensor
     auto opBinary(string op)(Variable!(T, dim, Storage) b) {
         import grain.chain : opBinaryFunc, reciprocal;
+
         static if (op == "+" || op == "*") {
             return opBinaryFunc!op(this, b);
-        } else static if (op == "-") {
+        }
+        else static if (op == "-") {
             return opBinaryFunc!"+"(this, b, 1, -1);
-        } else static if (op == "/") {
+        }
+        else static if (op == "/") {
             return opBinaryFunc!"*"(this, reciprocal(b));
-        } else {
+        }
+        else {
             static assert(false, "unsupported op: " ~ op);
         }
     }
 
+    /// binary ops with primitive scalar value (e.g., float, double)
     auto opBinary(string op)(T b) {
         uint[dim] shape;
         shape[] = 1;
         auto v = uninitVariable!(T, Storage, dim)(shape, false);
         static if (is(Storage!T == HostStorage!T)) {
             import std.algorithm : fill;
+
             fill(v.data, b);
-        } else {
+        }
+        else {
             fill_(v.data, b);
         }
         return this.opBinary!op(v);
     }
 
+    /// binary ops: this op b
     auto opBinaryRight(string op)(T b) {
         static if (op == "+" || op == "*") {
             return this.opBinary!op(b);
@@ -373,14 +416,16 @@ struct Variable(T, size_t dim, alias Storage = HostStorage, SliceKind kind = Con
         else static if (op == "-") {
             return this.opBinary!"+"(-b);
         }
-        else static if (op == "/"){
+        else static if (op == "/") {
             uint[dim] shape;
             shape[] = 1;
             auto v = uninitVariable!(T, Storage, dim)(shape, false);
             static if (is(Storage!T == HostStorage!T)) {
                 import std.algorithm : fill;
+
                 fill(v.data, b);
-            } else {
+            }
+            else {
                 fill_(v.data, b);
             }
             return v.opBinary!op(this);
@@ -396,6 +441,7 @@ unittest {
     import mir.ndslice;
     import numir;
     import std.stdio;
+
     static foreach (op; ["+", "*", "-", "/"]) {
         {
             auto a = uniform!float(3, 2).slice.variable(true);
@@ -417,6 +463,7 @@ unittest {
                 assert(approxEqual(dc.to!HostStorage.sliced, c.sliced));
 
                 import grain.cuda : zero_;
+
                 da.grad.zero_();
                 db.grad.zero_();
                 auto dugc = UntypedVariable(gc.to!DeviceStorage);
@@ -452,8 +499,6 @@ unittest {
 //     assert(x.gradSliced == [0f, 4f]);
 // }
 
-
-
 /// test Variable.defined
 unittest {
     Variable!(float, 1, HostStorage) h;
@@ -478,7 +523,8 @@ unittest {
 enum bool isVariable(T) = is(T : Variable!(Elem, dim, Storage), Elem, size_t dim, alias Storage);
 
 /// a trait to identify variable stored in CPU memory
-enum bool isHost(V : Variable!(Elem, dim, Storage), Elem, size_t dim, alias Storage) = is(Storage!Elem == HostStorage!Elem);
+enum bool isHost(V : Variable!(Elem, dim, Storage), Elem, size_t dim, alias Storage) = is(
+            Storage!Elem == HostStorage!Elem);
 
 /// a function to get the number of dimensions of variable
 enum size_t Ndim(V : Variable!(Elem, dim, Storage), Elem, size_t dim, alias Storage) = dim;
@@ -489,6 +535,7 @@ alias ElementType(V : Variable!(Elem, dim, Storage), Elem, size_t dim, alias Sto
 /// total number of elements in variable
 auto length(V)(V v) if (isVariable!V) {
     import std.algorithm : reduce;
+
     return v.shape.reduce!"a * b";
 }
 
@@ -497,11 +544,12 @@ auto variable(Sl)(Sl sl, bool requiresGrad = false) if (isSlice!Sl) {
     import mir.ndslice : universal, DeepElementType;
     import std.algorithm : reduce;
     import numir : Ndim;
+
     auto s = sl.universal;
     alias S = typeof(s);
     alias E = DeepElementType!S;
     auto size = s._lengths.reduce!"a * b";
-    auto data = s._iterator[0..size];
+    auto data = s._iterator[0 .. size];
     uint[Ndim!S] shape;
     int[Ndim!S] strides;
     static foreach (i; 0 .. Ndim!S) {
@@ -510,19 +558,21 @@ auto variable(Sl)(Sl sl, bool requiresGrad = false) if (isSlice!Sl) {
         shape[i] = cast(uint) s.length!i;
         strides[i] = cast(int) s._strides[i];
     }
-    return Variable!(E, Ndim!S, HostStorage)(
-        requiresGrad, shape, strides, data);
+    return Variable!(E, Ndim!S, HostStorage)(requiresGrad, shape, strides, data);
 }
 
 import std.traits : isNumeric;
+
 /// a helper function to create variable object from CPU/CUDA array
-auto variable(alias Storage=HostStorage, bool requiresGrad=false, T)(T x) if (isNumeric!T) {
+auto variable(alias Storage = HostStorage, bool requiresGrad = false, T)(T x)
+        if (isNumeric!T) {
     return Variable!(T, 0, Storage)(requiresGrad, [], [], [x]);
 }
 
 /// ditto
-auto variable(A)(A a, bool requiresGrad=false) if (isArray!A) {
+auto variable(A)(A a, bool requiresGrad = false) if (isArray!A) {
     import numir.core : nparray;
+
     return a.nparray.variable(requiresGrad);
 }
 
@@ -535,9 +585,11 @@ version (grain_cuda) unittest {
 
 /// copy variable into the other device (e.g., CPU -> CUDA or CUDA -> CPU)
 Variable!(T, dim, Dst) to(alias Dst, T, size_t dim, alias Src)(Variable!(T, dim, Src) src) {
-    static if (is(Dst!T == Src!T)) return src;
+    static if (is(Dst!T == Src!T))
+        return src;
     else {
-        import std.range :empty;
+        import std.range : empty;
+
         auto d = src.data.to!Dst;
         auto g = src.grad.to!Dst;
         // FIXME: consider grad
@@ -547,10 +599,10 @@ Variable!(T, dim, Dst) to(alias Dst, T, size_t dim, alias Src)(Variable!(T, dim,
     }
 }
 
-
 ///
 unittest {
     import std.stdio;
+
     {
         // Variable!(float, 1) x;
         auto x = [-1f, -2f, -3f].variable;
@@ -563,21 +615,20 @@ unittest {
     }
     version (grain_cuda) {
         {
-            auto x = [[1f, 3f],
-                      [5f, 7f],
-                      [9f, 11f]].variable;
+            auto x = [[1f, 3f], [5f, 7f], [9f, 11f]].variable;
 
             assert(x.data.length == 6);
             static assert(!isHost!(typeof(x.to!DeviceStorage)));
             auto xx = x.dup;
-            assert(x.to!DeviceStorage.to!HostStorage.sliced == x.sliced);
+            assert(x.to!DeviceStorage
+                    .to!HostStorage
+                    .sliced == x.sliced);
         }
     }
 }
 
-
 /// kind of std.algorithm.each for iterating variables inside a chain
-void iterVariables(alias proc, C)(C* chain, string prefix="") {
+void iterVariables(alias proc, C)(C* chain, string prefix = "") {
     import std.traits;
     import grain.autograd;
 
@@ -587,14 +638,15 @@ void iterVariables(alias proc, C)(C* chain, string prefix="") {
         alias V = typeof(value);
         static if (isVariable!V) {
             proc(fullName, value);
-        } else static if (hasMember!(V, "tupleof")) {
+        }
+        else static if (hasMember!(V, "tupleof")) {
             iterVariables!proc(&value, fullName);
         }
     }
 }
 
-
-void refIterVariables(alias proc, C)(ref C chain, string prefix="") {
+/// ditto
+void refIterVariables(alias proc, C)(ref C chain, string prefix = "") {
     import std.traits;
     import grain.autograd;
 
@@ -604,7 +656,8 @@ void refIterVariables(alias proc, C)(ref C chain, string prefix="") {
         alias V = typeof(value);
         static if (isVariable!V) {
             proc(fullName, value);
-        } else static if (hasMember!(V, "tupleof")) {
+        }
+        else static if (hasMember!(V, "tupleof")) {
             refIterVariables!proc(value, fullName);
         }
     }

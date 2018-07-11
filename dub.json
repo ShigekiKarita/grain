@@ -88,6 +88,20 @@
             "targetName": "grain-example-char-rnn-hand",
             "targetType": "executable",
             "mainSourceFile": "example/char_rnn_hand.d",
+        },
+        {
+            "name": "example-reinforce-random",
+            "targetName": "grain-example-reinforce-random",
+            "targetType": "executable",
+            "mainSourceFile": "example/reinforce/random_agent.d",
+            "sourceFiles": ["example/reinforce/gym.d"]
+        },
+        {
+            "name": "example-reinforce-reinforce",
+            "targetName": "grain-example-reinforce-reinforce",
+            "targetType": "executable",
+            "mainSourceFile": "example/reinforce/reinforce_agent.d",
+            "sourceFiles": ["example/reinforce/gym.d"]
         }
     ],
     "-ddoxTool": "scod",

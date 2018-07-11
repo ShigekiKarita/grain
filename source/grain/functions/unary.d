@@ -18,8 +18,10 @@ import grain.cuda;
 import grain.utility;
 import grain.functions.common;
 
-version (grain_cuda) {
+version (grain_cuda)
+{
     import grain.cudnn;
+
     // FIXME do not know why this mixin won't work
     // mixin template CudnnActivation(T, size_t dim, cudnnActivationMode_t mode) {
 
@@ -46,7 +48,8 @@ version (grain_cuda) {
 }
 
 /// sigmoid function
-struct Sigmoid(T, size_t dim) {
+struct Sigmoid(T, size_t dim)
+{
     import mir.math : exp;
     import std.math : tanh;
     import mir.ndslice : sliced, slice, map;
@@ -54,7 +57,8 @@ struct Sigmoid(T, size_t dim) {
     Variable!(T, dim, HostStorage) hy;
 
     ///
-    auto forward(Variable!(T, dim, HostStorage) x) {
+    auto forward(Variable!(T, dim, HostStorage) x)
+    {
         enum z = T(0.5);
         auto ys = x.sliced.map!(a => tanh(a * z) * z + z);
         auto y = ys.slice.variable(x.requiresGrad);
@@ -63,14 +67,16 @@ struct Sigmoid(T, size_t dim) {
     }
 
     ///
-    auto backward(Variable!(T, dim, HostStorage) gy) {
+    auto backward(Variable!(T, dim, HostStorage) gy)
+    {
         auto gx = this.hy.dup;
         gx.sliced[] *= T(1) - this.hy.sliced;
         gx.sliced[] *= gy.sliced;
         return gx;
     }
 
-    version (grain_cuda) {
+    version (grain_cuda)
+    {
         // mixin CudnnActivation!(T, dim, CUDNN_ACTIVATION_TANH);
         enum mode = CUDNN_ACTIVATION_SIGMOID;
         mixin(CUDNN_ACTIVATION_IMPL_MIXIN);
@@ -80,11 +86,13 @@ struct Sigmoid(T, size_t dim) {
 }
 
 ///
-unittest {
+unittest
+{
     // test CPU
     import grain.testing;
     import std.math : tanh;
     import numir;
+
     auto func = new Sigmoid!(float, 1);
     auto hx = [-1.0f, 1.0f, 0.0f].variable;
     gradCheck(func, hx, [0.1f, 0.1f, 0.1f].variable);
@@ -95,7 +103,8 @@ unittest {
     auto hgx = func.backward(hgy);
 
     // test CUDA
-    version(grain_cuda) {
+    version (grain_cuda)
+    {
         auto dfunc = new Sigmoid!(float, 1);
         auto dx = hx.to!DeviceStorage;
         auto dy = dfunc.forward(dx);
@@ -105,16 +114,17 @@ unittest {
     }
 }
 
-
 /// hyperbolic tangent
-struct Tanh(T, size_t dim) {
+struct Tanh(T, size_t dim)
+{
     import std.math : tanh;
     import mir.ndslice : sliced, slice, map;
 
     Variable!(T, dim, HostStorage) hy;
 
     ///
-    auto forward(Variable!(T, dim, HostStorage) x) {
+    auto forward(Variable!(T, dim, HostStorage) x)
+    {
         auto ys = x.sliced.map!tanh;
         auto y = ys.slice.variable(x.requiresGrad);
         this.hy = y;
@@ -122,7 +132,8 @@ struct Tanh(T, size_t dim) {
     }
 
     ///
-    auto backward(Variable!(T, dim, HostStorage) gy) {
+    auto backward(Variable!(T, dim, HostStorage) gy)
+    {
         auto gx = this.hy.dup;
         gx.sliced[] *= gx.sliced; // hy ^^ 2
         gx.sliced[] = T(1.0) - gx.sliced;
@@ -130,7 +141,8 @@ struct Tanh(T, size_t dim) {
         return gx; // .slice.variable;
     }
 
-    version (grain_cuda) {
+    version (grain_cuda)
+    {
         // mixin CudnnActivation!(T, dim, CUDNN_ACTIVATION_TANH);
         enum mode = CUDNN_ACTIVATION_TANH;
         mixin(CUDNN_ACTIVATION_IMPL_MIXIN);
@@ -140,11 +152,13 @@ struct Tanh(T, size_t dim) {
 }
 
 ///
-unittest {
+unittest
+{
     // test CPU
     import grain.testing;
     import std.math : tanh;
     import numir;
+
     auto func = new Tanh!(float, 1);
     auto hx = [-1.0f, 1.0f, 0.0f].variable;
     gradCheck(func, hx, [0.1f, 0.1f, 0.1f].variable);
@@ -155,7 +169,8 @@ unittest {
     auto hgx = func.backward(hgy);
 
     // test CUDA
-    version(grain_cuda) {
+    version (grain_cuda)
+    {
         auto dfunc = new Tanh!(float, 1);
         auto dx = hx.to!DeviceStorage;
         auto dy = dfunc.forward(dx);
@@ -168,60 +183,80 @@ unittest {
 /// TODO implement scale with cudnnScaleTensor
 
 /// rectified linear unit nonlinearity (using cuDNN)
-struct ReLU(T, size_t dim) {
+struct ReLU(T, size_t dim)
+{
     mixin FunctionCommon;
     bool inplace = false;
     bool useCuDNN = true;
     Variable!(T, dim, HostStorage) hx;
 
-    auto forward(Variable!(T, dim, HostStorage) x) {
+    auto forward(Variable!(T, dim, HostStorage) x)
+    {
         import mir.ndslice : each;
+
         // FIXME if train
         this.hx = x.dup;
         auto y = this.inplace ? x : x.dup;
-        y.sliced.each!((ref a) { if (a < 0) a = 0; });
+        y.sliced.each!((ref a) {
+            if (a < 0)
+                a = 0;
+        });
         return y;
     }
 
-    auto backward(Variable!(T, dim, HostStorage) gy) {
+    auto backward(Variable!(T, dim, HostStorage) gy)
+    {
         auto gx = gy.dup;
-        foreach (i; 0..gx.data.length) {
-            if (this.hx.data[i] < 0.0) gx.data[i] = 0.0;
+        foreach (i; 0 .. gx.data.length)
+        {
+            if (this.hx.data[i] < 0.0)
+                gx.data[i] = 0.0;
         }
         return gx;
     }
 
     // TODO use cudnn
-    version(grain_cuda) {
+    version (grain_cuda)
+    {
         import grain.cudnn;
+
         Variable!(T, dim, DeviceStorage) dx, dy;
 
-        auto forward(Variable!(T, dim, DeviceStorage) x) {
+        auto forward(Variable!(T, dim, DeviceStorage) x)
+        {
             // FIXME if train
             this.dx = x.dup;
             auto y = this.inplace ? x : x.dup;
 
-            if (this.useCuDNN) {
+            if (this.useCuDNN)
+            {
                 activationForward!CUDNN_ACTIVATION_RELU(x, y);
                 this.dy = y;
-            } else {
+            }
+            else
+            {
                 import grain.kernel : relu;
+
                 auto n = cast(uint) y.data.length; // FIXME use y.nElement
-                Global.kernel!relu
-                    .call(y.data.ptr, n).launch(n);
+                Global.kernel!relu.call(y.data.ptr, n).launch(n);
             }
             return y;
         }
 
-        auto backward(Variable!(T, dim, DeviceStorage) gy) {
+        auto backward(Variable!(T, dim, DeviceStorage) gy)
+        {
             auto gx = gy.uninit;
-            if (this.useCuDNN) {
+            if (this.useCuDNN)
+            {
                 activationBackward!CUDNN_ACTIVATION_RELU(gx, gy, dx, dy);
-            } else {
+            }
+            else
+            {
                 import grain.kernel : reluGrad;
+
                 auto n = cast(uint) gy.data.length;
-                Global.kernel!reluGrad
-                    .call(gx.data.ptr, gy.data.ptr, this.dx.data.ptr, n).launch(n);
+                Global.kernel!reluGrad.call(gx.data.ptr, gy.data.ptr,
+                        this.dx.data.ptr, n).launch(n);
             }
             return gx;
         }
@@ -229,10 +264,14 @@ struct ReLU(T, size_t dim) {
 }
 
 /// test relu
-unittest {
+unittest
+{
     import grain.testing : gradCheck;
-    foreach (inplace; [true, false]) {
-        foreach (useCuDNN; [true, false]) {
+
+    foreach (inplace; [true, false])
+    {
+        foreach (useCuDNN; [true, false])
+        {
             auto func = new ReLU!(float, 1);
             func.inplace = inplace;
             func.useCuDNN = useCuDNN;
@@ -253,7 +292,8 @@ unittest {
             }
 
             // test CUDA
-            version(grain_cuda) {
+            version (grain_cuda)
+            {
                 auto x = [-1.0f, 1.0f, 0.0f].variable;
                 auto xd = x.to!DeviceStorage;
                 auto yd = func.forward(xd);
@@ -273,8 +313,10 @@ unittest {
 }
 
 // forward two functions parallel
-unittest {
+unittest
+{
     import std.typecons;
+
     grain.autograd.backprop = true;
     // scope (exit) grain.autograd.backprop = false;
     {
@@ -306,7 +348,8 @@ unittest {
         y2.backward(&ugy);
         assert(x.grad == [0, 4, 6]); // summation
     }
-    version (grain_cuda) {
+    version (grain_cuda)
+    {
         auto func = new ReLU!(float, 1);
         auto x = [-1.0f, 2.0f, 3.0f].variable(true).to!DeviceStorage;
         auto y = func.applyForward(x);
@@ -322,53 +365,57 @@ unittest {
     }
 }
 
-
-
 // TODO add to numir
 import mir.ndslice : isSlice;
 import numir : Ndim;
-pure nothrow @nogc
-logsumexp(S)(S x) if (isSlice!S && Ndim!S == 1) {
+
+pure nothrow @nogc logsumexp(S)(S x) if (isSlice!S && Ndim!S == 1)
+{
     import mir.ndslice : map, maxIndex;
     import mir.math : log, sum, exp;
+
     auto m = x[x.maxIndex];
     auto s = map!exp(x - m).sum!"fast".log;
     return m + s;
 }
 
 ///
-pure nothrow @nogc
-unittest {
+pure nothrow @nogc unittest
+{
     import numir;
     import mir.ndslice;
+
     // import mir.math;
     import std.math;
+
     static immutable x = [-1.0, 2.0, 3.0];
     static immutable e = log(exp(-1.0) + exp(2.0) + exp(3.0));
     assert(approxEqual(x.sliced.logsumexp, e));
-    static immutable xs = [-1.0, 2.0, 3.0,
-                           -1.0, 2.0, 3.0,
-                           -1.0, 2.0, 3.0];
+    static immutable xs = [-1.0, 2.0, 3.0, -1.0, 2.0, 3.0, -1.0, 2.0, 3.0];
     static immutable es = [e, e, e];
-    assert(approxEqual(xs.sliced(3, 3).alongDim!1.map!logsumexp, es));
+    assert(approxEqual(xs.sliced(3, 3).alongDim!1
+            .map!logsumexp, es));
 }
-
 
 /++
 See_also: https://github.com/chainer/chainer/blob/v1/chainer/functions/activation/log_softmax.py
  +/
-struct LogSoftmax(T, size_t dim=2) {
+struct LogSoftmax(T, size_t dim = 2)
+{
     // TODO support custom dim to compute softmax over (now only dim=1)
     mixin FunctionCommon;
 
     Variable!(T, dim, HostStorage) hy;
 
-    auto forward(Variable!(T, dim, HostStorage) x) {
+    auto forward(Variable!(T, dim, HostStorage) x)
+    {
         import mir.ndslice;
         import numir;
+
         // return slice(x.sliced.alongDim!0.map!(e => e - e.logsumexp)).variable;
         auto y = x.dup;
-        foreach (i; 0 .. y.shape[0]) {
+        foreach (i; 0 .. y.shape[0])
+        {
             y.sliced[i][] -= x.sliced[i].logsumexp;
         }
         // TODO if train
@@ -376,23 +423,31 @@ struct LogSoftmax(T, size_t dim=2) {
         return y;
     }
 
-    auto backward(Variable!(T, dim, HostStorage) gy) {
+    auto backward(Variable!(T, dim, HostStorage) gy)
+    {
         import mir.math;
         import numir;
         import mir.ndslice;
+
         auto gx = gy.dup;
-        auto m = gy.sliced.alongDim!1.map!(sum!"fast");
-        foreach (i; 0 .. gx.shape[0]) {
+        auto m = gy.sliced
+            .alongDim!1
+            .map!(sum!"fast");
+        foreach (i; 0 .. gx.shape[0])
+        {
             gx.sliced[i][] -= this.hy.sliced[i].map!exp * m[i];
         }
         return gx;
     }
 
-    version (grain_cuda) {
+    version (grain_cuda)
+    {
         import grain.cudnn;
+
         Variable!(T, dim, DeviceStorage) dy;
 
-        auto forward(Variable!(T, dim, DeviceStorage) x) {
+        auto forward(Variable!(T, dim, DeviceStorage) x)
+        {
             auto y = x.dup;
             softmaxForward!CUDNN_SOFTMAX_LOG(x, y);
             // TODO if train
@@ -400,7 +455,8 @@ struct LogSoftmax(T, size_t dim=2) {
             return y;
         }
 
-        auto backward(Variable!(T, dim, DeviceStorage) gy) {
+        auto backward(Variable!(T, dim, DeviceStorage) gy)
+        {
             auto gx = gy.dup;
             softmaxBackward!CUDNN_SOFTMAX_LOG(gx, gy, this.dy);
             return gx;
@@ -409,14 +465,17 @@ struct LogSoftmax(T, size_t dim=2) {
 }
 
 /// test logsoftmax simple case, gradcheck and cpu/cuda equality
-unittest {
+unittest
+{
     import grain.testing;
     import std.typecons;
     import numir;
     import mir.ndslice;
     import mir.math;
+
     auto e = log(exp(-1.0) + exp(2.0) + exp(3.0));
-    auto xs = [[-1.0f, 2.0f, 3.0f], [-1.0f, 2.0f, 3.0f], [-1.0f, 2.0f, 3.0f]].nparray;
+    auto xs = [[-1.0f, 2.0f, 3.0f], [-1.0f, 2.0f, 3.0f], [-1.0f, 2.0f, 3.0f]]
+        .nparray;
     LogSoftmax!float hfunc;
     auto _hx = xs.variable;
     auto _hy = hfunc.forward(_hx);
@@ -428,7 +487,8 @@ unittest {
     auto hgx = hfunc.backward(hgy);
     gradCheck(hfunc, hx, hgy, 1e-3, 1e-3, 1e-3);
 
-    version (grain_cuda) {
+    version (grain_cuda)
+    {
         alias Storage = DeviceStorage;
         auto func = LogSoftmax!float();
         auto dx = hx.to!Storage;
@@ -440,34 +500,35 @@ unittest {
     }
 }
 
-
 /// wrapper of CUDA kernel unary functions
-void unaryFunc(alias K, size_t dim)(Variable!(float, dim, DeviceStorage) x) {
-    auto shape = CuPtr!uint(x.shape[0..$]);
-    auto strides = CuPtr!int(x.strides[0..$]);
+void unaryFunc(alias K, size_t dim)(Variable!(float, dim, DeviceStorage) x)
+{
+    auto shape = CuPtr!uint(x.shape[0 .. $]);
+    auto strides = CuPtr!int(x.strides[0 .. $]);
     auto ndim = cast(uint) dim;
     auto len = cast(uint) x.data.length;
-    Global.kernel!K
-        .call(x.data.ptr, len, ndim, shape.ptr, strides.ptr)
-        .launch(len);
+    Global.kernel!K.call(x.data.ptr, len, ndim, shape.ptr, strides.ptr).launch(len);
 }
 
 /// test neg kernel
-version (grain_cuda) unittest {
+version (grain_cuda) unittest
+{
     import numir;
     import grain.kernel;
+
     auto x = [[1f, 2f, 3f], [4f, 5f, 6f]].variable.to!DeviceStorage;
     unaryFunc!neg(x);
-    assert(x.to!HostStorage.sliced == -  [[1f, 2f, 3f], [4f, 5f, 6f]].nparray);
+    assert(x.to!HostStorage.sliced == -[[1f, 2f, 3f], [4f, 5f, 6f]].nparray);
 }
 
-
 /// test reciprocal kernel
-version (grain_cuda) unittest {
+version (grain_cuda) unittest
+{
     import grain.kernel;
+
     auto x = [[1f, 2f, 3f], [4f, 5f, 6f]].variable.to!DeviceStorage;
     unaryFunc!reciprocal(x);
-    assert(x.to!HostStorage.sliced == [[1f,1f/2f,1f/3f], [1f/4f,1f/5f,1f/6f]]);
+    assert(x.to!HostStorage.sliced == [[1f, 1f / 2f, 1f / 3f], [1f / 4f, 1f / 5f, 1f / 6f]]);
 }
 
 /**
@@ -477,7 +538,8 @@ version (grain_cuda) unittest {
    - http://mir.dlang.io/mir_math_common.html
    - https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#intrinsic-functions
 */
-version (grain_cuda) unittest {
+version (grain_cuda) unittest
+{
     // FIXME mir.math.log will exit 1
     import std.math : log, tan; // , log2, log10, exp, exp2, cos, sin, tan;
     import mir.math : log2, log10, exp, exp2, cos, sin;
@@ -485,74 +547,94 @@ version (grain_cuda) unittest {
     import std.format : format;
     import numir : approxEqual;
     import mir.ndslice : iota, as, slice, map;
-    static foreach (name; ["log", "log2", "log10", "exp", "exp2", "cos", "sin", "tan"]) {
+
+    static foreach (name; ["log", "log2", "log10", "exp", "exp2", "cos", "sin", "tan"])
+    {
         {
-            auto x = iota([2, 3], 1).as!float.slice.variable.to!DeviceStorage;
+            auto x = iota([2, 3], 1).as!float
+                .slice
+                .variable
+                .to!DeviceStorage;
             mixin(format!q{  unaryFunc!(grain.kernel.%s)(x);  }(name));
             mixin(format!q{  alias func = %s;  }(name));
-            assert(approxEqual(x.to!HostStorage.sliced, iota([2, 3], 1).as!float.map!func));
+            assert(approxEqual(x.to!HostStorage.sliced, iota([2, 3], 1).as!float
+                    .map!func));
         }
     }
 }
 
 /// wrapper of CUDA kernel pow function
-void unaryPow(size_t dim)(Variable!(float, dim, DeviceStorage) x, float power) {
+void unaryPow(size_t dim)(Variable!(float, dim, DeviceStorage) x, float power)
+{
     import grain.kernel : pow;
-    auto shape = CuPtr!uint(x.shape[0..$]);
-    auto strides = CuPtr!int(x.strides[0..$]);
+
+    auto shape = CuPtr!uint(x.shape[0 .. $]);
+    auto strides = CuPtr!int(x.strides[0 .. $]);
     auto ndim = cast(uint) dim;
     auto len = cast(uint) x.data.length;
-    Global.kernel!pow
-        .call(power, x.data.ptr, len, ndim, shape.ptr, strides.ptr)
+    Global.kernel!pow.call(power, x.data.ptr, len, ndim, shape.ptr, strides.ptr)
         .launch(len);
 }
 
 /// test pow kernel
-version (grain_cuda) unittest {
+version (grain_cuda) unittest
+{
     import numir;
     import mir.ndslice;
     import grain.kernel;
     import mir.math : pow;
-    auto x = iota([2, 3], 1).as!float.slice.variable.to!DeviceStorage;
+
+    auto x = iota([2, 3], 1).as!float
+        .slice
+        .variable
+        .to!DeviceStorage;
     unaryPow(x, 2f);
-    assert(approxEqual(x.to!HostStorage.sliced,
-                       iota([2, 3], 1).as!float.map!(x => pow(x, 2))));
+    assert(approxEqual(x.to!HostStorage.sliced, iota([2, 3], 1).as!float
+            .map!(x => pow(x, 2))));
 }
 
-
 /// y = 1 / x
-struct Reciprocal(T, size_t dim) {
+struct Reciprocal(T, size_t dim)
+{
     mixin FunctionCommon;
 
     Variable!(T, dim, HostStorage) hy;
 
-    auto forward(Variable!(T, dim, HostStorage) x) {
+    auto forward(Variable!(T, dim, HostStorage) x)
+    {
         import mir.ndslice : map, slice;
+
         auto y = x.sliced.map!(a => T(1) / a).slice.variable(x.requiresGrad);
         this.hy = y; // TODO if train
         return y;
     }
 
-    auto backward(Variable!(T, dim, HostStorage) gy) {
+    auto backward(Variable!(T, dim, HostStorage) gy)
+    {
         auto gx = this.hy.dup;
         gx.sliced[] *= gx.sliced;
         gx.sliced[] *= -gy.sliced;
         return gx;
     }
 
-    version (grain_cuda) {
+    version (grain_cuda)
+    {
         Variable!(T, dim, DeviceStorage) dy;
 
-        auto forward(Variable!(T, dim, DeviceStorage) x) {
+        auto forward(Variable!(T, dim, DeviceStorage) x)
+        {
             import grain.kernel : reciprocal;
+
             auto y = x.dup;
             unaryFunc!reciprocal(y);
             this.dy = y; // TODO if train
             return y;
         }
 
-        auto backward(Variable!(T, dim, DeviceStorage) gy) {
+        auto backward(Variable!(T, dim, DeviceStorage) gy)
+        {
             import grain.cudnn : tensorOp, CUDNN_OP_TENSOR_MUL;
+
             auto gx = this.dy.dup;
             tensorOp!CUDNN_OP_TENSOR_MUL(gx, gx, this.dy, T(-1));
             tensorOp!CUDNN_OP_TENSOR_MUL(gx, gx, gy);
@@ -562,14 +644,15 @@ struct Reciprocal(T, size_t dim) {
 }
 
 /// test reciprocal simple case, gradcheck and cpu/cuda equality
-unittest {
+unittest
+{
     import grain.testing;
     import std.typecons;
     import numir;
     import mir.ndslice;
 
     // simple case
-    auto e = [[-1.0f,1f/2f,1f/3f], [1f, 10f,1f/3f]].nparray;
+    auto e = [[-1.0f, 1f / 2f, 1f / 3f], [1f, 10f, 1f / 3f]].nparray;
     auto xs = [[-1.0f, 2.0f, 3.0f], [1.0f, 0.1f, 3.0f]].nparray;
     Reciprocal!(float, 2) hfunc;
     auto _hx = xs.variable;
@@ -582,7 +665,8 @@ unittest {
     auto hgx = hfunc.backward(hgy);
     gradCheck(hfunc, hx, hgy, 1e-3, 5e-2, 5e-2);
 
-    version (grain_cuda) {
+    version (grain_cuda)
+    {
         Reciprocal!(float, 2) dfunc;
         auto dy = dfunc.forward(hx.to!DeviceStorage);
         assert(approxEqual(dy.to!HostStorage.sliced, hy.sliced));
@@ -592,45 +676,54 @@ unittest {
 }
 
 /// y = exp x
-struct Exp(T, size_t dim) {
+struct Exp(T, size_t dim)
+{
     import mir.ndslice : slice, map;
 
     mixin FunctionCommon;
 
     Variable!(T, dim, HostStorage) hy;
 
-    auto forward(Variable!(T, dim, HostStorage) x) {
+    auto forward(Variable!(T, dim, HostStorage) x)
+    {
         import mir.math.common : exp;
+
         auto y = slice(x.sliced.map!exp).variable(x.requiresGrad);
         this.hy = y; // TODO if train
         return y;
     }
 
-    auto backward(Variable!(T, dim, HostStorage) gy) {
+    auto backward(Variable!(T, dim, HostStorage) gy)
+    {
         auto gx = gy.dup;
         gx.sliced[] *= this.hy.sliced;
         return gx;
     }
 
-    version (grain_cuda) {
+    version (grain_cuda)
+    {
         Variable!(T, dim, DeviceStorage) dy;
 
-        auto forward(Variable!(T, dim, DeviceStorage) x) {
+        auto forward(Variable!(T, dim, DeviceStorage) x)
+        {
             import grain.kernel : exp;
+
             auto y = x.dup;
             unaryFunc!exp(y);
             this.dy = y;
             return y;
         }
 
-        auto backward(Variable!(T, dim, DeviceStorage) gy) {
+        auto backward(Variable!(T, dim, DeviceStorage) gy)
+        {
             return this.dy * gy;
         }
     }
 }
 
 ///
-unittest {
+unittest
+{
     import grain.testing;
     import std.typecons;
     import numir;
@@ -645,7 +738,8 @@ unittest {
     gradCheck(hfunc, hx, hgy);
     assert(approxEqual(hy.sliced, hx.sliced.map!exp));
 
-    version (grain_cuda) {
+    version (grain_cuda)
+    {
         Exp!(float, 2) dfunc;
         auto dy = dfunc.forward(hx.to!DeviceStorage);
         assert(approxEqual(dy.to!HostStorage.sliced, hy.sliced));
@@ -655,45 +749,54 @@ unittest {
 }
 
 /// y = exp x
-struct Log(T, size_t dim) {
+struct Log(T, size_t dim)
+{
     import mir.ndslice : slice, map;
 
     mixin FunctionCommon;
 
     Variable!(T, dim, HostStorage) hx;
 
-    auto forward(Variable!(T, dim, HostStorage) x) {
+    auto forward(Variable!(T, dim, HostStorage) x)
+    {
         import mir.math.common : log;
+
         auto y = slice(x.sliced.map!log).variable(x.requiresGrad);
         this.hx = x; // TODO if train
         return y;
     }
 
-    auto backward(Variable!(T, dim, HostStorage) gy) {
+    auto backward(Variable!(T, dim, HostStorage) gy)
+    {
         auto gx = gy.dup;
         gx.sliced[] /= this.hx.sliced;
         return gx;
     }
 
-    version (grain_cuda) {
+    version (grain_cuda)
+    {
         Variable!(T, dim, DeviceStorage) dx;
 
-        auto forward(Variable!(T, dim, DeviceStorage) x) {
+        auto forward(Variable!(T, dim, DeviceStorage) x)
+        {
             import grain.kernel : log;
+
             auto y = x.dup;
             unaryFunc!log(y);
             this.dx = x;
             return y;
         }
 
-        auto backward(Variable!(T, dim, DeviceStorage) gy) {
+        auto backward(Variable!(T, dim, DeviceStorage) gy)
+        {
             return gy / this.dx;
         }
     }
 }
 
 ///
-unittest {
+unittest
+{
     import grain.testing;
     import std.typecons;
     import numir;
@@ -708,7 +811,8 @@ unittest {
     gradCheck(hfunc, hx, hgy, 1e-3, 5e-2, 5e-2);
     assert(approxEqual(hy.sliced, hx.sliced.map!log));
 
-    version (grain_cuda) {
+    version (grain_cuda)
+    {
         Log!(float, 2) dfunc;
         auto dy = dfunc.forward(hx.to!DeviceStorage);
         assert(approxEqual(dy.to!HostStorage.sliced, hy.sliced));
@@ -716,7 +820,6 @@ unittest {
         assert(approxEqual(dgx.to!HostStorage.sliced, hgx.sliced));
     }
 }
-
 
 // TODO implement these autograd fast-math functions
 // struct Log2
@@ -726,41 +829,51 @@ unittest {
 // struct Exp10
 
 /// y = sin x
-struct Sin(T, size_t dim) {
+struct Sin(T, size_t dim)
+{
     import mir.ndslice : slice, map;
 
     mixin FunctionCommon;
 
     Variable!(T, dim, HostStorage) hx;
 
-    auto forward(Variable!(T, dim, HostStorage) x) {
+    auto forward(Variable!(T, dim, HostStorage) x)
+    {
         import mir.math.common : sin;
+
         auto y = slice(x.sliced.map!sin).variable(x.requiresGrad);
         this.hx = x; // TODO if train
         return y;
     }
 
-    auto backward(Variable!(T, dim, HostStorage) gy) {
+    auto backward(Variable!(T, dim, HostStorage) gy)
+    {
         import mir.math.common : cos;
+
         auto gx = gy.dup;
         gx.sliced[] *= this.hx.sliced.map!cos;
         return gx;
     }
 
-    version (grain_cuda) {
+    version (grain_cuda)
+    {
         Variable!(T, dim, DeviceStorage) dx;
 
-        auto forward(Variable!(T, dim, DeviceStorage) x) {
+        auto forward(Variable!(T, dim, DeviceStorage) x)
+        {
             import grain.kernel : sin;
+
             auto y = x.dup;
             unaryFunc!sin(y);
             this.dx = x;
             return y;
         }
 
-        auto backward(Variable!(T, dim, DeviceStorage) gy) {
+        auto backward(Variable!(T, dim, DeviceStorage) gy)
+        {
             import grain.cudnn;
             import grain.kernel : cos;
+
             auto gx = this.dx.dup;
             unaryFunc!cos(gx);
             tensorOp!CUDNN_OP_TENSOR_MUL(gx, gx, gy);
@@ -770,7 +883,8 @@ struct Sin(T, size_t dim) {
 }
 
 ///
-unittest {
+unittest
+{
     import grain.testing;
     import std.typecons;
     import numir;
@@ -785,7 +899,8 @@ unittest {
     gradCheck(hfunc, hx, hgy);
     assert(approxEqual(hy.sliced, hx.sliced.map!sin));
 
-    version (grain_cuda) {
+    version (grain_cuda)
+    {
         Sin!(float, 2) dfunc;
         auto dy = dfunc.forward(hx.to!DeviceStorage);
         assert(approxEqual(dy.to!HostStorage.sliced, hy.sliced));
@@ -794,43 +909,52 @@ unittest {
     }
 }
 
-
 /// y = cos x
-struct Cos(T, size_t dim) {
+struct Cos(T, size_t dim)
+{
     import mir.ndslice : slice, map;
 
     mixin FunctionCommon;
 
     Variable!(T, dim, HostStorage) hx;
 
-    auto forward(Variable!(T, dim, HostStorage) x) {
+    auto forward(Variable!(T, dim, HostStorage) x)
+    {
         import mir.math.common : cos;
+
         auto y = slice(x.sliced.map!cos).variable(x.requiresGrad);
         this.hx = x; // TODO if train
         return y;
     }
 
-    auto backward(Variable!(T, dim, HostStorage) gy) {
+    auto backward(Variable!(T, dim, HostStorage) gy)
+    {
         import mir.math.common : sin;
+
         auto gx = gy.dup;
         gx.sliced[] *= -this.hx.sliced.map!sin;
         return gx;
     }
 
-    version (grain_cuda) {
+    version (grain_cuda)
+    {
         Variable!(T, dim, DeviceStorage) dx;
 
-        auto forward(Variable!(T, dim, DeviceStorage) x) {
+        auto forward(Variable!(T, dim, DeviceStorage) x)
+        {
             import grain.kernel : cos;
+
             auto y = x.dup;
             unaryFunc!cos(y);
             this.dx = x;
             return y;
         }
 
-        auto backward(Variable!(T, dim, DeviceStorage) gy) {
+        auto backward(Variable!(T, dim, DeviceStorage) gy)
+        {
             import grain.cudnn;
             import grain.kernel : sin;
+
             auto gx = this.dx.dup;
             unaryFunc!sin(gx);
             tensorOp!CUDNN_OP_TENSOR_MUL(gx, gx, gy, -1);
@@ -840,7 +964,8 @@ struct Cos(T, size_t dim) {
 }
 
 ///
-unittest {
+unittest
+{
     import grain.testing;
     import std.typecons;
     import numir;
@@ -855,7 +980,8 @@ unittest {
     gradCheck(hfunc, hx, hgy, 1e-3, 1e-3, 1e-3);
     assert(approxEqual(hy.sliced, hx.sliced.map!cos));
 
-    version (grain_cuda) {
+    version (grain_cuda)
+    {
         Cos!(float, 2) dfunc;
         auto dy = dfunc.forward(hx.to!DeviceStorage);
         assert(approxEqual(dy.to!HostStorage.sliced, hy.sliced));
@@ -865,42 +991,57 @@ unittest {
 }
 
 /// y = tan x
-struct Tan(T, size_t dim) {
+struct Tan(T, size_t dim)
+{
     import mir.ndslice : slice, map, as;
 
     mixin FunctionCommon;
 
     Variable!(T, dim, HostStorage) hx;
 
-    auto forward(Variable!(T, dim, HostStorage) x) {
+    auto forward(Variable!(T, dim, HostStorage) x)
+    {
         import std.math : tan;
-        auto y = slice(x.sliced.map!tan.as!T).variable(x.requiresGrad);
+
+        auto y = slice(x.sliced
+                .map!tan
+                .as!T).variable(x.requiresGrad);
         this.hx = x; // TODO if train
         return y;
     }
 
-    auto backward(Variable!(T, dim, HostStorage) gy) {
+    auto backward(Variable!(T, dim, HostStorage) gy)
+    {
         import mir.math.common : cos;
+
         auto gx = gy.dup;
-        auto c = this.hx.sliced.map!cos.map!"a * a";
+        auto c = this.hx
+            .sliced
+            .map!cos
+            .map!"a * a";
         gx.sliced[] /= c;
         return gx;
     }
 
-    version (grain_cuda) {
+    version (grain_cuda)
+    {
         Variable!(T, dim, DeviceStorage) dx;
 
-        auto forward(Variable!(T, dim, DeviceStorage) x) {
+        auto forward(Variable!(T, dim, DeviceStorage) x)
+        {
             import grain.kernel : tan;
+
             auto y = x.dup;
             unaryFunc!tan(y);
             this.dx = x;
             return y;
         }
 
-        auto backward(Variable!(T, dim, DeviceStorage) gy) {
+        auto backward(Variable!(T, dim, DeviceStorage) gy)
+        {
             import grain.cudnn;
             import grain.kernel : cos;
+
             auto gx = this.dx.dup;
             unaryFunc!cos(gx);
             tensorOp!CUDNN_OP_TENSOR_MUL(gx, gx, gx); // cos^2 x
@@ -910,7 +1051,8 @@ struct Tan(T, size_t dim) {
 }
 
 ///
-unittest {
+unittest
+{
     import grain.testing;
     import std.typecons;
     import numir;
@@ -925,7 +1067,8 @@ unittest {
     gradCheck(hfunc, hx, hgy);
     assert(approxEqual(hy.sliced, hx.sliced.map!tan));
 
-    version (grain_cuda) {
+    version (grain_cuda)
+    {
         Tan!(float, 2) dfunc;
         auto dy = dfunc.forward(hx.to!DeviceStorage);
         assert(approxEqual(dy.to!HostStorage.sliced, hy.sliced));
@@ -934,33 +1077,38 @@ unittest {
     }
 }
 
-
 /// y = alpha * x
-struct Scale(T, size_t dim) {
+struct Scale(T, size_t dim)
+{
     import mir.ndslice : slice;
 
     mixin FunctionCommon;
 
     T alpha = 1.0;
 
-    auto forward(Variable!(T, dim, HostStorage) x) {
+    auto forward(Variable!(T, dim, HostStorage) x)
+    {
         return slice(this.alpha * x.sliced).variable(x.requiresGrad);
     }
 
-    auto backward(Variable!(T, dim, HostStorage) gy) {
+    auto backward(Variable!(T, dim, HostStorage) gy)
+    {
         return slice(this.alpha * gy.sliced).variable(gy.requiresGrad);
     }
 
-    version (grain_cuda) {
+    version (grain_cuda)
+    {
         import grain.cudnn : scale;
 
-        auto forward(Variable!(T, dim, DeviceStorage) x) {
+        auto forward(Variable!(T, dim, DeviceStorage) x)
+        {
             auto y = x.dup;
             scale(y, this.alpha);
             return y;
         }
 
-        auto backward(Variable!(T, dim, DeviceStorage) gy) {
+        auto backward(Variable!(T, dim, DeviceStorage) gy)
+        {
             auto gx = gy.dup;
             scale(gx, this.alpha);
             return gx;
@@ -968,9 +1116,9 @@ struct Scale(T, size_t dim) {
     }
 }
 
-
 /// test scale in simple case, gradcheck and cpu/cuda equality
-unittest {
+unittest
+{
     import grain.testing;
     import std.typecons;
     import numir;
@@ -990,7 +1138,8 @@ unittest {
     auto hgx = hfunc.backward(hgy);
     gradCheck(hfunc, hx, hgy); // , 1e-3, 1e-3, 1e-3);
 
-    version (grain_cuda) {
+    version (grain_cuda)
+    {
         auto dfunc = Scale!(float, 2)(2f);
         auto dy = dfunc.forward(hx.to!DeviceStorage);
         assert(approxEqual(dy.to!HostStorage.sliced, hy.sliced));
@@ -999,31 +1148,36 @@ unittest {
     }
 }
 
-
 /// y = -x
-struct Neg(T, size_t dim) {
+struct Neg(T, size_t dim)
+{
     import mir.ndslice : slice;
 
     mixin FunctionCommon;
 
-    auto forward(Variable!(T, dim, HostStorage) x) {
+    auto forward(Variable!(T, dim, HostStorage) x)
+    {
         return slice(-x.sliced).variable(x.requiresGrad);
     }
 
-    auto backward(Variable!(T, dim, HostStorage) gy) {
+    auto backward(Variable!(T, dim, HostStorage) gy)
+    {
         return slice(-gy.sliced).variable(gy.requiresGrad);
     }
 
-    version (grain_cuda) {
+    version (grain_cuda)
+    {
         import grain.kernel : neg;
 
-        auto forward(Variable!(T, dim, DeviceStorage) x) {
+        auto forward(Variable!(T, dim, DeviceStorage) x)
+        {
             auto y = x.dup;
             unaryFunc!neg(y);
             return y;
         }
 
-        auto backward(Variable!(T, dim, DeviceStorage) gy) {
+        auto backward(Variable!(T, dim, DeviceStorage) gy)
+        {
             auto gx = gy.dup;
             unaryFunc!neg(gx);
             return gx;
@@ -1031,9 +1185,9 @@ struct Neg(T, size_t dim) {
     }
 }
 
-
 /// test neg simple case, gradcheck and cpu/cuda equality
-unittest {
+unittest
+{
     import grain.testing;
     import std.typecons;
     import numir;
@@ -1052,7 +1206,8 @@ unittest {
     auto hgx = hfunc.backward(hgy);
     gradCheck(hfunc, hx, hgy); // , 1e-3, 1e-3, 1e-3);
 
-    version (grain_cuda) {
+    version (grain_cuda)
+    {
         auto dfunc = Neg!(float, 2)();
         auto dy = dfunc.forward(hx.to!DeviceStorage);
         assert(approxEqual(dy.to!HostStorage.sliced, hy.sliced));
@@ -1061,39 +1216,47 @@ unittest {
     }
 }
 
-
 /// y = abs x
-struct Abs(T, size_t dim) {
+struct Abs(T, size_t dim)
+{
     import mir.ndslice : slice, map;
 
     mixin FunctionCommon;
     Variable!(T, dim, HostStorage) hx;
 
-    auto forward(Variable!(T, dim, HostStorage) x) {
+    auto forward(Variable!(T, dim, HostStorage) x)
+    {
         import mir.math : fabs;
+
         this.hx = x; // if train
         return slice(x.sliced.map!fabs).variable(x.requiresGrad);
     }
 
-    auto backward(Variable!(T, dim, HostStorage) gy) {
+    auto backward(Variable!(T, dim, HostStorage) gy)
+    {
         auto gx = gy.dup;
         gx.sliced[] *= this.hx.sliced.map!(a => a == 0f ? 0f : (a > 0f ? 1f : -1f));
         return gx;
     }
 
-    version (grain_cuda) {
+    version (grain_cuda)
+    {
         Variable!(T, dim, DeviceStorage) dx;
 
-        auto forward(Variable!(T, dim, DeviceStorage) x) {
+        auto forward(Variable!(T, dim, DeviceStorage) x)
+        {
             import grain.kernel : abs;
+
             auto y = x.dup;
             unaryFunc!abs(y);
             this.dx = x; // if train
             return y;
         }
 
-        auto backward(Variable!(T, dim, DeviceStorage) gy) {
+        auto backward(Variable!(T, dim, DeviceStorage) gy)
+        {
             import grain.kernel : absGrad;
+
             auto gx = this.dx.dup;
             unaryFunc!absGrad(gx);
             return gy * gx;
@@ -1102,7 +1265,8 @@ struct Abs(T, size_t dim) {
 }
 
 /// test abs simple case, gradcheck and cpu/cuda equality
-unittest {
+unittest
+{
     import grain.testing;
     import std.typecons;
     import numir;
@@ -1121,7 +1285,8 @@ unittest {
     auto hgx = hfunc.backward(hgy);
     assert(approxEqual(hgx.sliced, gxs));
 
-    version (grain_cuda) {
+    version (grain_cuda)
+    {
         auto dfunc = Abs!(float, 2)();
         auto dy = dfunc.forward(hx.to!DeviceStorage);
         assert(approxEqual(dy.to!HostStorage.sliced, hy.sliced));
@@ -1130,9 +1295,9 @@ unittest {
     }
 }
 
-
 /// y = pow x
-struct Pow(T, size_t dim) {
+struct Pow(T, size_t dim)
+{
     import mir.ndslice : slice, map;
 
     mixin FunctionCommon;
@@ -1140,60 +1305,70 @@ struct Pow(T, size_t dim) {
     T power;
     Variable!(T, dim, HostStorage) hx;
 
-    this(T power) {
+    this(T power)
+    {
         this.power = power;
     }
 
-    auto forward(Variable!(T, dim, HostStorage) x) {
+    auto forward(Variable!(T, dim, HostStorage) x)
+    {
         import mir.math.common : pow;
-        auto y = slice(x.sliced.map!(a => pow(a, this.power))).variable(x.requiresGrad);
+
+        auto y = slice(x.sliced.map!(a => pow(a, this.power))).variable(x
+                .requiresGrad);
         this.hx = x; // TODO if train
         return y;
     }
 
-    auto backward(Variable!(T, dim, HostStorage) gy) {
+    auto backward(Variable!(T, dim, HostStorage) gy)
+    {
         import mir.math.common : pow;
+
         auto gx = gy.dup;
         gx.sliced[] *= this.hx.sliced.map!(a => this.power * pow(a, this.power - 1));
         return gx;
     }
 
-    version (grain_cuda) {
+    version (grain_cuda)
+    {
         Variable!(T, dim, DeviceStorage) dx;
 
-        auto forward(Variable!(T, dim, DeviceStorage) _x) {
+        auto forward(Variable!(T, dim, DeviceStorage) _x)
+        {
             this.dx = _x;
             auto x = _x.dup;
             import grain.kernel : pow;
-            auto shape = CuPtr!uint(x.shape[0..$]);
-            auto strides = CuPtr!int(x.strides[0..$]);
+
+            auto shape = CuPtr!uint(x.shape[0 .. $]);
+            auto strides = CuPtr!int(x.strides[0 .. $]);
             auto ndim = cast(uint) dim;
             auto len = cast(uint) x.data.length;
 
-            Global.kernel!pow
-                .call(this.power, x.data.ptr, len, ndim, shape.ptr, strides.ptr)
-                .launch(len);
+            Global.kernel!pow.call(this.power, x.data.ptr, len, ndim,
+                    shape.ptr, strides.ptr).launch(len);
             return x;
         }
 
-        auto backward(Variable!(T, dim, DeviceStorage) gy) {
+        auto backward(Variable!(T, dim, DeviceStorage) gy)
+        {
             auto x = this.dx.dup;
             import grain.kernel : powGrad;
-            auto shape = CuPtr!uint(x.shape[0..$]);
-            auto strides = CuPtr!int(x.strides[0..$]);
+
+            auto shape = CuPtr!uint(x.shape[0 .. $]);
+            auto strides = CuPtr!int(x.strides[0 .. $]);
             auto ndim = cast(uint) dim;
             auto len = cast(uint) x.data.length;
 
-            Global.kernel!powGrad
-                .call(this.power, x.data.ptr, len, ndim, shape.ptr, strides.ptr)
-                .launch(len);
+            Global.kernel!powGrad.call(this.power, x.data.ptr, len, ndim,
+                    shape.ptr, strides.ptr).launch(len);
             return gy * x;
         }
     }
 }
 
 ///
-unittest {
+unittest
+{
     import grain.testing;
     import std.typecons;
     import numir;
@@ -1209,7 +1384,8 @@ unittest {
     gradCheck(hfunc, hx, hgy, 1e-3, 1e-3, 1e-3);
     assert(approxEqual(hy.sliced, hx.sliced.map!(a => pow(a, p))));
 
-    version (grain_cuda) {
+    version (grain_cuda)
+    {
         auto dfunc = Pow!(float, 2)(p);
         auto dy = dfunc.forward(hx.to!DeviceStorage);
         assert(approxEqual(dy.to!HostStorage.sliced, hy.sliced));
@@ -1219,68 +1395,91 @@ unittest {
 }
 
 /// n-dimensional strided
-auto ndStrided(size_t d=0, S, size_t dim)(S s, ptrdiff_t[dim] strides ...)
-    if (isSlice!S && Ndim!S >= dim) {
-    static if (d == dim) {
+auto ndStrided(size_t d = 0, S, size_t dim)(S s, ptrdiff_t[dim] strides...)
+        if (isSlice!S && Ndim!S >= dim)
+{
+    static if (d == dim)
+    {
         return s;
-    } else {
+    }
+    else
+    {
         import mir.ndslice.dynamic : strided;
-        return ndStrided!(d+1)(s.strided!d(strides[d]), strides);
+
+        return ndStrided!(d + 1)(s.strided!d(strides[d]), strides);
     }
 }
 
 ///
-unittest {
+unittest
+{
     import mir.ndslice;
+
     auto s = iota(3, 4);
     assert(s.ndStrided(2, 3) == s.strided(0, 2).strided(1, 3));
 }
 
 /// only both is supported
-auto unpad(size_t d = 0, S, size_t N)(S s, size_t[N] lengths...) if (isSlice!S && Ndim!S == N) {
+auto unpad(size_t d = 0, S, size_t N)(S s, size_t[N] lengths...)
+        if (isSlice!S && Ndim!S == N)
+{
     import mir.ndslice;
-    static if (d == N) {
+
+    static if (d == N)
+    {
         return s;
-    } else {
+    }
+    else
+    {
         immutable p = lengths[d];
-        auto s_ = s.swapped!(0, d)[p..$-p].swapped!(0, d);
+        auto s_ = s.swapped!(0, d)[p .. $ - p].swapped!(0, d);
         return unpad!(d + 1)(s_, lengths);
     }
 }
 
 ///
-unittest {
+unittest
+{
     import mir.ndslice;
+
     auto s = iota(3, 4);
     assert(s.pad(0, [2, 1]).slicedNdField.unpad(2, 1) == s);
 }
 
-
-void sumNdStrided(size_t d=0, S, D, size_t dim)(S src, D dst, ptrdiff_t[dim] strides ...)
-    if (isSlice!S && isSlice!D && Ndim!S == Ndim!D)
+void sumNdStrided(size_t d = 0, S, D, size_t dim)(S src, D dst, ptrdiff_t[dim] strides...)
+        if (isSlice!S && isSlice!D && Ndim!S == Ndim!D)
 {
-    static if (d == 0) {
+    static if (d == 0)
+    {
         static assert(dim == Ndim!S);
     }
-    foreach (i; 0 .. src.length!0) {
+    foreach (i; 0 .. src.length!0)
+    {
         immutable j = i * strides[d];
-        foreach (k; i .. i + strides[d]) {
-            if (j >= dst.length!0 || k >= src.length!0) {
+        foreach (k; i .. i + strides[d])
+        {
+            if (j >= dst.length!0 || k >= src.length!0)
+            {
                 break;
             }
-            static if (d + 1 == dim) {
+            static if (d + 1 == dim)
+            {
                 dst[j] += src[k];
-            } else {
-                sumNdStrided!(d+1)(src[k], dst[j], strides);
+            }
+            else
+            {
+                sumNdStrided!(d + 1)(src[k], dst[j], strides);
             }
         }
     }
 }
 
 ///
-unittest {
+unittest
+{
     import numir;
     import mir.ndslice;
+
     auto s = iota(3, 4);
     auto t = s.ndStrided(2, 3); // [[[[1, 2, 2]], [[4, 5, 5]]], [[[7, 8, 8]], [[10, 11, 11]]]]
     auto d = s.slice.zeros_like;
@@ -1288,16 +1487,17 @@ unittest {
     assert(d == [[22, 0, 0, 14], [0, 0, 0, 0], [19, 0, 0, 11]]);
 }
 
-
 /// reference implementaion of pooling function
-struct PoolRefImpl(alias poolFun) {
+struct PoolRefImpl(alias poolFun)
+{
     import mir.ndslice;
     import numir;
 
-    static auto forward(T, size_t poolDims, size_t tensorDims)(
-        Variable!(T, tensorDims, HostStorage) x,
-        // ref Variable!(T, poolDims+2, HostStorage) y,
-        int[poolDims] windowA, int[poolDims] padA, int[poolDims] strideA) {
+    static auto forward(T, size_t poolDims, size_t tensorDims)(Variable!(T,
+            tensorDims, HostStorage) x,
+            // ref Variable!(T, poolDims+2, HostStorage) y,
+            int[poolDims] windowA, int[poolDims] padA, int[poolDims] strideA)
+    {
         static assert(poolDims + 2 == tensorDims);
         size_t[tensorDims] p, w;
         p[2 .. $] = padA.castArray!size_t[];
@@ -1306,36 +1506,35 @@ struct PoolRefImpl(alias poolFun) {
         ptrdiff_t[tensorDims] s;
         s[0 .. 2] = 1;
         s[2 .. $] = strideA.castArray!ptrdiff_t[];
-        auto expanded = x.sliced
-            .pad(0, p)
-            .slicedNdField
-            .windows(w)       // [wb=1, wc=1, wx, wy, ..., [b, c, kx, ky, ...]]
-            .ndStrided(s)     // [wb=1, wc=1, sx, sy, ..., [b, c, kx, ky, ...]]
-            .unpack;          // [wb=1, wc=1, sx, sy, ..., b, c, kx, ky, ...]
+        auto expanded = x.sliced.pad(0, p).slicedNdField.windows(w) // [wb=1, wc=1, wx, wy, ..., [b, c, kx, ky, ...]]
+        .ndStrided(s) // [wb=1, wc=1, sx, sy, ..., [b, c, kx, ky, ...]]
+        .unpack; // [wb=1, wc=1, sx, sy, ..., b, c, kx, ky, ...]
 
-        ptrdiff_t[poolDims+3] e;
-        static foreach (i; 0 .. poolDims) {
+        ptrdiff_t[poolDims + 3] e;
+        static foreach (i; 0 .. poolDims)
+        {
             e[i] = cast(ptrdiff_t) expanded.length!(i + 2);
         }
         e[poolDims] = x.shape[0];
-        e[poolDims+1] = x.shape[1];
-        e[poolDims+2] = -1;
-        return expanded
-            .slice            // TODO how can i avoid this allocation
-            .view(e)
-            .alongDim!(-1) // [wx, wy, b, c, kx * ky]
+        e[poolDims + 1] = x.shape[1];
+        e[poolDims + 2] = -1;
+        return expanded.slice // TODO how can i avoid this allocation
+        .view(e).alongDim!(-1) // [wx, wy, b, c, kx * ky]
+        
             .map!poolFun
-            .transposed!(tensorDims-1)
-            .transposed!(tensorDims-1)
-            .slice.variable(x.requiresGrad);
+            .transposed!(tensorDims - 1)
+            .transposed!(tensorDims - 1)
+            .slice
+            .variable(x.requiresGrad);
     }
 
     static void backward(T, size_t poolDims, size_t tensorDims)(
-        ref Variable!(T, tensorDims, HostStorage) gx,
-        Variable!(T, tensorDims, HostStorage) x,
-        Variable!(T, tensorDims, HostStorage) gy,
-        Variable!(T, tensorDims, HostStorage) y,
-        int[poolDims] windowA, int[poolDims] padA, int[poolDims] strideA) {
+            ref Variable!(T, tensorDims, HostStorage) gx, Variable!(T,
+            tensorDims, HostStorage) x, Variable!(T, tensorDims,
+            HostStorage) gy, Variable!(T,
+            tensorDims, HostStorage) y, int[poolDims] windowA,
+            int[poolDims] padA, int[poolDims] strideA)
+    {
 
         static assert(poolDims + 2 == tensorDims);
         size_t[tensorDims] p, w;
@@ -1345,22 +1544,21 @@ struct PoolRefImpl(alias poolFun) {
         ptrdiff_t[tensorDims] s;
         s[0 .. 2] = 1;
         s[2 .. $] = strideA.castArray!ptrdiff_t[];
-        auto expanded = x.sliced
-            .pad(0, p)
-            .slice            // TODO how can i avoid this allocation
-            .windows(w)       // [wb=1, wc=1, wx, wy, ..., [b, c, kx, ky, ...]]
-            .ndStrided(s)     // [wb=1, wc=1, sx, sy, ..., [b, c, kx, ky, ...]]
-            .unpack;          // [wb=1, wc=1, sx, sy, ..., b, c, kx, ky, ...]
+        auto expanded = x.sliced.pad(0, p).slice // TODO how can i avoid this allocation
+        .windows(w) // [wb=1, wc=1, wx, wy, ..., [b, c, kx, ky, ...]]
+        .ndStrided(s) // [wb=1, wc=1, sx, sy, ..., [b, c, kx, ky, ...]]
+        .unpack; // [wb=1, wc=1, sx, sy, ..., b, c, kx, ky, ...]
 
-        ptrdiff_t[poolDims+3] e;
+        ptrdiff_t[poolDims + 3] e;
         size_t kernelSize = 1;
-        static foreach (i; 0 .. poolDims) {
+        static foreach (i; 0 .. poolDims)
+        {
             e[i] = cast(ptrdiff_t) expanded.length!(i + 2);
             kernelSize *= windowA[i];
         }
         e[poolDims] = x.shape[0];
-        e[poolDims+1] = x.shape[1];
-        e[poolDims+2] = -1;
+        e[poolDims + 1] = x.shape[1];
+        e[poolDims + 2] = -1;
         auto gxpad = x.uninit.sliced.pad(0, p).slice;
         gxpad[] = 0;
         auto xe = expanded.view(e); // [wx, wy, ..., b, c, kx * ky * ...]
@@ -1369,23 +1567,29 @@ struct PoolRefImpl(alias poolFun) {
 }
 
 /// max pooling function
-struct Pool(bool isMax, T, size_t poolDims) {
+struct Pool(bool isMax, T, size_t poolDims)
+{
     static assert(poolDims > 0);
     enum dim = poolDims + 2;
     int[poolDims] window, pad, stride;
 
     Variable!(T, dim, HostStorage) hx, hy;
 
-    static if (isMax) {
+    static if (isMax)
+    {
         // import std.algorithm : max;
         import mir.ndslice;
-        static auto pool(S)(S s) if (isSlice!S) {
+
+        static auto pool(S)(S s) if (isSlice!S)
+        {
             return maxPos(s).first;
         }
+
         alias CpuImpl = PoolRefImpl!pool;
     }
 
-    auto forward(Variable!(T, dim, HostStorage) x) {
+    auto forward(Variable!(T, dim, HostStorage) x)
+    {
         auto y = CpuImpl.forward(x, this.window, this.pad, this.stride);
         // TODO if train
         this.hx = x;
@@ -1393,27 +1597,35 @@ struct Pool(bool isMax, T, size_t poolDims) {
         return y;
     }
 
-    auto backward(Variable!(T, dim, HostStorage) gy) {
+    auto backward(Variable!(T, dim, HostStorage) gy)
+    {
         auto gx = this.hx.uninit;
-        CpuImpl.backward(gx, this.hx, gy, this.hy, this.window, this.pad, this.stride);
+        CpuImpl.backward(gx, this.hx, gy, this.hy, this.window, this.pad, this
+                .stride);
         return gx;
     }
 
-    version (grain_cuda) {
+    version (grain_cuda)
+    {
         Variable!(T, dim, DeviceStorage) dx, dy;
 
         import grain.cudnn;
-        auto forward(Variable!(T, dim, DeviceStorage) x) {
-            auto y = grain.cudnn.poolForward(x, this.window, this.pad, this.stride);
+
+        auto forward(Variable!(T, dim, DeviceStorage) x)
+        {
+            auto y = grain.cudnn.poolForward(x, this.window, this.pad, this
+                    .stride);
             // TODO if train
             this.dx = x;
             this.dy = y;
             return y;
         }
 
-        auto backward(Variable!(T, dim, DeviceStorage) gy) {
+        auto backward(Variable!(T, dim, DeviceStorage) gy)
+        {
             auto gx = this.dx.uninit;
-            grain.cudnn.poolBackward(gx, this.dx, gy, this.dy, this.window, this.pad, this.stride);
+            grain.cudnn.poolBackward(gx, this.dx, gy, this.dy, this.window, this
+                    .pad, this.stride);
             return gx;
         }
     }
@@ -1423,10 +1635,12 @@ alias MaxPool(T, size_t poolDims) = Pool!(true, T, poolDims);
 alias AvgPool(T, size_t poolDims) = Pool!(false, T, poolDims);
 
 ///
-unittest {
+unittest
+{
     import std.stdio;
     import mir.ndslice;
     import numir;
+
     auto f = MaxPool!(float, 2)([3, 3], [1, 1], [1, 1]);
     auto x = iota(2, 2, 1, 3).as!float.slice.variable;
     // [[[[0, 1, 2]], [[3, 4, 5]]],
@@ -1437,7 +1651,8 @@ unittest {
     auto hy = f.forward(x);
     assert(hy.sliced == yex);
 
-    version (grain_cuda) {
+    version (grain_cuda)
+    {
         auto y = f.forward(x.to!DeviceStorage);
         assert(y.to!HostStorage.sliced == yex);
         // writeln(y.to!HostStorage.sliced);
