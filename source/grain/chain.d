@@ -109,7 +109,7 @@ auto tan(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
 }
 
 /// abs
-auto abs(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
+auto  abs(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
     import grain.functions.unary : Abs;
 
     auto func = new Abs!(T, dim);
@@ -462,4 +462,42 @@ unittest {
     hy.backward(&ugy);
     assert(hx.gradSliced == numir.view(hgy.sliced, [6, 4]));
     // gradCheckChain!(x => x.view([2, 3, -1]))(hx, hgy, 1e-3, 5e-2, 5e-2);
+}
+
+
+/// squeeze/remove redundant size-1 dimension (axis) d
+auto squeeze(size_t d, T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
+    import grain.utility : castArray;
+    static assert(dim >= 1);
+    assert(x.shape[d] == 1);
+    ptrdiff_t[dim-1] s;
+    s[0..d] = x.shape[0..d].castArray!ptrdiff_t;
+    s[d..$] = x.shape[d+1..$].castArray!ptrdiff_t;
+    return x.view(s);
+}
+
+///
+unittest {
+    import mir.ndslice;
+    auto x = iota(3, 4, 1, 5).as!double.slice.variable;
+    assert(x.squeeze!2.shape == [3, 4, 5]);
+}
+
+
+/// unsqueeze/add redundant size-1 dimension (axis) d
+auto unsqueeze(size_t d, T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
+    import grain.utility : castArray;
+    static assert(dim >= d);
+    ptrdiff_t[dim+1] s;
+    s[0..d] = x.shape[0..d].castArray!ptrdiff_t;
+    s[d] = 1;
+    s[d+1..$] = x.shape[d..$].castArray!ptrdiff_t;
+    return x.view(s);
+}
+
+///
+unittest {
+    import mir.ndslice;
+    auto x = iota(3, 4, 5).as!double.slice.variable;
+    assert(x.unsqueeze!2.shape == [3, 4, 1, 5]);
 }
