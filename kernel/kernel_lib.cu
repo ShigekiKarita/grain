@@ -237,3 +237,28 @@ GRAIN_GLOBAL void embeddingGrad(float* gw, const int* x, const float* gy, uint n
         atomicAdd(gw + x[b] * nembed + e, gy[b * nembed + e]);
     }
 }
+
+
+GRAIN_GLOBAL void huber(float* output, const float* predict, const float* target, float threshold,
+                        uint len, uint ndim, const uint* shape, const uint* strides) {
+    auto t05 = 0.5 * threshold;
+    float l1;
+    uint idx;
+    GRAIN_PARALLEL_FOR(i, len) {
+        idx = indexof(i, ndim, shape, strides);
+        l1 = fabs(predict[idx] - target[idx]);
+        atomicAdd(output,
+                  l1 > threshold
+                  ? threshold * (l1 - t05)
+                  : 0.5 * l1 * l1);
+    }
+}
+
+GRAIN_GLOBAL void huberGrad(float* gradPredict, const float* predict, const float* target, float threshold,                             uint len, uint ndim, const uint* shape, const uint* strides) {
+    uint idx;
+    GRAIN_PARALLEL_FOR(i, len) {
+        idx = indexof(i, ndim, shape, strides);
+        gradPredict[idx] = fmaxf(fminf(predict[idx] - target[idx], threshold), -threshold);
+    }
+}
+

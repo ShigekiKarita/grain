@@ -9,8 +9,7 @@ import grain.cuda;
 import grain.functions.common;
 import grain.utility : toTuple, fromTuple, castArray;
 
-
-struct NegativeLogLikelihood(F, I=long) {
+struct NegativeLogLikelihood(F, I = long) {
     /++
     Compute negative log-likelihood: -logP(y=t)
     Params:
@@ -32,6 +31,7 @@ struct NegativeLogLikelihood(F, I=long) {
     auto forward(Variable!(F, 2, HostStorage) logP, Variable!(I, 1, HostStorage) targetId) {
         import mir.math;
         import mir.ndslice;
+
         F result = 0.0;
         size_t count = 0;
         foreach (i; 0 .. targetId.sliced.length) {
@@ -76,14 +76,15 @@ struct NegativeLogLikelihood(F, I=long) {
             static assert(is(I == int), "only int is supported now");
 
             import grain.kernel : nll;
+
             this._nClass = logP.shape[1];
             auto dresult = CuArray!F([0]); // [result].variable.to!DeviceStorage; <- FIXME
             auto dcount = CuArray!int([0]); // [count].variable.to!DeviceStorage;
 
             auto batchSize = targetId.shape[0];
-            Global.kernel!nll
-                .call(dresult.ptr, dcount.ptr, logP.data.ptr,
-                      targetId.data.ptr, this.ignoreIndex, batchSize, logP.strides[0]).launch(batchSize);
+            Global.kernel!nll.call(dresult.ptr, dcount.ptr, logP.data.ptr,
+                    targetId.data.ptr, this.ignoreIndex, batchSize, logP.strides[
+                    0]).launch(batchSize);
 
             F result = 0.0;
             int count = 0;
@@ -106,13 +107,16 @@ struct NegativeLogLikelihood(F, I=long) {
 
             import grain.kernel;
             import std.typecons : tuple;
+
             auto nBatch = this._dtargetId.shape[0];
             auto glogP = CuArray!F(nBatch * this._nClass);
             glogP.zero_();
             auto coeff = gy.to!HostStorage.data[0] * this._normalize;
-            Global.kernel!nllGrad
-                .call(glogP.ptr, -coeff, this._dtargetId.data.ptr, this.ignoreIndex, nBatch, this._nClass).launch(nBatch);
-            auto v = Variable!(F, 2, DeviceStorage)(false, [nBatch, this._nClass], [this._nClass, 1], glogP);
+            Global.kernel!nllGrad.call(glogP.ptr, -coeff,
+                    this._dtargetId.data.ptr,
+                    this.ignoreIndex, nBatch, this._nClass).launch(nBatch);
+            auto v = Variable!(F, 2, DeviceStorage)(false, [nBatch,
+                    this._nClass], [this._nClass, 1], glogP);
             return tuple(v, typeof(this._dtargetId)());
         }
 
@@ -135,8 +139,10 @@ unittest {
      +/
     import std.typecons;
     import grain.testing;
+
     NegativeLogLikelihood!(float, int) func;
-    auto hx = [[0.2f, 0.4f, 0.4f], [0.1f, 0.5f, 0.4f], [0.1f, 0.5f, 0.4f]].variable;
+    auto hx = [[0.2f, 0.4f, 0.4f], [0.1f, 0.5f, 0.4f], [0.1f, 0.5f, 0.4f]]
+        .variable;
     auto ht = [1, 0, func.ignoreIndex].variable;
     auto hl = func.forward(hx, ht);
     assert(func._normalize == 0.5);
@@ -153,9 +159,10 @@ unittest {
         assert(func._normalize == 0.5);
         assert(dl.to!HostStorage.sliced == [-(0.4f + 0.1f + 0.0f) / 2]);
         auto dgx = func.backward(1.0f.variable.to!DeviceStorage);
-        assert(dgx[0].to!HostStorage.sliced == [[0.0, -0.5, 0.0], [-0.5, 0.0, 0.0], [0.0, 0.0, 0.0]]);
+        assert(dgx[0].to!HostStorage.sliced == [[0.0, -0.5, 0.0], [-0.5, 0.0,
+                0.0], [0.0, 0.0, 0.0]]);
         assert(!dgx[1].defined);
-    }
+    }.s
 }
 
 /// test variable.backward
@@ -167,7 +174,8 @@ unittest {
     grain.autograd.backprop = true;
 
     NegativeLogLikelihood!(float, int) func;
-    auto hx = [[0.2f, 0.4f, 0.4f], [0.1f, 0.5f, 0.4f], [0.1f, 0.5f, 0.4f]].variable;
+    auto hx = [[0.2f, 0.4f, 0.4f], [0.1f, 0.5f, 0.4f], [0.1f, 0.5f, 0.4f]]
+        .variable;
     hx.requiresGrad = true;
     auto ht = [1, 0, func.ignoreIndex].variable;
     auto hl = func.applyForward(hx, ht);
@@ -177,6 +185,39 @@ unittest {
     auto u = UntypedVariable(1.0f.variable);
     hl.backward(&u);
 
-    assert(hx.grad[].sliced(3, 3) == [[0.0, -0.5, 0.0], [-0.5, 0.0, 0.0], [0.0, 0.0, 0.0]]);
+    assert(hx.grad[].sliced(3, 3) == [[0.0, -0.5, 0.0], [-0.5, 0.0, 0.0], [0.0, 0.0,
+            0.0]]);
     // TODO assert(!ht.grad.defined);
+}
+
+struct HuberLoss(T) {
+    auto forward() {
+
+    }
+}
+
+/**
+   PyTorch equality check
+ */
+unittest {
+    import std.typecons;
+    import grain.testing;
+    import mir.ndslice;
+
+    grain.autograd.backprop = true;
+
+    HuberLoss!float func;
+    auto hx = [[0.2f, 0.4f, 0.4f], [0.1f, 0.5f, 0.4f], [0.1f, 0.5f, 0.4f]]
+        .variable;
+    hx.requiresGrad = true;
+    auto ht = [1, 0, func.ignoreIndex].variable;
+    auto hl = func.applyForward(hx, ht);
+
+    assert(func._normalize == 0.5);
+    assert(hl.sliced == [-(0.4f + 0.1f + 0.0f) / 2]);
+    auto u = UntypedVariable(1.0f.variable);
+    hl.backward(&u);
+
+    assert(hx.grad[].sliced(3, 3) == [[0.0, -0.5, 0.0], [-0.5, 0.0, 0.0], [0.0, 0.0,
+            0.0]]);
 }
