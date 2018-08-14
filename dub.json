@@ -102,6 +102,20 @@
             "targetType": "executable",
             "mainSourceFile": "example/reinforce/reinforce_agent.d",
             "sourceFiles": ["example/reinforce/gym.d"]
+        },
+        {
+            "name": "repl",
+            "targetName": "grain-repl",
+            "targetType": "executable",
+            "mainSourceFile": "example/repl",
+            "lflags-ldc2": ["-l:libdruntime-ldc-shared.so", "-ldl"],
+            "dependencies": {
+                "drepl": "~>0.2.1",
+                "linenoise": "~>1.1.0"
+            },
+            "subConfigurations": {
+                "linenoise": "vendored"
+            }
         }
     ],
     "-ddoxTool": "scod",

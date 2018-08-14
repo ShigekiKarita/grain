@@ -159,10 +159,12 @@ unittest {
         assert(func._normalize == 0.5);
         assert(dl.to!HostStorage.sliced == [-(0.4f + 0.1f + 0.0f) / 2]);
         auto dgx = func.backward(1.0f.variable.to!DeviceStorage);
-        assert(dgx[0].to!HostStorage.sliced == [[0.0, -0.5, 0.0], [-0.5, 0.0,
-                0.0], [0.0, 0.0, 0.0]]);
+        assert(dgx[0].to!HostStorage.sliced ==
+               [[0.0, -0.5, 0.0],
+                [-0.5, 0.0, 0.0],
+                [0.0, 0.0, 0.0]]);
         assert(!dgx[1].defined);
-    }.s
+    }
 }
 
 /// test variable.backward
@@ -196,6 +198,7 @@ struct HuberLoss(T) {
     }
 }
 
+/+
 /**
    PyTorch equality check
  */
@@ -221,3 +224,4 @@ unittest {
     assert(hx.grad[].sliced(3, 3) == [[0.0, -0.5, 0.0], [-0.5, 0.0, 0.0], [0.0, 0.0,
             0.0]]);
 }
++/
