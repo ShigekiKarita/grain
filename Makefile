@@ -17,7 +17,7 @@ endif
 
 
 test: $(CUDA_DEPS)
-	dub test --compiler=ldc2 $(DUB_OPTS)
+	dub test --compiler=$(DC) $(DUB_OPTS)
 
 cuda-deps: $(CUDA_DEPS)
 

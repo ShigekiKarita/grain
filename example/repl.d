@@ -24,13 +24,6 @@ class REPLLogger : Logger {
 
 REPLLogger logger;
 
-auto dubEngine(string packageName, CompilerOpt compiler)
-{
-    import core.sys.posix.unistd, std.random;
-    auto tmpDir = mkdtemp();
-    return DUBEngine(packageName, compiler, tmpDir);
-}
-
 struct CompilerOpt {
     string compiler, ver, pic, mode;
     string[string] build;
@@ -69,11 +62,15 @@ struct DUBEngine {
         std.process, std.range, std.stdio, std.string, std.typecons;
 
     string[] _dubFlags;
-    string _package;
 
-    this(string packageName, CompilerOpt compiler, string tmpDir)
+    this(string[] packages, CompilerOpt compiler) {
+        import core.sys.posix.unistd, std.random;
+        auto tmpDir = mkdtemp();
+        this(packages, compiler, tmpDir);
+    }
+
+    this(string[] packages, CompilerOpt compiler, string tmpDir)
     {
-        _package = packageName;
         _compiler = compiler;
         _tmpDir = tmpDir;
         if (_tmpDir.exists) rmdirRecurse(_tmpDir);
@@ -85,32 +82,36 @@ struct DUBEngine {
         import std.json;
 
         // FIXME use dub library instead of subprocess
-        auto dubDescribe = execute(["dub", "describe", _package,
-                                    "--compiler=" ~ _compiler.compiler]);
-        if (dubDescribe.status != 0) {
-            throw new Exception("failed: dub describe " ~ _package ~ "\n" ~ dubDescribe.output);
-        }
-        auto dubInfo = parseJSON(dubDescribe.output);
-        auto target = dubInfo["targets"][0];
-        assert(target["rootPackage"].str == _package);
-        auto build = target["buildSettings"];
-        auto read(string key) {
-            return build[key].array.map!"a.str".array;
-        }
+        foreach (_package; packages) {
+            auto dubDescribe = execute(["dub", "describe", _package,
+                                        "--compiler=" ~ _compiler.compiler]);
+            if (dubDescribe.status != 0) {
+                throw new Exception("failed: $ dub describe " ~ _package ~ "\n" ~
+                                    dubDescribe.output ~
+                                    "\n\nsuggest: $ dub fetch " ~ _package);
+            }
+            auto dubInfo = parseJSON(dubDescribe.output);
+            auto target = dubInfo["targets"][0];
+            assert(target["rootPackage"].str == _package);
+            auto build = target["buildSettings"];
+            auto read(string key) {
+                return build[key].array.map!"a.str".array;
+            }
 
-        _dubFlags =
-            chain(
-                read("importPaths").map!(a => "-I" ~ a),
-                read("libs").map!(a => "-L-l" ~ a),
-                read("versions").map!(a => _compiler.ver ~ "=" ~ a),
-                read("linkerFiles")
-                ).array;
+            _dubFlags ~=
+                chain(
+                    read("importPaths").map!(a => "-I" ~ a),
+                    read("libs").map!(a => "-L-l" ~ a),
+                    read("versions").map!(a => _compiler.ver ~ "=" ~ a),
+                    read("linkerFiles")
+                    ).array;
 
-        // TODO re-think how to read _package's static lib
-        immutable targetFileName = build["targetPath"].str
-            ~ "/lib" ~ build["targetName"].str ~ ".a";
-        if (targetFileName.exists) {
-            _dubFlags ~= targetFileName;
+            // TODO re-think how to read _package's static lib
+            immutable targetFileName = build["targetPath"].str
+                ~ "/lib" ~ build["targetName"].str ~ ".a";
+            if (targetFileName.exists) {
+                _dubFlags ~= targetFileName;
+            }
         }
     }
 
@@ -297,12 +298,14 @@ void main(string[] args)
     string build = "debug";
     string compiler = "dmd";
     string flags = "-debug -g -w";
+    string packages = "grain";
     auto opt = getopt(
         args,
         "verbose|V", "verbose mode for logging", &verbose,
         "flags|F", "compiler flags", &flags,
         "compiler|C", "compiler binary", &compiler,
-        "build|B", "build mode (debug, release, optimize)", &build
+        "build|B", "build mode (debug, release, optimize)", &build,
+        "packages|P", "list of DUB packages", &packages
         );
 
     if (opt.helpWanted) {
@@ -318,7 +321,8 @@ void main(string[] args)
     auto history = buildPath(environment.get("HOME", ""), ".drepl_history").toStringz();
     linenoiseHistoryLoad(history);
 
-    auto intp = interpreter(dubEngine("grain", CompilerOpt(compiler, build, flags)));
+    auto intp = interpreter(DUBEngine(packages.split,
+                                      CompilerOpt(compiler, build, flags)));
 
     char *line;
     const(char) *prompt = "grain> ";
