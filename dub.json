@@ -60,6 +60,16 @@
             "targetType": "sourceLibrary"
         },
         {
+            "name": "example-cifar",
+            "targetName": "grain-example-cifar",
+            "targetType": "executable",
+            "mainSourceFile": "example/cifar.d",
+            "dependencies": {
+                "imaged": "~>1.0.2",
+                "snck": "~>0.0.4"
+            }
+        },
+        {
             "name": "example-mnist",
             "targetName": "grain-example-mnist",
             "targetType": "executable",

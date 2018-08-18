@@ -72,21 +72,15 @@ auto makeBatch(Dataset* d, size_t batchSize) {
 
 struct Model(T, alias Storage) {
     alias L = Linear!(T, Storage);
-    Convolution!(float, 2, Storage) conv;
     L fc1, fc2, fc3;
 
     this(int nin, int nhidden, int nout) {
-        this.conv = Convolution!(float, 2, Storage)(1, 32, [3, 3]);
-        auto x = numir.empty!float(1, 1, nin, nin).variable.to!Storage;
-        auto hshape = this.conv.outShape([1, 1, nin, nin]);
         this.fc1 = L(nin * nin, nhidden);
         this.fc2 = L(nhidden, nhidden);
         this.fc3 = L(nhidden, nout);
     }
 
     auto opCall(Variable!(T, 2, Storage) x) {
-        // auto h0 = relu(this.conv(x));
-        // TODO implement view
         auto h1 = relu(this.fc1(x));
         auto h2 = relu(this.fc2(h1));
         auto h3 = this.fc3(h2);
