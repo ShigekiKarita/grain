@@ -3,7 +3,7 @@ module example.cifar;
 /**
    Image recognition example on CIFAR10/100
 
-   TODO: implement maxpool and batch normalization for VGG
+   TODO: implement maxpool, dropout and batch normalization for VGG
 */
 
 import std.stdio : writeln, writefln;
@@ -217,13 +217,14 @@ void main(string[] args) {
     auto trainBatch = datasets.train.makeBatch(batchSize);
     auto testBatch = datasets.test.makeBatch(batchSize);
     auto model = Model!(float, S)(256, cast(int) datasets.labels.length);
-    auto optimizer = SGD!(typeof(model))(model, 1e-3);
-    if ("mnist_cnn.h5".exists) {
-        model.load("mnist_cnn.h5");
-    }
+    auto optimizer = SGD!(typeof(model))(model, 0.001);
+    // if ("cifar_cnn.h5".exists) {
+    //     model.load("cifar_cnn.h5");
+    // }
 
-    foreach (epoch; 0 .. 10) {
+    foreach (epoch; 0 .. 300) {
         // TODO implement model.train();
+        writeln("epoch: ", epoch);
         with (trainBatch) {
             double lossSum = 0;
             double accSum = 0;
@@ -238,7 +239,7 @@ void main(string[] args) {
                 model.zeroGrad();
                 loss.backward();
                 optimizer.update();
-                writefln!"train loss: %f, acc: %f"(lossSum / i, accSum / i);
+                // writefln!"train loss: %f, acc: %f"(lossSum / i, accSum / i);
             }
             writefln!"train loss: %f, acc: %f"(lossSum / niter, accSum / niter);
         }
@@ -257,7 +258,6 @@ void main(string[] args) {
             }
             writefln!"test loss: %f, acc: %f"(lossSum / niter, accSum / niter);
         }
-        model.save("mnist_cnn.h5");
+        model.save("cifar_cnn.h5");
     }
-
 }
