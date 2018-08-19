@@ -1,3 +1,4 @@
+module grain;
 /++
 
 Chainer like autograd and neural networks library
@@ -17,3 +18,13 @@ Chainer like autograd and neural networks library
    $(LINK2 https://pytorch.org, pytorch)
    $(BR)
 */
+
+
+public:
+import grain.autograd;
+import grain.chain;
+import grain.serializer;
+import grain.optim;
+import grain.metric;
+
+version (grain_cuda) import grain.cuda;

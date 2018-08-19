@@ -88,20 +88,6 @@ struct Model(T, alias Storage) {
     }
 }
 
-auto accuracy(Vy, Vt)(Vy y, Vt t) { // if (isVariable!Vy && isVariable!Vt) {
-    auto nbatch = t.shape[0];
-    auto hy = y.to!HostStorage.sliced;
-    auto ht = t.to!HostStorage.sliced;
-    double acc = 0.0;
-    foreach (i; 0 .. nbatch) {
-        auto maxid = hy[i].maxIndex[0];
-        if (maxid == ht[i]) {
-            ++acc;
-        }
-    }
-    return acc / nbatch;
-}
-
 // FIXME build with "optimize" option and DeviceStorage backend causes loss=nan (non-release or CPU is OK)
 version (grain_cuda) {
     alias S = DeviceStorage;
@@ -111,6 +97,8 @@ version (grain_cuda) {
 
 void main() {
     import std.file : exists;
+    import grain.metric : accuracy;
+
     RNG.setSeed(0);
     grain.autograd.backprop = true;
     auto datasets = prepareDataset();
