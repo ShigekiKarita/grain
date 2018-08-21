@@ -3,7 +3,7 @@ module example.cifar;
 /**
    Image recognition example on CIFAR10/100
 
-   TODO: implement maxpool and batch normalization for VGG
+   TODO: implement maxpool, dropout and batch normalization for VGG
 */
 
 import std.stdio : writeln, writefln;
