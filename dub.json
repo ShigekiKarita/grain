@@ -125,6 +125,32 @@
             },
             "subConfigurations": {
                 "linenoise": "vendored"
+            },
+            "sourceFiles": [
+                "example/dub_engine.d"
+            ]
+        },
+        {
+            "name": "jupyterd",
+            "targetName": "jupyterd",
+            "targetType": "executable",
+            "mainSourceFile": "example/grain_jupyterd",
+            "lflags-ldc2": ["-l:libdruntime-ldc-shared.so", "-ldl"],
+            "dependencies": {
+                "drepl": "~>0.2.1",
+                "linenoise": "~>1.1.0",
+                "zmqd": "~>1.1.1",
+                "asdf": "~>0.2.2",
+            },
+            "sourceFiles": [
+                "example/dub_engine.d",
+                "example/jupyterd/source/jupyterd/conn.d",
+                "example/jupyterd/source/jupyterd/interpreter.d",
+                "example/jupyterd/source/jupyterd/kernel.d",
+                "example/jupyterd/source/jupyterd/message.d"
+            ],
+            "subConfigurations": {
+                "linenoise": "vendored"
             }
         }
     ],

@@ -501,3 +501,22 @@ unittest {
     auto x = iota(3, 4, 5).as!double.slice.variable;
     assert(x.unsqueeze!2.shape == [3, 4, 1, 5]);
 }
+
+auto sum(string mode = "fast", T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
+    import grain.functions.reduce : Sum;
+    auto f = new Sum!(mode, T, dim);
+    return f.applyForward(x);
+}
+
+unittest {
+    import grain.testing;
+    import numir;
+    import mir.ndslice;
+    import std.meta;
+
+    auto hx = [1f, 2f, 3f, 4f].sliced(2, 2).variable(true);
+    auto loss = sum(hx);
+    assert(loss.data[0] == 10f);
+    loss.backward();
+    assert(hx.gradSlice == [1f, 1f, 1f, 1f].sliced(2, 2));
+}

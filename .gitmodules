@@ -1,0 +1,3 @@
+[submodule "example/jupyterd"]
+	path = example/jupyterd
+	url = https://github.com/kaleidicassociates/jupyterd.git
