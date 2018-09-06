@@ -349,18 +349,20 @@ pure nothrow @nogc logsumexp(S)(S x) if (isSlice!S && Ndim!S == 1) {
 }
 
 ///
-pure nothrow @nogc unittest {
+pure nothrow // @nogc due to bug dmd 2.082.0
+unittest {
     import numir;
     import mir.ndslice;
 
     // import mir.math;
     import std.math;
 
-    static immutable x = [-1.0, 2.0, 3.0];
-    static immutable e = log(exp(-1.0) + exp(2.0) + exp(3.0));
+    // FIXME: add static after dmd 2.082.0 fixed
+    immutable x = [-1.0, 2.0, 3.0];
+    immutable e = log(exp(-1.0) + exp(2.0) + exp(3.0));
     assert(approxEqual(x.sliced.logsumexp, e));
-    static immutable xs = [-1.0, 2.0, 3.0, -1.0, 2.0, 3.0, -1.0, 2.0, 3.0];
-    static immutable es = [e, e, e];
+    immutable xs = [-1.0, 2.0, 3.0, -1.0, 2.0, 3.0, -1.0, 2.0, 3.0];
+    immutable es = [e, e, e];
     assert(approxEqual(xs.sliced(3, 3).alongDim!1
             .map!logsumexp, es));
 }

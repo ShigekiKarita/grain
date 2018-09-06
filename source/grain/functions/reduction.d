@@ -1,4 +1,4 @@
-module grain.functions.reduce;
+module grain.functions.reduction;
 
 import grain.autograd;
 import grain.cuda;

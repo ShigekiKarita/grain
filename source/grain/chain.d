@@ -503,7 +503,7 @@ unittest {
 }
 
 auto sum(string mode = "fast", T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
-    import grain.functions.reduce : Sum;
+    import grain.functions.reduction : Sum;
     auto f = new Sum!(mode, T, dim);
     return f.applyForward(x);
 }
