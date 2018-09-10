@@ -240,8 +240,7 @@ unittest {
     assert(iota(1, 1, 3).expand!0(2).expand!1(3) ==
            [[[0,1,2],[0,1,2],[0,1,2]],
             [[0,1,2],[0,1,2],[0,1,2]]]);
-    assert(iota(1, 3, 2).expand!0(2) == [[[0,1],[2,3],[4,5]],
-                                         [[0,1],[2,3],[4,5]]]);
+    assert(iota(1, 3, 2).expand!0(2) == iota(3, 2).repeat(2).unpack);
 }
 
 /// exapand dimension if s.length!dim == 1 else do nothing but type in the same expressions of repeat/unpack/swapped/index[0]
@@ -254,12 +253,10 @@ auto maybeExpand(size_t dim, S)(S s, size_t n) if (isSlice!S) {
 }
 
 ///
-nothrow pure @safe
+@nogc nothrow pure @safe
 unittest {
     import mir.ndslice;
-    assert(iota(1, 3, 2).maybeExpand!0(2) ==
-           [[[0,1],[2,3],[4,5]],
-            [[0,1],[2,3],[4,5]]]);
+    assert(iota(1, 3, 2).maybeExpand!0(2) == iota(3, 2).repeat(2).unpack);
     assert(iota(3, 2).maybeExpand!0(2) == iota(3, 2));
 }
 
