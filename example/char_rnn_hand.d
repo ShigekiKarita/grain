@@ -16,6 +16,7 @@ import std.algorithm : stdmap = map;
 import std.typecons : tuple;
 import std.net.curl : get;
 
+import mir.primitives : DimensionCount;
 import mir.math.common : log, exp, sqrt, fastmath;
 import mir.random : Random, unpredictableSeed;
 import mir.random.variable : discreteVar;
@@ -27,7 +28,7 @@ import numir;
 
 // pragma(inline, true)
 // @fastmath
-void dger(S, R)(S x, S y, R A, double alpha=1.0) if (Ndim!S == 2)
+void dger(S, R)(S x, S y, R A, double alpha=1.0) if (DimensionCount!S == 2)
 in {
     assert(x.length!1 == 1);
     assert(y.length!1 == 1);

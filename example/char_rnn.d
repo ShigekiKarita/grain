@@ -54,6 +54,7 @@ struct RNN(alias Storage, T=float) {
 
     auto sample(int seed_ix, size_t n, Variable!(float, 2, Storage) hprev) {
         // Random gen;
+        import numir : squeeze;
         auto gen = Random(unpredictableSeed);
         import mir.math : exp, sum;
         auto x = [seed_ix].variable;
@@ -70,7 +71,7 @@ struct RNN(alias Storage, T=float) {
     }
 
     /// batch x frame input
-    auto accumGrad(Slice!(Universal, [2L], int*) xs, Variable!(float, 2, Storage) hprev) {
+    auto accumGrad(Slice!(int*, 2, Universal) xs, Variable!(float, 2, Storage) hprev) {
         grain.autograd.backprop = true;
         auto loss = new Variable!(float, 0, Storage)[xs.length!1-1];
         auto hs = new Variable!(float, 2, Storage)[xs.length!1];

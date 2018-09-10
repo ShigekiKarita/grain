@@ -5,8 +5,8 @@
     ],
     "dependencies": {
         "derelict-cuda": "~>3.1.1",
-        "numir": "~>0.1.4",
-        "lubeck": "~>0.0.5"
+        "numir": "~>2.0.0",
+        "lubeck": "~>1.0.0-beta"
     },
     "targetType": "library",
     "libs": ["openblas", "hdf5"],

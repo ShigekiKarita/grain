@@ -18,8 +18,8 @@ enum files = [
     ];
 
 struct Dataset {
-    Slice!(Contiguous, [3], float*) inputs;
-    Slice!(Contiguous, [1], int*) targets;
+    Slice!(float*, 3) inputs;
+    Slice!(int*, 1) targets;
 }
 
 auto prepareDataset() {

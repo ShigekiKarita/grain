@@ -337,9 +337,9 @@ unittest {
 
 // TODO add to numir
 import mir.ndslice : isSlice;
-import numir : Ndim;
+import mir.primitives : DimensionCount;
 
-pure nothrow @nogc logsumexp(S)(S x) if (isSlice!S && Ndim!S == 1) {
+pure nothrow @nogc logsumexp(S)(S x) if (isSlice!S && DimensionCount!S == 1) {
     import mir.ndslice : map, maxIndex;
     import mir.math : log, sum, exp;
 
@@ -1268,7 +1268,7 @@ unittest {
 
 /// n-dimensional strided
 auto ndStrided(size_t d = 0, S, size_t dim)(S s, ptrdiff_t[dim] strides...)
-        if (isSlice!S && Ndim!S >= dim) {
+        if (isSlice!S && DimensionCount!S >= dim) {
     static if (d == dim) {
         return s;
     }
@@ -1289,7 +1289,7 @@ unittest {
 
 /// only both is supported
 auto unpad(size_t d = 0, S, size_t N)(S s, size_t[N] lengths...)
-        if (isSlice!S && Ndim!S == N) {
+        if (isSlice!S && DimensionCount!S == N) {
     import mir.ndslice;
 
     static if (d == N) {
@@ -1311,9 +1311,9 @@ unittest {
 }
 
 void sumNdStrided(size_t d = 0, S, D, size_t dim)(S src, D dst, ptrdiff_t[dim] strides...)
-        if (isSlice!S && isSlice!D && Ndim!S == Ndim!D) {
+        if (isSlice!S && isSlice!D && DimensionCount!S == DimensionCount!D) {
     static if (d == 0) {
-        static assert(dim == Ndim!S);
+        static assert(dim == DimensionCount!S);
     }
     foreach (i; 0 .. src.length!0) {
         immutable j = i * strides[d];

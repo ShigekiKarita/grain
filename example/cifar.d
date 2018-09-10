@@ -13,9 +13,9 @@ struct Dataset {
     import mir.ndslice : Slice, Contiguous;
 
     /// shape is [data, rgb, width, height]
-    Slice!(Contiguous, [4], float*) inputs;
-    Slice!(Contiguous, [1], int*) targets;
-    Slice!(Contiguous, [1], int*) coarses;
+    Slice!(float*, 4) inputs;
+    Slice!(int*, 1) targets;
+    Slice!(int*, 1) coarses;
 
     this(string[] paths) {
         import std.algorithm : sum, map, canFind;

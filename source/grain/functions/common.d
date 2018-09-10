@@ -222,8 +222,8 @@ auto broadcastable(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) a, V
 
 /// expand dimension i.e. repeat n time on dim
 auto expand(size_t dim, S)(S s, size_t n) if (isSlice!S) {
-    import numir : Ndim;
-    static assert(dim < Ndim!S, format!"acessing invalid dim %d (should be < %d)"(dim, Ndim!S));
+    import mir.primitives : DimensionCount;
+    static assert(dim < DimensionCount!S, format!"acessing invalid dim %d (should be < %d)"(dim, Ndim!S));
     assert(s.length!dim == 1);
 
     import mir.ndslice : repeat, swapped, transposed, unpack;
@@ -254,10 +254,12 @@ auto maybeExpand(size_t dim, S)(S s, size_t n) if (isSlice!S) {
 }
 
 ///
-@nogc nothrow pure @safe
+nothrow pure @safe
 unittest {
     import mir.ndslice;
-    assert(iota(1, 3, 2).maybeExpand!0(2) == iota(3, 2).repeat(2));
+    assert(iota(1, 3, 2).maybeExpand!0(2) ==
+           [[[0,1],[2,3],[4,5]],
+            [[0,1],[2,3],[4,5]]]);
     assert(iota(3, 2).maybeExpand!0(2) == iota(3, 2));
 }
 
@@ -273,9 +275,9 @@ unittest {
 auto broadcast(S1, S2)(S1 a0, S2 b0) if (isSlice!S1 && isSlice!S2) {
     import std.format : format;
     import std.typecons : tuple;
-    import numir.core : Ndim;
-    static assert(Ndim!S1 == Ndim!S2); // TODO support dim mismatched slices by unsqueezing like numpy
-    enum dim = Ndim!S1;
+    import mir.primitives : DimensionCount;
+    static assert(DimensionCount!S1 == DimensionCount!S2); // TODO support dim mismatched slices by unsqueezing like numpy
+    enum dim = DimensionCount!S1;
     static foreach (d; 1 .. dim+1) {
         mixin(format!q{auto a%d = a%d.maybeExpand!(d-1)(b0.length!(d-1));}(d, d-1));
         mixin(format!q{auto b%d = b%d.maybeExpand!(d-1)(a0.length!(d-1));}(d, d-1));

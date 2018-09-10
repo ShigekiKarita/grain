@@ -9,6 +9,7 @@ module grain.autograd;
 import std.traits : isArray, isBasicType;
 import std.typecons : RefCounted, RefCountedAutoInitialize;
 import mir.ndslice : isSlice, SliceKind, Contiguous, Universal;
+import mir.primitives : DimensionCount;
 import std.range : ElementType;
 
 import grain.cuda;
@@ -167,7 +168,7 @@ struct UntypedVariable {
     auto gradSlice(V)() if (isVariable!V && isHost!V) {
         import mir.ndslice.slice : sliced;
 
-        return grad.get!(typeof(V.init.data)).ptr.sliced(this.shape[0 .. Ndim!V]
+        return grad.get!(typeof(V.init.data)).ptr.sliced(this.shape[0 .. DimensionCount!V]
                 .castArray!size_t);
     }
 
@@ -175,7 +176,7 @@ struct UntypedVariable {
     auto dataSlice(V)() if (isVariable!V && isHost!V) {
         import mir.ndslice.slice : sliced;
 
-        return data.get!(typeof(V.init.data)).ptr.sliced(this.shape[0 .. Ndim!V]
+        return data.get!(typeof(V.init.data)).ptr.sliced(this.shape[0 .. DimensionCount!V]
                 .castArray!size_t);
     }
 }
@@ -316,7 +317,7 @@ struct Variable(T, size_t dim, alias Storage = HostStorage, SliceKind kind = Con
                 return [this.data[0]].sliced.universal;
             }
             else {
-                return Slice!(Universal, [dim], T*)(
+                return Slice!(T*, dim, Universal)(
                         this.shape.castArray!size_t,
                         this.strides.castArray!ptrdiff_t, data.ptr);
             }
@@ -329,7 +330,7 @@ struct Variable(T, size_t dim, alias Storage = HostStorage, SliceKind kind = Con
                 return [this.grad[0]].sliced.universal;
             }
             else {
-                return Slice!(Universal, [dim], T*)(
+                return Slice!(T*, dim, Universal)(
                         this.shape.castArray!size_t,
                         this.strides.castArray!ptrdiff_t, grad.ptr);
             }
@@ -340,10 +341,10 @@ struct Variable(T, size_t dim, alias Storage = HostStorage, SliceKind kind = Con
         auto sliced() {
             import mir.ndslice; // .slice : Slice, Universal;
             static if (dim == 0) {
-                return Slice!(Universal, [1], T*)([1], [1], cast(T*) data.ptr);
+                return Slice!(T*, 1, Universal)([1], [1], cast(T*) data.ptr);
             }
             else {
-                return Slice!(Universal, [dim], T*)(
+                return Slice!(T*, dim, Universal)(
                         this.shape.castArray!size_t,
                         this.strides.castArray!ptrdiff_t, cast(T*) data.ptr);
             }
@@ -527,7 +528,7 @@ enum bool isHost(V : Variable!(Elem, dim, Storage), Elem, size_t dim, alias Stor
             Storage!Elem == HostStorage!Elem);
 
 /// a function to get the number of dimensions of variable
-enum size_t Ndim(V : Variable!(Elem, dim, Storage), Elem, size_t dim, alias Storage) = dim;
+enum size_t DimensionCount(V : Variable!(Elem, dim, Storage), Elem, size_t dim, alias Storage) = dim;
 
 /// an alias of element type (e.g., float, double and int) of variable
 alias ElementType(V : Variable!(Elem, dim, Storage), Elem, size_t dim, alias Storage) = Elem;
@@ -543,22 +544,21 @@ auto length(V)(V v) if (isVariable!V) {
 auto variable(Sl)(Sl sl, bool requiresGrad = false) if (isSlice!Sl) {
     import mir.ndslice : universal, DeepElementType;
     import std.algorithm : reduce;
-    import numir : Ndim;
 
     auto s = sl.universal;
     alias S = typeof(s);
     alias E = DeepElementType!S;
     auto size = s._lengths.reduce!"a * b";
     auto data = s._iterator[0 .. size];
-    uint[Ndim!S] shape;
-    int[Ndim!S] strides;
-    static foreach (i; 0 .. Ndim!S) {
+    uint[DimensionCount!S] shape;
+    int[DimensionCount!S] strides;
+    static foreach (i; 0 .. DimensionCount!S) {
         assert(s._lengths[i] < int.max);
         assert(s._strides[i] < int.max);
         shape[i] = cast(uint) s.length!i;
         strides[i] = cast(int) s._strides[i];
     }
-    return Variable!(E, Ndim!S, HostStorage)(requiresGrad, shape, strides, data);
+    return Variable!(E, DimensionCount!S, HostStorage)(requiresGrad, shape, strides, data);
 }
 
 import std.traits : isNumeric;
