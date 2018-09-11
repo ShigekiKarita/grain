@@ -6,10 +6,10 @@
     "dependencies": {
         "derelict-cuda": "~>3.1.1",
         "numir": "~>2.0.0",
-        "lubeck": "~>1.0.0-beta"
+        "lubeck": "~>1.0.0"
     },
     "targetType": "library",
-    "libs": ["openblas", "hdf5"],
+    "libs": ["hdf5"],
     "buildTypes": {
         "cuda-unittest": {
             "buildOptions": ["unittests", "debugMode", "debugInfo"],
