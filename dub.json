@@ -9,7 +9,7 @@
         "lubeck": "~>1.0.0-beta"
     },
     "targetType": "library",
-    "libs": ["openblas", "hdf5"],
+    "libs": ["hdf5"],
     "buildTypes": {
         "cuda-unittest": {
             "buildOptions": ["unittests", "debugMode", "debugInfo"],
