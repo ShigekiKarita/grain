@@ -1,3 +1,7 @@
+<p align="center">
+  <img height="160" src="https://raw.githubusercontent.com/ShigekiKarita/grain/master/grain.png">
+</p>
+
 # grain
 [![Build Status](https://travis-ci.org/ShigekiKarita/grain.svg?branch=master)](https://travis-ci.org/ShigekiKarita/grain)
 [![codecov](https://codecov.io/gh/ShigekiKarita/grain/branch/master/graph/badge.svg)](https://codecov.io/gh/ShigekiKarita/grain)
