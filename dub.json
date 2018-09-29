@@ -40,6 +40,7 @@
         },
         "cuda-release": {
             "buildOptions":  ["releaseMode", "inline", "noBoundsCheck"],
+            "dflags-ldc2": ["-mcpu=native"],
             "versions": ["grain_cuda"],
             "preBuildCommands": ["make --silent cuda-deps"],
             "libs": ["cublas"]
@@ -60,6 +61,15 @@
             "targetType": "sourceLibrary"
         },
         {
+            "name": "example-ptb",
+            "targetName": "grain-example-ptb",
+            "targetType": "executable",
+            "mainSourceFile": "example/ptb.d",
+            "dependencies": {
+                "snck": "~>0.0.4"
+            }
+        },
+        {
             "name": "example-cifar",
             "targetName": "grain-example-cifar",
             "targetType": "executable",
@@ -70,13 +80,20 @@
             }
         },
         {
+            "name": "example-probability",
+            "targetName": "grain-example-probability",
+            "targetType": "executable",
+            "mainSourceFile": "example/probability.d"
+        },
+        {
             "name": "example-mnist",
             "targetName": "grain-example-mnist",
             "targetType": "executable",
             "mainSourceFile": "example/mnist.d",
             "dependencies": {
                 "snck": "~>0.0.4"
-            }
+            },
+            "libs": ["mkl_rt"]
         },
         {
             "name": "example-mnist-cnn",
