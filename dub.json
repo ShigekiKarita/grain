@@ -92,6 +92,15 @@
             "mainSourceFile": "example/mnist.d",
             "dependencies": {
                 "snck": "~>0.0.4"
+            }
+        },
+        {
+            "name": "example-mnist-mkl",
+            "targetName": "grain-example-mnist",
+            "targetType": "executable",
+            "mainSourceFile": "example/mnist.d",
+            "dependencies": {
+                "snck": "~>0.0.4"
             },
             "libs": ["mkl_rt"]
         },
