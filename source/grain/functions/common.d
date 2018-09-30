@@ -39,25 +39,6 @@ mixin template TypeChecker(alias forward, alias backward) {
 /// a trait to identify autograd functions
 enum bool isFunction(T) = hasMember!(T, "forward") && hasMember!(T, "backward");
 
-// {
-//     import std.meta : allSatisfy;
-//     import std.typecons : isTuple, tuple, Tuple, RefCounted;
-//     import std.traits : arity, Parameters, ReturnType;
-//     static foreach (i, forward; __traits(getOverloads, T, "forward")) {
-//         static foreach (i, backward; __traits(getOverloads, T, "backward")) {
-//             static if (!allSatisfy!(isHost, Parameters!forward) &&
-//                        !allSatisfy!(isHost, Parameters!backward)) {
-//                 mixin TypeChecker!(forward, backward);
-//             }
-//             static if (allSatisfy!(isHost, Parameters!forward) &&
-//                        allSatisfy!(isHost, Parameters!backward)) {
-//                 mixin TypeChecker!(forward, backward);
-//             }
-//         }
-//     }
-//     return true;
-// }();
-
 /// common components (typecheck and backprop wrappers) for autograd functions
 mixin template FunctionCommon() {
     import std.meta : allSatisfy;
@@ -73,12 +54,14 @@ mixin template FunctionCommon() {
                 alias DeviceRets = Tuple!(Parameters!backward);
                 alias DeviceArgs = Tuple!(Parameters!forward);
                 mixin TypeChecker!(forward, backward);
+                DeviceArgs _mixin_dargs;
             }
             static if (allSatisfy!(isHost, Parameters!forward) &&
                        allSatisfy!(isHost, Parameters!backward)) {
                 alias HostRets = Tuple!(Parameters!backward);
                 alias HostArgs = Tuple!(Parameters!forward);
                 mixin TypeChecker!(forward, backward);
+                HostArgs _mixin_hargs;
             }
         }
     }
@@ -86,17 +69,17 @@ mixin template FunctionCommon() {
 
     /// store grain.autograd.BackProp object in returned variables from forward function
     auto applyForward(Args...)(Args args) {
-        UntypedVariable[] uargs;
-        uargs.reserve(args.length);
-        foreach (a; args) {
-            uargs ~= UntypedVariable(a);
+        enum isHost = allSatisfy!(isHost, Args);
+        static foreach (i, a; args) {
+            static if (isHost) _mixin_hargs[i] = a;
+            else _mixin_dargs[i] = a;
         }
         auto rets = this.forward(args).toTuple;
-        enum isHost = allSatisfy!(isHost, Args);
-        foreach (ref r; rets) {
-            if (grain.autograd.backprop) {
-                r.bprop = BackProp(&this.applyBackward!isHost,
-                                   uargs, new UntypedVariable[rets.length]);
+        auto bp = BackProp(&this.applyBackward!isHost,
+                           new UntypedVariable[rets.length]);
+        if (grain.autograd.backprop) {
+            foreach (ref r; rets) {
+                r.bprop = bp;
             }
         }
         static if (rets.length > 1) {
@@ -107,36 +90,38 @@ mixin template FunctionCommon() {
     }
 
     /// type-erased version of backward function used in grain.autograd.BackProp object
-    void applyBackward(bool isHost_)(UntypedVariable[] ugradOutputs, UntypedVariable[] uinputs) {
+    void applyBackward(bool isHost_)(UntypedVariable[] ugradOutputs) {
         static if (isHost_) {
             HostRets vgradOutputs;
+            alias args = _mixin_hargs;
         } else {
             DeviceRets vgradOutputs;
+            alias args = _mixin_dargs;
         }
         static foreach (i; 0 .. vgradOutputs.length) {
             vgradOutputs[i] = ugradOutputs[i].to!(typeof(vgradOutputs[i]));
         }
         auto vgradInputs = this.backward(vgradOutputs.expand).toTuple;
-        assert(vgradInputs.length == uinputs.length, "invalid number of input gradients");
-        UntypedVariable[vgradInputs.length] ugradInputs; // TODO use refcounted?
+        static assert(typeof(vgradInputs).length == args.length,
+                      "invalid number of input gradients");
+
+        UntypedVariable[vgradInputs.length] ugradInputs;
         foreach (i, v; vgradInputs) {
             ugradInputs[i] = UntypedVariable(v);
         }
 
         foreach (i, vgi; vgradInputs) {
             // TODO reconsider this condition
-            if (uinputs[i].requiresGrad) {
-                alias Storage = typeof(vgradInputs[i].data);
-                alias V = typeof(vgradInputs[i]);
-                auto data = uinputs[i].grad.get!Storage;
-                static if (vgradInputs[i].isHost) {
+            if (args[i].requiresGrad) {
+                auto data = args[i].grad;
+                static if (vgi.isHost) {
                     import mir.ndslice.slice : sliced;
                     auto shape = vgradInputs[i].shape.castArray!size_t;
                     data[] += vgradInputs[i].data[]; // .sliced(shape); FIXME use shape
                 } else version (grain_cuda) {
                     import std.traits : isFloatingPoint;
                     // TODO support integral types
-                    static if (isFloatingPoint!(ElementType!V)) {
+                    static if (isFloatingPoint!(ElementType!(typeof(vgi)))) {
                         // FIXME if contiguous
                         import grain.cuda;
                         grain.cuda.axpy(vgradInputs[i].data, data);
@@ -155,7 +140,7 @@ mixin template FunctionCommon() {
                     }
                 }
             }
-            uinputs[i].bprop.backward(&ugradInputs[i], uinputs[i].outPosition);
+            args[i].bprop.backward(&ugradInputs[i]); // FIXME support pos
         }
     }
 }

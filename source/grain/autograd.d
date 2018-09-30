@@ -122,6 +122,9 @@ struct UntypedVariable {
     int[] strides;
     TypeInfo elem;
     Variant data, grad;
+    // void* dataPtr, gradPtr;
+    bool isHost = true;
+
     size_t outPosition = 0;
     // RefCounted!
     BackProp bprop;
@@ -136,6 +139,7 @@ struct UntypedVariable {
         this.data = v.data;
         this.grad = v.grad;
         this.bprop = v.bprop;
+        this.isHost = v.isHost;
     }
 
     /// variant.get
@@ -194,9 +198,8 @@ shared bool backprop = false;
 
 /// stores information for backpropagation
 struct BackProp {
-    alias Proc = void delegate(UntypedVariable[], UntypedVariable[]);
+    alias Proc = void delegate(UntypedVariable[]);
     Proc proc;
-    UntypedVariable[] inputs;
     UntypedVariable[] gradOutputs;
     size_t nGrad = 0;
 
@@ -205,18 +208,16 @@ struct BackProp {
         import std.exception : enforce;
         import std.range : empty;
 
-        // enforce(!this.inputs.empty, "nothing to backprop");
-        if (this.inputs.empty)
-            return;
+        if (this.gradOutputs.empty) return;
         ++this.nGrad;
         if (grad is null) {
             enforce(this.gradOutputs.length == 1, "this variable is not loss");
         }
         else {
-            this.gradOutputs[pos] = *grad; // FIXME??
+            this.gradOutputs[pos] = *grad; // FIXME currently multi-output functions is not supported??
         }
         if (grad is null || this.nGrad == this.gradOutputs.length) {
-            proc(this.gradOutputs, this.inputs);
+            proc(this.gradOutputs);
         }
     }
 }
@@ -355,7 +356,7 @@ struct Variable(T, size_t dim, alias Storage = HostStorage, SliceKind kind = Con
     static if (dim == 0) {
         void backward() {
             auto grad = UntypedVariable(1.0f.variable.to!Storage);
-            this.bprop.backward(&grad, 0);
+            this.bprop.backward(&grad);
         }
     }
 
