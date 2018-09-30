@@ -4,6 +4,8 @@ import std.array;
 import std.algorithm : splitter;
 import std.stdio : File;
 import mir.ndslice;
+
+import numir;
 import grain;
 
 struct Dictionary {
@@ -54,21 +56,22 @@ struct Corpus {
 struct LSTM(T, alias Storage) {
     int inSize, outSize;
     enum gates = ["c", "i", "f", "o"];
-    static foreach (i; ["x", "h"]) {
-        static foreach (g; gates) {
+    static foreach (g; gates) {
+        static foreach (i; ["x", "h"]) {
             mixin("Linear!(T, Storage) " ~ i ~ g ~";");
         }
     }
 
     this(int inSize, int outSize) {
         static foreach (g; gates) {
-            mixin("x" ~ g ~" = Linear!(T, Storage)(inSize, outSize);");
-            mixin("h" ~ g ~" = Linear!(T, Storage)(outSize, outSize);");
+            static foreach (i, isize; ["x": "inSize", "h": "outSize"]) {
+                mixin(i ~ g ~" = Linear!(T, Storage)(" ~ isize ~ ", outSize);");
+            }
         }
     }
 
     auto opCall(Variable!(T, 2, Storage) x, Variable!(T, 2, Storage) h, Variable!(T, 2, Storage) c) {
-        import std.typecons;
+        import std.typecons : tuple;
         static foreach (g; gates) {
             mixin("auto " ~ g ~ "_ = x" ~ g  ~ "(x) + h" ~ g ~ "(h);");
         }
@@ -78,21 +81,63 @@ struct LSTM(T, alias Storage) {
     }
 }
 
-struct RNNLM(alias Storage) {
-    size_t vocabSize, embedSize, hiddenSize;
-    Embedding!(int, Storage) embed;
-    Linear!(float, Storage) linear;
+void test() {
+    auto lstm = LSTM!(float, HostStorage)(2, 3);
+    auto x = zeros!float(5, 2).variable;
+    auto h = zeros!float(5, 3).variable;
+    auto c = zeros!float(5, 3).variable;
+    auto state = lstm(x, h, c);
+    assert(state.h.shape == [5, 3]);
+    assert(state.c.shape == [5, 3]);
 }
 
-void main() {
+struct RNNLM(alias Storage) {
+    Embedding!(float, Storage) embed;
+    LSTM!(float, Storage) lstm1, lstm2;
+    Linear!(float, Storage) linear;
+
+    static void init(C, Args ...)(ref C chain, Args args) {
+        chain = C(args);
+    }
+
+    this(int vocabSize, int embedSize, int hiddenSize) {
+        init(embed, vocabSize, embedSize);
+    }
+}
+
+void main(string[] args) {
+    debug test();
+
     import std.stdio;
+    import std.getopt;
+    import std.format;
+
+    version (grain_cuda) alias Storage = DeviceStorage;
+    else alias Storage = HostStorage;
+
+    auto dataset = "data";
+    auto embed = 200;
+    auto hidden = 200;
+
+    auto opt = getopt(
+        args,
+        "dataset", format!"dataset path (default %s)"(dataset), &dataset,
+        "embed", format!"embed size (default %s)"(embed), &embed,
+        "hidden", format!"hidden size (default %s)"(hidden), &hidden
+        );
+
+    if (opt.helpWanted) {
+        defaultGetoptPrinter("Image recognition example on CIFAR10/100",
+                             opt.options);
+        return;
+    }
+
     Corpus corpus;
     foreach (name; ["train", "valid", "test"]) {
         corpus.register("data/ptb." ~ name ~ ".txt", name);
     }
-    writeln("vocab:", corpus.dict.idx2word.length);
-    // auto trainBatchList =
-    // writeln(corpus.dataset["train"][0 .. 10].map!(i => corpus.dict.idx2word[i]));
+    immutable vocabSize = cast(int) corpus.dict.idx2word.length;
+    writeln("vocab:", vocabSize);
     corpus.batchfy("train")[0 .. 10, 0].map!(i => corpus.dict.idx2word[i]).writeln;
-    auto lstm = LSTM!(float, HostStorage)(2, 3);
+    auto rnnlm = RNNLM!Storage(vocabSize, embed, hidden);
 }
