@@ -116,18 +116,11 @@ struct UntypedVariable {
 
     bool requiresGrad;
     size_t dim;
-    // size_t[]
     uint[] shape;
-    // ptrdiff_t[]
     int[] strides;
     TypeInfo elem;
     Variant data, grad;
-    // void* dataPtr, gradPtr;
-    bool isHost = true;
-
-    size_t outPosition = 0;
-    // RefCounted!
-    BackProp bprop;
+    // size_t outPosition = 0;
 
     ///
     this(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) v) {
@@ -138,8 +131,6 @@ struct UntypedVariable {
         this.dim = dim;
         this.data = v.data;
         this.grad = v.grad;
-        this.bprop = v.bprop;
-        this.isHost = v.isHost;
     }
 
     /// variant.get
