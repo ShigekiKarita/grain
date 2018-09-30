@@ -86,25 +86,17 @@ mixin template FunctionCommon() {
 
     /// store grain.autograd.BackProp object in returned variables from forward function
     auto applyForward(Args...)(Args args) {
-        import std.algorithm : each;
-        RefCounted!(UntypedVariable[]) uargs;
-        uargs.length = args.length;
-        foreach (i, a; args) {
-            uargs[i] = UntypedVariable(a);
-            uargs[i].bprop = a.bprop; // pass the chain to backprop
+        UntypedVariable[] uargs;
+        uargs.reserve(args.length);
+        foreach (a; args) {
+            uargs ~= UntypedVariable(a);
         }
         auto rets = this.forward(args).toTuple;
         enum isHost = allSatisfy!(isHost, Args);
-        foreach (i, r; rets) {
-            auto u = UntypedVariable(r);
+        foreach (ref r; rets) {
             if (grain.autograd.backprop) {
-                // RefCounted!
-                BackProp bp = BackProp(&this.applyBackward!isHost,
-                                       uargs);
-                bp.gradOutputs.length = rets.length;
-                u.bprop = bp;
-                u.outPosition = i;
-                rets[i].bprop = bp;
+                r.bprop = BackProp(&this.applyBackward!isHost,
+                                   uargs, new UntypedVariable[rets.length]);
             }
         }
         static if (rets.length > 1) {
@@ -116,13 +108,6 @@ mixin template FunctionCommon() {
 
     /// type-erased version of backward function used in grain.autograd.BackProp object
     void applyBackward(bool isHost_)(UntypedVariable[] ugradOutputs, UntypedVariable[] uinputs) {
-        // static foreach (backward; __traits(getOverloads, this, "backward")) {
-        //     static if (isHost_ &&  allSatisfy!(isHost, Parameters!backward))  {
-        //         Parameters!backward vgradOutputs;
-        //     } else {
-        //         Parameters!backward vgradOutputs;
-        //     }
-        // }
         static if (isHost_) {
             HostRets vgradOutputs;
         } else {
@@ -155,7 +140,6 @@ mixin template FunctionCommon() {
                         // FIXME if contiguous
                         import grain.cuda;
                         grain.cuda.axpy(vgradInputs[i].data, data);
-
                         /*
                         import grain.cudnn;
                         auto shape = vgradInputs[i].shape;

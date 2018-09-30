@@ -55,7 +55,7 @@ struct Corpus {
 
 struct LSTM(T, alias Storage) {
     int inSize, outSize;
-    enum gates = ["c", "i", "f", "o"];
+    enum gates = ["a", "i", "f", "o"];
     static foreach (g; gates) {
         static foreach (i; ["x", "h"]) {
             mixin("Linear!(T, Storage) " ~ i ~ g ~";");
@@ -72,23 +72,40 @@ struct LSTM(T, alias Storage) {
 
     auto opCall(Variable!(T, 2, Storage) x, Variable!(T, 2, Storage) h, Variable!(T, 2, Storage) c) {
         import std.typecons : tuple;
+        if (!h.defined || !c.define) {
+            return this.opCall(x);
+        }
+
         static foreach (g; gates) {
             mixin("auto " ~ g ~ "_ = x" ~ g  ~ "(x) + h" ~ g ~ "(h);");
         }
-        auto cNext = sigmoid(f_) * c + sigmoid(i_) * tanh(c_);
+        auto cNext = sigmoid(f_) * c + sigmoid(i_) * tanh(a_);
         auto hNext = sigmoid(o_) * tanh(cNext);
-        return tuple!("h", "c")(cNext, hNext);
+        return tuple!("h", "c")(hNext, cNext);
+    }
+
+    auto opCall(Variable!(T, 2, Storage) x) {
+        import std.typecons : tuple;
+        static foreach (g; gates) {
+            mixin("auto " ~ g ~ "_ = x" ~ g  ~ "(x);");
+        }
+        auto cNext = sigmoid(i_) * tanh(a_);
+        auto hNext = sigmoid(o_) * tanh(cNext);
+        return tuple!("h", "c")(hNext, cNext);
     }
 }
 
 void test() {
     auto lstm = LSTM!(float, HostStorage)(2, 3);
     auto x = zeros!float(5, 2).variable;
-    auto h = zeros!float(5, 3).variable;
-    auto c = zeros!float(5, 3).variable;
-    auto state = lstm(x, h, c);
-    assert(state.h.shape == [5, 3]);
-    assert(state.c.shape == [5, 3]);
+
+    auto state1 = lstm(x);
+    assert(state1.h.shape == [5, 3]);
+    assert(state1.c.shape == [5, 3]);
+
+    auto state2 = lstm(x, state1.h, state1.c);
+    assert(state2.h.shape == [5, 3]);
+    assert(state2.c.shape == [5, 3]);
 }
 
 struct RNNLM(alias Storage) {
@@ -102,6 +119,26 @@ struct RNNLM(alias Storage) {
 
     this(int vocabSize, int embedSize, int hiddenSize) {
         init(embed, vocabSize, embedSize);
+    }
+
+    auto opCall(Variable!(int, 1, Storage)[] xs) {
+        // TODO implement indexing
+        double ret = 0;
+        Variable!(float, 2, Storage) h1, h2, c1, c2;
+        foreach (i, x; xs[0 .. $-1]) {
+            auto h0 = this.embed(x);
+            auto s1 = this.lstm1(h0, h1, c1);
+            h1 = s1.h;
+            c1 = s1.h;
+            auto s2 = this.lstm2(h1, h2, c2);
+            h2 = s2.h;
+            c2 = s2.c;
+            auto y = this.fc(h2);
+            auto loss = crossEntropy(y, xs[i + 1]);
+            loss.backward();
+            ret += loss.to!HostStorage.data[0];
+        }
+        return ret;
     }
 }
 

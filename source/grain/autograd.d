@@ -135,6 +135,7 @@ struct UntypedVariable {
         this.dim = dim;
         this.data = v.data;
         this.grad = v.grad;
+        this.bprop = v.bprop;
     }
 
     /// variant.get
@@ -217,13 +218,6 @@ struct BackProp {
         if (grad is null || this.nGrad == this.gradOutputs.length) {
             proc(this.gradOutputs, this.inputs);
         }
-
-        // FIXME: reconsider this maybe
-        // import core.memory : GC;
-        // destroy(gradOutputs);
-        // GC.free(&gradOutputs);
-        // destroy(this);
-        // GC.free(&this);
     }
 }
 
@@ -252,10 +246,12 @@ struct Variable(T, size_t dim, alias Storage = HostStorage, SliceKind kind = Con
     int[dim] strides;
     Storage!T data;
     Storage!T grad;
-    // RefCounted!
     BackProp bprop;
     enum isHost = is(Storage!T == HostStorage!T);
     uint offset = 0;
+
+    // void opAssign(Variable!(T, dim, Storage) rhs) {
+    // }
 
     ///
     this(bool requiresGrad, uint[dim] shape, int[dim] strides, Storage!T data) {
@@ -263,16 +259,13 @@ struct Variable(T, size_t dim, alias Storage = HostStorage, SliceKind kind = Con
         this.shape = shape;
         this.strides = strides;
         this.data = data;
-        // this.grad.isHost = is(Storage!T == HostStorage!T);
         // if (this.requiresGrad) { // TODO enable this
         static if (is(Storage!T == HostStorage!T)) {
             this.grad = zeros!(Storage!T)(this.data.length);
         }
         else version (grain_cuda) {
-            // TODO why is grain.cuda. required?
             this.grad = grain.cuda.zeros!(CuPtr!T)(this.data.length);
         }
-        // }
     }
 
     /// get gradient as variable
@@ -484,11 +477,14 @@ unittest {
     auto g = [0f, 1f].variable;
     auto u = UntypedVariable(g);
     z.backward(&u);
+    import std.stdio;
+    writeln(x.gradSliced);
     assert(x.gradSliced == [0f, 4f]);
 }
 
-/// FIXME: test multiple addition with assign
+// /// FIXME: test multiple addition with assign
 // unittest {
+//     import std.stdio;
 //     grain.autograd.backprop = true;
 //     auto x = [1f, 2f].variable(true);
 //     x = x + x; // x = 2 x
