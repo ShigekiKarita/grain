@@ -9,7 +9,7 @@
         "lubeck": "~>1.0.0"
     },
     "targetType": "library",
-    "libs": ["hdf5"],
+    "libs": ["hdf5", "sz"],
     "buildTypes": {
         "cuda-unittest": {
             "buildOptions": ["unittests", "debugMode", "debugInfo"],
@@ -67,7 +67,8 @@
             "mainSourceFile": "example/ptb.d",
             "dependencies": {
                 "snck": "~>0.0.4"
-            }
+            },
+            "libs": ["mkl_rt"]
         },
         {
             "name": "example-cifar",

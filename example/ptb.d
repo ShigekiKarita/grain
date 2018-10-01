@@ -16,11 +16,11 @@ auto prepareDataset() {
 
     if (!exists("data")) {
         mkdir("data");
-        enum root = "https://github.com/tomsercu/lstm/raw/master/";
-        enum dst = "data/ptb.%s.txt";
-        foreach (f; ["train", "valid", "test"]) {
-            download(format!(root ~ dst)(f), format!dst(f));
-        }
+    }
+    enum root = "https://github.com/tomsercu/lstm/raw/master/";
+    foreach (f; ["train", "valid", "test"]) {
+        auto dst = format!"data/ptb.%s.txt"(f);
+        if (!exists(dst))download(root ~ dst, dst);
     }
 
     Corpus corpus;
@@ -139,7 +139,7 @@ void uniform_(C)(ref C chain) {
     import std.traits : hasMember;
     static if (!hasMember!(C, "tupleof")) return;
     else {
-        foreach (c; chain.tupleof) {
+        foreach (ref c; chain.tupleof) {
             static if (is(typeof(C) == Linear!(T, Storage))) {
                 c.weight.sliced[] = UniformVariable!T(-0.1, 0.1).generate(c.nInput, c.nOutput);
                 c.bias.sliced[] = 0;
@@ -162,9 +162,9 @@ struct RNNLM(alias Storage) {
 
     this(int vocabSize, int embedSize, int hiddenSize) {
         init(embed, vocabSize, embedSize);
-        init(lstm1, embedSize, hiddenSize).uniform_;
-        init(lstm2, hiddenSize, hiddenSize).uniform_;
-        init(linear, hiddenSize, vocabSize).uniform_;
+        init(lstm1, embedSize, hiddenSize); // .uniform_;
+        init(lstm2, hiddenSize, hiddenSize); // .uniform_;
+        init(linear, hiddenSize, vocabSize); // .uniform_;
     }
 
     auto opCall(O)(Slice!(int*, 2) xslice, ref O optimizer) {
@@ -180,6 +180,9 @@ struct RNNLM(alias Storage) {
         auto h2 = new VF2[xs.length+1];
         auto c1 = new VF2[xs.length+1];
         auto c2 = new VF2[xs.length+1];
+        auto loss = new Variable!(float, 0, Storage)[xs.length];
+
+        // Variable!(float, 1, Storage) loss = 0.0f.variable.to!Storage;
         foreach (i, x; xs[0 .. $-1]) {
             h0[i] = this.embed(x);
             auto s1 = this.lstm1(h0[i], h1[i], c1[i]);
@@ -189,9 +192,11 @@ struct RNNLM(alias Storage) {
             h2[i+1] = s2.h;
             c2[i+1] = s2.c;
             auto y = this.linear(h2[i+1]);
-            auto loss = crossEntropy(y, xs[i+1]);
-            loss.backward();
-            ret += y.shape[0] * loss.to!HostStorage.data[0];
+            loss[i] = crossEntropy(y, xs[i+1]);
+            ret += y.shape[0] * loss[i].to!HostStorage.data[0];
+        }
+        foreach (l; loss) {
+            l.backward();
         }
         return ret / xslice.length!0;
     }
@@ -214,6 +219,7 @@ void main(string[] args) {
     auto batchSize = 20;
     auto bptt = 35;
     auto lr = 0.1;
+    auto epoch = 20;
 
     auto opt = getopt(
         args,
@@ -222,7 +228,8 @@ void main(string[] args) {
         "hidden", format!"hidden size (default %s)"(hidden), &hidden,
         "batchSize", format!"batch size (default %s)"(batchSize), &batchSize,
         "bptt", format!"backprop through time size (default %s)"(bptt), &bptt,
-        "lr", format!"learning rate of optimizer (default %s)"(lr), &lr
+        "lr", format!"learning rate of optimizer (default %s)"(lr), &lr,
+        "epoch", format!"epoch of training (default %s)"(epoch), &epoch
         );
 
     if (opt.helpWanted) {
@@ -243,11 +250,14 @@ void main(string[] args) {
     import std.algorithm : min;
     grain.autograd.backprop = true;
     auto total = batch.length!0;
-    foreach (i; iota([total / bptt], 0, bptt)) {
-        auto xs = batch[i .. min($, i + bptt)];
-        model.zeroGrad();
-        auto loss = model(xs, optimizer);
-        writeln(loss.exp);
-        optimizer.update();
+    foreach (e; 0 .. epoch) {
+        import snck : snck;
+        foreach (i; iota([total / bptt], 0, bptt).snck) {
+            auto xs = batch[i .. min($, i + bptt)];
+            model.zeroGrad();
+            auto loss = model(xs, optimizer);
+            writeln(loss);
+            optimizer.update();
+        }
     }
 }
