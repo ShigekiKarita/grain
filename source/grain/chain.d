@@ -423,7 +423,6 @@ struct Embedding(T, alias Storage) if (isFloatingPoint!T) {
 
     void resetParameters() {
         import numir : normal;
-
         this.weight = normal!T(this.nVocab, this.nEmbed).slice.variable(true).to!Storage;
     }
 

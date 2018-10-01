@@ -95,6 +95,10 @@ struct SGD(Chain) {
 
         // FIXME : this code is much faster than above (250fps -> 300fps in example/mnist.d)
         static if (isHost!V) {
+            // if (field.data.ptr != null && field.grad.ptr != null)
+            // writeln(field);
+            // writeln(field.sliced.shape);
+            // writeln(field.gradSliced.shape);
             field.sliced[] -= this.lr * field.gradSliced[];
         }
         else {
@@ -339,6 +343,10 @@ struct AdaDelta(Chain) {
     }
 }
 
+auto make(alias O, C, Args ...)(ref C chain, Args args) if (isOptimizer!(O!C)) {
+    return O!C(chain, args);
+}
+
 ///
 unittest {
     import grain.autograd;
@@ -346,7 +354,8 @@ unittest {
 
     {
         auto model = MLP!(float, HostStorage)(3);
-        auto optim = AdaDelta!(typeof(model))(model);
+        // auto optim = AdaDelta!(typeof(model))(model);
+        auto optim = make!AdaDelta(model);
         // static assert(isOptimizer!(typeof(optim)));
         model.fc1.weight.data.zero_();
         model.fc1.weight.grad = [[0.2f, 0.0f, 0.0f], [0.0f, 0.0f, 0.0f]].variable
