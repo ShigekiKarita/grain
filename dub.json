@@ -9,7 +9,7 @@
         "lubeck": "~>1.0.0"
     },
     "targetType": "library",
-    "libs": ["hdf5", "sz"],
+    "libs": ["hdf5"],
     "buildTypes": {
         "cuda-unittest": {
             "buildOptions": ["unittests", "debugMode", "debugInfo"],
