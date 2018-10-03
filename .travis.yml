@@ -17,6 +17,7 @@ addons:
     packages:
       - libopenblas-dev
       - libhdf5-dev
+      - libsz2
 
 cache: apt
 
