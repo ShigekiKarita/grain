@@ -124,36 +124,14 @@ struct DUBInterpreter(Engine) if (isEngine!Engine)
         return !hasErr;
     }
 
-    // unittest
-    // {
-    //     auto intp = interpreter(echoEngine());
-    //     assert(intp.classify("3+2") == Kind.Expr);
-    //     // only single expressions
-    //     assert(intp.classify("3+2 foo()") == Kind.Error);
-    //     assert(intp.classify("3+2;") == Kind.Stmt);
-    //     // multiple statements
-    //     assert(intp.classify("3+2; foo();") == Kind.Stmt);
-    //     assert(intp.classify("struct Foo {}") == Kind.Decl);
-    //     // multiple declarations
-    //     assert(intp.classify("void foo() {} void bar() {}") == Kind.Decl);
-    //     // can't currently mix declarations and statements
-    //     assert(intp.classify("void foo() {} foo();") == Kind.Error);
-    //     // or declarations and expressions
-    //     assert(intp.classify("void foo() {} foo()") == Kind.Error);
-    //     // or statments and expressions
-    //     assert(intp.classify("foo(); foo()") == Kind.Error);
-
-    //     assert(intp.classify("import std.stdio;") == Kind.Decl);
-    // }
-
     Engine _engine;
     Appender!(char[]) _incomplete;
-
 }
 
 
 final class DynamicDUBInterpreter : Interpreter
 {
+    // FIXME do not hardcode here
     LanguageInfo li = LanguageInfo("D","2.081.1",".d", "text/plain");
     
     private import drepl.engines;
@@ -177,7 +155,6 @@ final class DynamicDUBInterpreter : Interpreter
 	    InterpreterResult.State state;
         auto codeLines = code.splitLines.array;
         InterpreterResult[] result;
-	    // auto result = codeLines.map!(line=>intp.interpret(line)).array;
         foreach (i, line; codeLines) {
             result ~= intp.interpret(line, i == codeLines.length - 1);
         }
@@ -201,7 +178,6 @@ final class DynamicDUBInterpreter : Interpreter
 }
 
 
-
 int main(string[] args) {
     import std.stdio : writeln;
     import std.getopt : getopt, defaultGetoptPrinter;
@@ -218,12 +194,12 @@ int main(string[] args) {
     string compiler = "dmd";
     string flags = "-debug -g -w";
     string packages = "grain";
+    // TODO support CUI args
     // auto opt = getopt(args, "verbose|V", "verbose mode for logging", &verbose,
     //         "flags|F", "compiler flags", &flags, "compiler|C",
     //         "compiler binary", &compiler, "build|B",
     //         "build mode (debug, release, optimize)", &build, "packages|P",
     //         "list of DUB packages", &packages);
-
     // if (opt.helpWanted) {
     //     defaultGetoptPrinter("playground of grain", opt.options);
     //     return;
@@ -233,23 +209,7 @@ int main(string[] args) {
         DUBEngine(packages.split,
                   CompilerOpt(compiler, build, flags))
         );
-    // );
-
-    // Interpreter i;
-    // switch(args[1])
-    // {
-    // case "echo":
-    //     i = new EchoInterpreter();
-    //     break;
-    // case "d":
-    //     i = new DInterpreter();
-    //     break;
-    // default:
-    //     return 1;
-    // }
-
     auto k = Kernel(i,/*connection string=*/args[2]);
     k.mainloop();
     return 0;
 }
-
