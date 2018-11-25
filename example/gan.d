@@ -48,7 +48,8 @@ struct Discriminator {
 
 void main() {
     import std.stdio;
-    import numir : RNG, permutation, view;
+    import mir.ndslice : slice;
+    import numir : RNG, permutation, view, normal;
     import grain.dataset.mnist : prepareDataset, makeBatch;
     import snck : snck;
     static import grain.config;
@@ -60,28 +61,50 @@ void main() {
     auto batchSize = 64;
     auto visibleSize = 28 * 28;
     auto latentSize = 100;
-    auto lr = 5e-4;
-    auto epochs = 1;
+    auto lr = 1e-4;
+    auto epochs = 20;
 
     auto datasets = prepareDataset();
     auto trainBatch = datasets.train.makeBatch(batchSize);
 
-    auto modelG = Generator(latentSize, visibleSize);
-    auto modelD = Discriminator(visibleSize);
-    auto optimG = Adam!Generator(modelG, lr);
-    auto optimD = Adam!Discriminator(modelD, lr);
+    auto gModel = Generator(latentSize, visibleSize);
+    auto gOptim = make!Adam(gModel, lr);
+
+    auto dModel = Discriminator(visibleSize);
+    auto dOptim = make!Adam(dModel, lr);
 
     foreach (e; 0 .. epochs) {
         writefln!"epoch %d"(e);
-        foreach (i; trainBatch.niter.permutation.snck) {
-            // writefln!"iter %d / %d"(i, trainBatch.niter);
-            auto x = trainBatch.inputs[i];
+        foreach (i; trainBatch.niter.permutation) {
+            auto x = slice(trainBatch.inputs[i] / 255f);
             auto nBatch = cast(uint) x.shape[0];
+
+            dModel.zeroGrad();
             auto xReal = x.view(nBatch, -1).variable(true).to!S;
-            auto yReal = uninitVariable!(float, S)([nBatch], true);
-            yReal.data.fill_(1);
-            auto pReal = modelD(xReal);
-            auto dRealLoss = pReal.log.sum;
+            auto dRealLoss = sum(0f - log(dModel(xReal)));
+            dRealLoss.backward();
+
+            auto zd = normal!float(nBatch, latentSize).slice.variable(true).to!S;
+            auto dFake = gModel(zd);
+            auto dFakeLoss = sum(log(dModel(dFake)));
+            dFakeLoss.backward();
+            dOptim.update();
+
+            auto zg = normal!float(nBatch, latentSize).slice.variable(true).to!S;
+            auto gFake = gModel(zg);
+            auto gLoss = sum(log(dModel(gFake)));
+            gModel.zeroGrad();
+            gLoss.backward();
+            gOptim.update();
+
+            auto dLoss = dRealLoss.to!HostStorage.data[0] + dFakeLoss.to!HostStorage.data[0];
+            writefln!"dloss(real) %f, dloss(fake) %f, dloss %f, gloss %f"(
+                dRealLoss.to!HostStorage.data[0],
+                dFakeLoss.to!HostStorage.data[0],
+                dLoss,
+                gLoss.to!HostStorage.data[0]);
         }
+        gModel.save("generator.h5");
+        dModel.save("discriminator.h5");
     }
 }
