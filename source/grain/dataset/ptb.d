@@ -1,4 +1,4 @@
-// PTB language modeling dataset
+/// PTB language modeling dataset
 module grain.dataset.ptb;
 
 import std.array;
@@ -9,6 +9,7 @@ import mir.random.variable : UniformVariable;
 
 import numir;
 
+///
 auto prepareDataset() {
     import std.format;
     import std.file : exists, read, mkdir;
@@ -30,6 +31,7 @@ auto prepareDataset() {
     return corpus;
 }
 
+///
 struct Dictionary {
     enum eos = "<eos>";
     enum eosId = 0;
@@ -49,6 +51,7 @@ struct Dictionary {
     }
 }
 
+///
 struct Corpus {
     Dictionary dict;
     int[][string] dataset;

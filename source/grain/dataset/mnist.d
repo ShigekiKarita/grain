@@ -4,7 +4,7 @@ module grain.dataset.mnist;
 import std.typecons : tuple;
 import mir.ndslice;
 
-
+///
 enum files = [
     "train-images-idx3-ubyte",
     "train-labels-idx1-ubyte",

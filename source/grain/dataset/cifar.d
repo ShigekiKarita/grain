@@ -12,6 +12,7 @@ struct Dataset {
     Slice!(int*, 1) targets;
     Slice!(int*, 1) coarses;
 
+    ///
     this(string[] paths) {
         import std.algorithm : sum, map, canFind;
         import mir.ndslice :  sliced, flattened, universal;
@@ -50,6 +51,7 @@ struct Dataset {
         }
     }
 
+    ///
     auto makeBatch(size_t batchSize) {
         import numir : view;
         import std.typecons : tuple;
@@ -63,6 +65,7 @@ struct Dataset {
     }
 }
 
+///
 auto prepareDataset(string dataset, string dir = "data") {
     import std.stdio : writeln;
     import std.typecons : tuple;
