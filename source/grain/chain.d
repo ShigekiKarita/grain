@@ -524,8 +524,11 @@ unittest {
 
 
 /// dropout : apply random mask
-auto dropout(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x, float ratio=0.5, bool isTrain=false) {
+auto dropout(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x, float ratio=0.5, bool isTrain=true) {
     import grain.functions.random : Dropout;
+
+    if (!isTrain || ratio == 0.0) return x;
+
     auto f = new Dropout!(T, dim)(ratio);
     return f.applyForward(x);
 }
@@ -537,6 +540,7 @@ unittest {
     import mir.ndslice;
     import std.meta;
     import std.stdio;
+    import std.math;
 
     auto hx = [1f, 2f, 3f, 4f].sliced(2, 2).variable(true);
     auto hy = dropout(hx);
@@ -544,7 +548,7 @@ unittest {
     auto ghx = hx.gradSliced;
     foreach (i; 0 .. hx.shape[0]) {
         foreach (j; 0 .. hx.shape[1]) {
-            if (hy.sliced[i, j] == 2.0 * hx.sliced[i, j]) {
+            if (approxEqual(hy.sliced[i, j], 2.0 * hx.sliced[i, j])) {
                 assert(ghx[i, j] == 2.0f);
             }
             else {
