@@ -69,6 +69,7 @@ mixin template FunctionCommon() {
 
     /// store grain.autograd.BackProp object in returned variables from forward function
     auto applyForward(Args...)(Args args) {
+        static import grain.config;
         enum isHost = allSatisfy!(isHost, Args);
         static foreach (i, a; args) {
             static if (isHost) _mixin_hargs[i] = a;
@@ -77,7 +78,7 @@ mixin template FunctionCommon() {
         auto rets = this.forward(args).toTuple;
         auto bp = BackProp(&this.applyBackward!isHost,
                            new UntypedVariable[rets.length]);
-        if (grain.autograd.backprop) {
+        if (grain.config.backprop) {
             foreach (ref r; rets) {
                 r.bprop = bp;
             }

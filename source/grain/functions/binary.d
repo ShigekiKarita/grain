@@ -411,7 +411,9 @@ unittest {
     import std.typecons;
     import numir;
     import mir.ndslice;
-    grain.autograd.backprop = true;
+    static import grain.config;
+
+    grain.config.backprop = true;
     auto func = new MatMul!float;
     auto a = uniform!float(3, 4).slice.variable(true);
     auto b = uniform!float(4, 2).slice.variable(true);

@@ -18,8 +18,8 @@ enum files = [
     ];
 
 struct Dataset {
-    Slice!(Contiguous, [3], float*) inputs;
-    Slice!(Contiguous, [1], int*) targets;
+    Slice!(float*, 3) inputs;
+    Slice!(int*, 1) targets;
 }
 
 auto prepareDataset() {
@@ -125,8 +125,10 @@ version (grain_cuda) {
 
 void main() {
     import std.file : exists;
+    static import grain.config;
+
     RNG.setSeed(0);
-    grain.autograd.backprop = true;
+    grain.config.backprop = true;
     auto datasets = prepareDataset();
     auto batchSize = 64;
     auto inSize = 28;

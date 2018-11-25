@@ -98,9 +98,10 @@ version (grain_cuda) {
 void main() {
     import std.file : exists;
     import grain.metric : accuracy;
+    static import grain.config;
 
     RNG.setSeed(0);
-    grain.autograd.backprop = true;
+    grain.config.backprop = true;
     auto datasets = prepareDataset();
     auto batchSize = 64;
     auto inSize = 28;

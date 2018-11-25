@@ -184,8 +184,6 @@ auto gradSlice(V)(V v) if (isVariable!V && isHost!V) {
     return v.grad.ptr.sliced(v.shape.castArray!size_t);
 }
 
-/// FIXME maybe singleton?
-shared bool backprop = false;
 
 /// stores information for backpropagation
 struct BackProp {
@@ -462,7 +460,8 @@ unittest {
 
 /// test multiple addition
 unittest {
-    grain.autograd.backprop = true;
+    static import grain.config;
+    grain.config.backprop = true;
     auto x = [1f, 2f].variable(true);
     auto y = x + x; // x = 2 x
     auto z = y + y; // x = 4 x
@@ -477,7 +476,7 @@ unittest {
 // /// FIXME: test multiple addition with assign
 // unittest {
 //     import std.stdio;
-//     grain.autograd.backprop = true;
+//     grain.config.backprop = true;
 //     auto x = [1f, 2f].variable(true);
 //     x = x + x; // x = 2 x
 //     x = x + x; // x = 4 x

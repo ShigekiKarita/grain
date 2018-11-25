@@ -287,9 +287,8 @@ unittest {
 // forward two functions parallel
 unittest {
     import std.typecons;
-
-    grain.autograd.backprop = true;
-    // scope (exit) grain.autograd.backprop = false;
+    static import grain.config;
+    grain.config.backprop = true;
     {
         auto x = [-1.0f, 2.0f, 3.0f].variable(true);
         x.requiresGrad = true;

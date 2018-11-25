@@ -187,8 +187,8 @@ unittest {
     import mir.ndslice;
     import grain.autograd;
     import numir;
-
-    grain.autograd.backprop = true;
+    static import grain.config;
+    grain.config.backprop = true;
 
     auto hx = [[0.1f, 0.2f], [0.3f, 0.4f], [0.5f, 0.6f]].variable(true);
     auto ht = [1, 0, -100].variable;

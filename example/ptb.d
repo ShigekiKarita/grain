@@ -246,9 +246,9 @@ void main(string[] args) {
     auto optimizer = make!SGD(model, lr);
 
     auto batch = corpus.batchfy("train");
-    import grain.autograd;
+    static import grain.config;
     import std.algorithm : min;
-    grain.autograd.backprop = true;
+    grain.config.backprop = true;
     auto total = batch.length!0;
     foreach (e; 0 .. epoch) {
         import snck : snck;

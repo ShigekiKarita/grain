@@ -1,4 +1,4 @@
-.PHONY: test clean kernel example-mnist example-char-rnn cuda-deps install-hdf5 doc
+.PHONY: test clean kernel example-mnist example-char-rnn cuda-deps install-hdf5 doc examples
 
 HDF5_URL := https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.8/hdf5-1.8.15-patch1/bin/linux-centos7-x86_64/hdf5-1.8.15-patch1-linux-centos7-x86_64-static.tar.gz
 HDF5_ROOT := $(shell basename $(HDF5_URL) .tar.gz)
@@ -7,6 +7,7 @@ CUDA_COMPUTE_CAPABILITY := `tool/grain-compute-capability 0`
 CUDA_BIT := $(shell getconf LONG_BIT)
 NO_CUDA := false
 DUB_BUILD := unittest
+
 
 ifeq ($(NO_CUDA),true)
 	DUB_OPTS = -b=$(DUB_BUILD)
@@ -60,14 +61,19 @@ clean:
 	find . -type f -name "*.lst" -print -delete	
 	rm -fv *.a
 
-example-mnist:
-	dub --config=example-mnist --compiler=ldc2 $(DUB_OPTS)
+# example-mnist:
+# 	dub --config=example-mnist --compiler=ldc2 $(DUB_OPTS)
 
-example-mnist-cnn:
-	dub --config=example-mnist-cnn --compiler=ldc2 $(DUB_OPTS)
+# example-mnist-cnn:
+# 	dub --config=example-mnist-cnn --compiler=ldc2 $(DUB_OPTS)
 
-example-char-rnn:
-	dub --config=example-char-rnn --compiler=ldc2 $(DUB_OPTS)
+# example-char-rnn:
+# 	dub --config=example-char-rnn --compiler=ldc2 $(DUB_OPTS)
+
+example-%:
+	dub build --config=$@ $(DUBOPTS)
+
+examples: example-mnist example-mnist-cnn example-char-rnn example-cifar example-ptb repl jupyterd
 
 $(HDF5_ROOT):
 	wget $(HDF5_URL)

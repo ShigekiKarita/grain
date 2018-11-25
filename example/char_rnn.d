@@ -21,6 +21,7 @@ import mir.random.variable : discreteVar;
 import mir.random;
 import mir.ndslice;
 
+static import grain.config;
 import grain.autograd;
 import grain.optim;
 
@@ -72,7 +73,7 @@ struct RNN(alias Storage, T=float) {
 
     /// batch x frame input
     auto accumGrad(Slice!(int*, 2, Universal) xs, Variable!(float, 2, Storage) hprev) {
-        grain.autograd.backprop = true;
+        grain.config.backprop = true;
         auto loss = new Variable!(float, 0, Storage)[xs.length!1-1];
         auto hs = new Variable!(float, 2, Storage)[xs.length!1];
         hs[0] = hprev;

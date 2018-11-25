@@ -727,3 +727,81 @@ void poolBackward(bool isMax = true, bool isAveragePad = false,
                                      gradInput.makeCudnnTensor,
                                      cast(void*) gradInput.data.ptr) );
 }
+
+
+/// Global (thread local) dropout state with descriptor and state array
+struct DropoutDescriptor {
+    cudnnDropoutDescriptor_t _dropoutDesc = null;
+    CuPtr!byte _stateArray;
+
+    @disable this(this);
+    @disable new(size_t);
+
+    /// FIXME set global seed
+    this(float ratio, size_t seed=0) {
+        assert(0.0 <= ratio && ratio <= 1.0);
+        checkCUDNN(cudnnCreateDropoutDescriptor(&_dropoutDesc));
+        // How much memory does dropout need for states?
+        // These states are used to generate random numbers internally
+        // and should not be freed until the RNN descriptor is no longer used
+        size_t stateSize;
+        checkCUDNN(cudnnDropoutGetStatesSize(cudnnHandle, &stateSize));
+        _stateArray = CuPtr!byte(stateSize);
+        checkCUDNN(cudnnSetDropoutDescriptor(_dropoutDesc,
+                                             cudnnHandle,
+                                             ratio,
+                                             cast(void*) _stateArray.ptr,
+                                             stateSize,
+                                             seed));
+    }
+
+    auto setRatio(float ratio=0.0) {
+        checkCUDNN(cudnnSetDropoutDescriptor(
+                       this._dropoutDesc,
+                       cudnnHandle,
+                       ratio,
+                       null, // if state is null, state won't be updated
+                       0,
+                       0));
+        return this._dropoutDesc;
+    }
+}
+
+struct DropoutState {
+    shared size_t count = 0;
+    static DropoutDescriptor _desc;
+
+
+    auto forward(size_t dim)(Variable!(float, dim, DeviceStorage) x) {
+        auto y = x.uninit;
+        auto xt = x.makeCudnnTensor;
+        size_t reservedSize;
+        cudnnDropoutGetReserveSpaceSize(xt, reservedSize);
+        checkCUDNN(cudnnDropoutForward(
+                       cudnnHandle,
+                       _dropoutDesc,
+                       xt,
+                       cast(void*) x.ptr,
+                       y.makeCudnnTensor,
+                       cast(void*) y.ptr,
+                       cast(void*) _stateArray.ptr,
+                       _stateArray.length
+                       ));
+        return y;
+    }
+
+    auto backward(size_t dim)(Variable!(float, dim, DeviceStorage) gy) {
+        auto gx = gy.uninit;
+        checkCUDNN(cudnnDropoutBackward(
+                       cudnnHandle,
+                       _dropoutDesc,
+                       gy.makeCudnnTensor,
+                       cast(void*) gy.ptr,
+                       gx.makeCudnnTensor,
+                       cast(void*) gx.ptr,
+                       cast(void*) _stateArray.ptr,
+                       _stateArray.length
+                       ));
+        return gx;
+    }
+}

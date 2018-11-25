@@ -67,6 +67,15 @@
             "mainSourceFile": "example/ptb.d",
             "dependencies": {
                 "snck": "~>0.0.4"
+            }
+        },
+        {
+            "name": "example-ptb-mkl",
+            "targetName": "grain-example-ptb",
+            "targetType": "executable",
+            "mainSourceFile": "example/ptb.d",
+            "dependencies": {
+                "snck": "~>0.0.4"
             },
             "libs": ["mkl_rt"]
         },

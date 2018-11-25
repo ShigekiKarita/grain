@@ -189,6 +189,7 @@ void main(string[] args) {
     import numir;
     import snck : snck;
     import grain.autograd;
+    static import grain.config;
 
     auto datasetName = "cifar-10";
     auto dumpDir = "";
@@ -212,7 +213,7 @@ void main(string[] args) {
 
     // TODO add training and evaluation code here
     RNG.setSeed(0);
-    grain.autograd.backprop = true;
+    grain.config.backprop = true;
     auto batchSize = 64;
     auto trainBatch = datasets.train.makeBatch(batchSize);
     auto testBatch = datasets.test.makeBatch(batchSize);

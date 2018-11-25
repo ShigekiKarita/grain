@@ -23,6 +23,7 @@ Chainer like autograd and neural networks library
 public:
 import grain.autograd;
 import grain.chain;
+import grain.config;
 import grain.serializer;
 import grain.optim;
 import grain.metric;

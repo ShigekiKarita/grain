@@ -172,8 +172,9 @@ unittest {
     import std.typecons;
     import grain.testing;
     import mir.ndslice;
+    static import grain.config;
 
-    grain.autograd.backprop = true;
+    grain.config.backprop = true;
 
     NegativeLogLikelihood!(float, int) func;
     auto hx = [[0.2f, 0.4f, 0.4f], [0.1f, 0.5f, 0.4f], [0.1f, 0.5f, 0.4f]]
@@ -206,8 +207,9 @@ unittest {
     import std.typecons;
     import grain.testing;
     import mir.ndslice;
+    static import grain.config;
 
-    grain.autograd.backprop = true;
+    grain.config.backprop = true;
 
     HuberLoss!float func;
     auto hx = [[0.2f, 0.4f, 0.4f], [0.1f, 0.5f, 0.4f], [0.1f, 0.5f, 0.4f]]

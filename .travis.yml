@@ -22,6 +22,7 @@ cache: apt
 
 script:
   - dub test --arch "$ARCH" --build=unittest-cov
+  - make test
 
 after_success:
   - if [ "$DC" = dmd ]; then
