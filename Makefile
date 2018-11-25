@@ -22,8 +22,8 @@ test: $(CUDA_DEPS)
 
 cuda-deps: $(CUDA_DEPS)
 
-tools/grain-compute-capability: tools/compute_capability.d
-	cd tools; dub build -b=compute-capability
+tool/grain-compute-capability: tool/compute_capability.d
+	cd tool; dub build -b=compute-capability
 
 kernel/kernel_lib.ptx: kernel/kernel_lib.cu
 	# clang-6.0 -c -S -emit-llvm $< --cuda-gpu-arch=sm_$(CUDA_COMPUTE_CAPABILITY)
