@@ -3,7 +3,7 @@
 HDF5_URL := https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.8/hdf5-1.8.15-patch1/bin/linux-centos7-x86_64/hdf5-1.8.15-patch1-linux-centos7-x86_64-static.tar.gz
 HDF5_ROOT := $(shell basename $(HDF5_URL) .tar.gz)
 
-CUDA_COMPUTE_CAPABILITY := `tool/compute_capability.out 0`
+CUDA_COMPUTE_CAPABILITY := `tool/grain-compute-capability 0`
 CUDA_BIT := $(shell getconf LONG_BIT)
 NO_CUDA := false
 DUB_BUILD := unittest
@@ -11,7 +11,7 @@ DUB_BUILD := unittest
 ifeq ($(NO_CUDA),true)
 	DUB_OPTS = -b=$(DUB_BUILD)
 else
-	CUDA_DEPS = tool/compute_capability.out source/grain/kernel.di kernel/kernel_lib.ptx
+	CUDA_DEPS = tool/grain-compute-capability source/grain/kernel.di kernel/kernel_lib.ptx
 	DUB_OPTS = -b=cuda-$(DUB_BUILD)
 endif
 
@@ -20,6 +20,9 @@ test: $(CUDA_DEPS)
 	dub test --compiler=$(DC) $(DUB_OPTS)
 
 cuda-deps: $(CUDA_DEPS)
+
+tools/grain-compute-capability: tools/compute_capability.d
+	cd tools; dub build -b=compute-capability
 
 kernel/kernel_lib.ptx: kernel/kernel_lib.cu
 	# clang-6.0 -c -S -emit-llvm $< --cuda-gpu-arch=sm_$(CUDA_COMPUTE_CAPABILITY)

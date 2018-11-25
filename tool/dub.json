@@ -1,0 +1,20 @@
+{
+    "name": "grain-tools",
+    "authors": [
+        "Shigeki Karita"
+    ],
+    "description": "CUDA utility for D",
+    "copyright": "Copyright © 2018, karita",
+    "license": "BSL-1.0",
+    "configurations": [
+        {
+            "name": "compute-capability",
+            "targetName": "grain-compute-capability",
+            "targetType": "executable",
+            "mainSourceFile": "compute_capability.d",
+            "dependencies": {
+                "derelict-cuda": "~>3.1.1"
+            }
+        }
+    ]
+}
