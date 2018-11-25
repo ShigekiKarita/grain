@@ -7,7 +7,7 @@ module grain.cudnn;
 
 version (grain_cuda):
 
-public import grain.cuda : cudnnHandle, checkCUDNN, CuPtr, isDeviceMemory;
+public import grain.cuda : cudnnHandle, checkCUDNN, CuPtr, CuArray, isDeviceMemory;
 import grain.autograd; //  : Variable, DeviceStorage;
 import grain.utility : castArray;
 public import derelict.cuda;
@@ -731,7 +731,7 @@ void poolBackward(bool isMax = true, bool isAveragePad = false,
 
 /// Global (thread local) dropout state with descriptor and state array
 struct ThreadLocalDropout {
-    shared size_t count = 0;
+    static shared size_t count = 0;
     static cudnnDropoutDescriptor_t _dropoutDesc = null;
     static CuPtr!byte _stateArray;
 
@@ -739,7 +739,7 @@ struct ThreadLocalDropout {
     @disable new(size_t);
 
     /// FIXME set global seed
-    void init(size_t seed=0) {
+    static void init(size_t seed=0) {
         if (_dropoutDesc != null) return;
 
         checkCUDNN(cudnnCreateDropoutDescriptor(&_dropoutDesc));
@@ -755,14 +755,16 @@ struct ThreadLocalDropout {
                                              cast(void*) _stateArray.ptr,
                                              stateSize,
                                              seed));
-        ++count;
+
+        import core.atomic : atomicOp;
+        count.atomicOp!"+="(1);
     }
 
     static descriptor(float ratio=0.0) {
-        this.init();
+        init();
         if (ratio != 0.0) {
             checkCUDNN(cudnnSetDropoutDescriptor(
-                           this._dropoutDesc,
+                           _dropoutDesc,
                            cudnnHandle,
                            ratio,
                            null, // if state is null, state won't be updated
@@ -773,8 +775,8 @@ struct ThreadLocalDropout {
     }
 
     static ref state() {
-        this.init();
-        return this._stateArray;
+        init();
+        return _stateArray;
     }
 }
 
@@ -782,12 +784,13 @@ struct CudnnDropout {
     CuPtr!byte reserved;
 
     auto forward(size_t dim)(Variable!(float, dim, DeviceStorage) x, float ratio) {
+        import std.algorithm : move;
         auto y = x.uninit;
         auto xt = x.makeCudnnTensor;
 
         size_t reservedSize;
-        cudnnDropoutGetReserveSpaceSize(xt, reservedSize);
-        this.reserved = CuPtr!byte(reserved);
+        cudnnDropoutGetReserveSpaceSize(xt, &reservedSize);
+        this.reserved = CuPtr!byte(reservedSize);
 
         checkCUDNN(cudnnDropoutForward(
                        cudnnHandle,
@@ -811,8 +814,8 @@ struct CudnnDropout {
                        cast(void*) gy.ptr,
                        gx.makeCudnnTensor,
                        cast(void*) gx.ptr,
-                       cast(void*) _stateArray.ptr,
-                       _stateArray.length
+                       cast(void*) this.reserved.ptr,
+                       this.reserved.length
                        ));
         return gx;
     }

@@ -16,9 +16,6 @@ struct Dropout(T, size_t dim) {
     this(double ratio) {
         assert(0.0 <= ratio && ratio <= 1.0);
         this.ratio = ratio;
-        // version (grain_cuda) {
-        //     this.impl = CudnnDropout(ratio);
-        // }
     }
 
     auto forward(Variable!(T, dim, HostStorage) x) {
@@ -39,18 +36,18 @@ struct Dropout(T, size_t dim) {
         return this.hostMask * gy;
     }
 
-    // version (grain_cuda) {
-    //     import grain.cudnn : CudnnDropout;
-    //     CudnnDropout impl;
+    version (grain_cuda) {
+        import grain.cudnn : CudnnDropout;
+        CudnnDropout impl;
 
-    //     auto forward(Variable!(T, dim, DeviceStorage) x) {
-    //         return this.impl.forward(x);
-    //     }
+        auto forward(Variable!(T, dim, DeviceStorage) x) {
+            return this.impl.forward(x, this.ratio);
+        }
 
-    //     auto backward(Variable!(T, dim, DeviceStorage) gy) {
-    //         return this.impl.backward(gy);
-    //     }
-    // }
+        auto backward(Variable!(T, dim, DeviceStorage) gy) {
+            return this.impl.backward(gy);
+        }
+    }
 
     mixin FunctionCommon;
 }
@@ -69,22 +66,17 @@ unittest {
         }
     }
 
-    // import std.stdio;
-    // writeln(x);
-    // auto cx = x.to!DeviceStorage;
-    // {
-    //     auto cy = func.forward(cx);
-    //     writeln(cy.to!HostStorage);
-    //     auto cgx = func.backward(cx);
-    //     writeln(cgx.to!HostStorage);
-    // }
-    // func.impl.setRatio(0.1);
-    // func.impl.setRatio(0.5);
-    // {
-    //     auto cy = func.forward(cx);
-    //     writeln(cy.to!HostStorage);
-    //     auto cgx = func.backward(cx);
-    //     writeln(cgx.to!HostStorage);
-    // }
+    version (grain_cuda) {
+        auto cx = x.to!DeviceStorage;
+        auto cy = func.forward(cx).to!HostStorage;
+        auto cgx = func.backward(cx).to!HostStorage;
 
+        foreach (i; 0 .. x.shape[0]) {
+            foreach (j; 0 .. x.shape[1]) {
+                auto yij = cy.sliced[i, j];
+                assert(yij == 0 || yij == 2.0 * x.sliced[i, j]);
+                assert(yij == cgx.sliced[i, j]);
+            }
+        }
+    }
 }
