@@ -43,12 +43,31 @@ GRAIN_GLOBAL void reluGrad(float* gx, const float* gy, const float* x, int n) {
     }
 }
 
+// TODO faster implementation using thrust
 GRAIN_GLOBAL void sum(const float* x, float* result, int N) {
     if (threadIdx.x != 0) return;
     result[0] = 0;
     for (int n = 0; n < N; ++n) {
         result[0] += x[n];
     }
+}
+
+GRAIN_GLOBAL void sum_faster(const float *g_idata, float *g_odata, uint n, uint N) {
+    extern __shared__ float sdata[];
+
+    unsigned int tid = threadIdx.x;
+    unsigned int i = blockIdx.x * (blockDim.x * 2) + threadIdx.x;
+    if (i >= N) return;
+    sdata[tid] = g_idata[i];
+    __syncthreads();
+
+    for (unsigned int s=1; s <= blockDim.x; s<<=1) {
+        if (tid % (2 * s) == 0) {
+            sdata[tid] += sdata[tid + s];
+        }
+        __syncthreads();
+    }
+    if (tid == 0) g_odata[blockIdx.x] = sdata[0];
 }
 
 GRAIN_GLOBAL void nll(float* loss, uint* count, const float* logp, const int* targetId, int ignoreIndex, uint batchSize, int classSize) {

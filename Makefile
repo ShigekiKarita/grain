@@ -12,15 +12,17 @@ DUB_BUILD := unittest
 ifeq ($(NO_CUDA),true)
 	DUB_OPTS = -b=$(DUB_BUILD)
 else
-	CUDA_DEPS = tool/grain-compute-capability source/grain/kernel.di kernel/kernel_lib.ptx
+	CUDA_DEPS = tool/grain-compute-capability source/grain/kernel.di kernel/kernel_lib.ptx libgrain_thrust.so
 	DUB_OPTS = -b=cuda-$(DUB_BUILD)
 endif
-
 
 test: $(CUDA_DEPS)
 	dub test --compiler=$(DC) $(DUB_OPTS)
 
 cuda-deps: $(CUDA_DEPS)
+
+libgrain_thrust.so: kernel/thrust.cu
+	nvcc -shared $< -o $@ -Xcompiler -fPIC
 
 tool/grain-compute-capability: tool/compute_capability.d
 	cd tool; dub build --config=compute-capability

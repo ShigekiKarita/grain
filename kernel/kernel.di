@@ -11,6 +11,7 @@ nothrow @nogc extern (C++)
 	/* @(kernel) */void relu(float* x, int N);
 	/* @(kernel) */void reluGrad(float* gx, const float* gy, const float* x, int N);
 	/* @(kernel) */void sum(const float* x, float* result, int N);
+    /* @(kernel) */void sum_faster(const float* x, float* result, uint n, uint N);
 	/* @(kernel) */void nll(float* loss, uint* count, const float* logp, const int* targetId, int ignoreIndex, uint batchSize, int logpStride);
 	/* @(kernel) */void nllGrad(float* glogP, float coeff, const int* targetId, int ignoreIndex, uint batchSize, int logpStride);
 	/* @(kernel) */void addBias(float* y, const float* b, uint blen, uint ylen);

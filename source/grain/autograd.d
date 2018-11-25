@@ -15,6 +15,9 @@ import std.range : ElementType;
 import grain.cuda;
 import grain.utility : castArray;
 
+// import std.algorithm : fill;
+// alias fill_ = fill;
+
 /// CPU storage (i.e., GC dynamic array)
 alias HostStorage(T) = T[];
 

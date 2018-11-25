@@ -15,19 +15,26 @@
             "buildOptions": ["unittests", "debugMode", "debugInfo"],
             "versions": ["grain_cuda"],
             "preBuildCommands": ["make --silent cuda-deps"],
-            "libs": ["cublas"]
+            "libs": ["cublas", "grain_thrust"]
         },
         "cuda-unittest-cov": {
             "buildOptions": ["unittests", "coverage", "debugMode", "debugInfo"],
             "versions": ["grain_cuda"],
             "preBuildCommands": ["make --silent cuda-deps"],
-            "libs": ["cublas"]
+            "libs": ["cublas", "grain_thrust"]
         },
         "cuda-unittest-release": {
             "buildOptions": ["unittests", "releaseMode", "optimize", "inline", "noBoundsCheck", "debugInfo"],
             "preBuildCommands": ["make --silent cuda-deps"],
             "versions": ["grain_cuda"],
-            "libs": ["cublas"]
+            "libs": ["cublas", "grain_thrust"]
+        },
+        "cuda-release": {
+            "buildOptions":  ["releaseMode", "inline", "noBoundsCheck"],
+            "dflags-ldc2": ["-mcpu=native"],
+            "versions": ["grain_cuda"],
+            "preBuildCommands": ["make --silent cuda-deps"],
+            "libs": ["cublas", "grain_thrust"]
         },
         "unittest": {
             "buildOptions": ["unittests", "debugMode", "debugInfo"],
@@ -37,13 +44,6 @@
         },
         "unittest-release": {
             "buildOptions": ["unittests", "releaseMode", "optimize", "inline", "noBoundsCheck", "debugInfo"],
-        },
-        "cuda-release": {
-            "buildOptions":  ["releaseMode", "inline", "noBoundsCheck"],
-            "dflags-ldc2": ["-mcpu=native"],
-            "versions": ["grain_cuda"],
-            "preBuildCommands": ["make --silent cuda-deps"],
-            "libs": ["cublas"]
         },
         "grain-docs": {
             "buildOptions": ["syntaxOnly"],
@@ -59,6 +59,15 @@
         {
             "name": "sourceLibrary",
             "targetType": "sourceLibrary"
+        },
+        {
+            "name": "example-gan",
+            "targetName": "grain-example-gan",
+            "targetType": "executable",
+            "mainSourceFile": "example/gan.d",
+            "dependencies": {
+                "snck": "~>0.0.4"
+            }
         },
         {
             "name": "example-ptb",

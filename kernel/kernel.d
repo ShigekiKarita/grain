@@ -53,6 +53,9 @@ void reluGrad(float* gx, const float* gy, const float* x, int N);
 void sum(const float* x, float* result, int N);
 
 /* @kernel */
+void sum_faster(const float* x, float* result, uint n, uint N);
+
+/* @kernel */
 void nll(float* loss, uint* count, const float* logp, const int* targetId,
         int ignoreIndex, uint batchSize, int logpStride);
 

@@ -8,7 +8,6 @@ import grain.utility : toTuple, fromTuple, castArray;
 struct Sum(string mode = "fast", T, size_t dim) {
     import std.traits : isFloatingPoint;
     static assert(isFloatingPoint!T, "currently only float point is supported.");
-    mixin FunctionCommon;
 
     uint[dim] shape;
 
@@ -27,6 +26,28 @@ struct Sum(string mode = "fast", T, size_t dim) {
         fill(gx.data, y.data[0]);
         return gx;
     }
+
+    version (grain_cuda) {
+        auto forward(Variable!(T, dim, DeviceStorage) x) {
+            import std.algorithm : reduce;
+            import grain.cuda : sum;
+
+            this.shape = x.shape;
+            // auto y = CuPtr!float([0]);
+            // Global.kernel!sum.call(x.data.ptr, y.ptr, cast(int) x.data.length)
+            //     .launch(cast(uint[3]) [1U,1,1], cast(uint[3]) [1U,1,1], 0U);
+            // checkCudaErrors(cuCtxSynchronize());
+            return x.data.sum.variable.to!DeviceStorage;
+        }
+
+        auto backward(Variable!(T, 0, DeviceStorage) y) {
+            auto gx = uninitVariable!(T, DeviceStorage)(this.shape, y.requiresGrad);
+            gx.data.fill_(y.data.toHost[0]);
+            return gx;
+        }
+    }
+
+    mixin FunctionCommon;
 }
 
 
@@ -38,4 +59,10 @@ unittest {
     auto y = func.forward(x);
     assert(y == 10f.variable);
     assert(func.backward(1.2f.variable) == [1.2f, 1.2f, 1.2f, 1.2f].sliced(2, 2).variable);
+
+    version (grain_cuda) {
+        auto cx = x.to!DeviceStorage;
+        auto cy = func.forward(cx).to!HostStorage;
+        assert(cy == 10f.variable);
+    }
 }
