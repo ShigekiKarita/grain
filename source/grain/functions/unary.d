@@ -1497,7 +1497,6 @@ unittest {
     version (grain_cuda) {
         auto y = f.forward(x.to!DeviceStorage);
         assert(y.to!HostStorage.sliced == yex);
-        // writeln(y.to!HostStorage.sliced);
         auto gx = f.backward(y);
         enum gxex = [[[[0, 1, 4]], [[0, 4, 10]]], [[[0, 7, 16]], [[0, 10, 22]]]];
         assert(gx.to!HostStorage.sliced == gxex);

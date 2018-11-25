@@ -468,8 +468,6 @@ unittest {
     auto g = [0f, 1f].variable;
     auto u = UntypedVariable(g);
     z.backward(&u);
-    import std.stdio;
-    writeln(x.gradSliced);
     assert(x.gradSliced == [0f, 4f]);
 }
 

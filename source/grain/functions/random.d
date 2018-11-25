@@ -10,7 +10,7 @@ struct Dropout(T, size_t dim) {
     import mir.ndslice : as, slice;
     import mir.random.variable : BernoulliVariable;
 
-    double ratio = 0.5;
+    float ratio = 0.5;
     Variable!(T, dim, HostStorage) hostMask;
 
     this(double ratio) {
@@ -24,9 +24,13 @@ struct Dropout(T, size_t dim) {
     auto forward(Variable!(T, dim, HostStorage) x) {
         if (this.ratio == 0.0) return x;
 
+        import mir.ndslice; //  : universal;
         const shape = x.shape.castArray!size_t;
-        this.hostMask = BernoulliVariable!T(1.0 - this.ratio)
-            .generate(shape).as!T.slice.variable;
+        const float survived = 1.0 - this.ratio;
+        const float scale = 1.0f / (1.0f - survived);
+        auto mask = BernoulliVariable!T(survived).generate(shape).as!T.slice.universal;
+        mask[] *= scale;
+        this.hostMask = mask.variable;
         return this.hostMask * x;
     }
 
@@ -60,7 +64,7 @@ unittest {
     foreach (i; 0 .. x.shape[0]) {
         foreach (j; 0 .. x.shape[1]) {
             auto yij = y.sliced[i, j];
-            assert(yij == 0 || yij == x.sliced[i, j]);
+            assert(yij == 0 || yij == 2.0 * x.sliced[i, j]);
             assert(yij == gx.sliced[i, j]);
         }
     }

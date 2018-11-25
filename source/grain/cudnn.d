@@ -730,16 +730,18 @@ void poolBackward(bool isMax = true, bool isAveragePad = false,
 
 
 /// Global (thread local) dropout state with descriptor and state array
-struct DropoutDescriptor {
-    cudnnDropoutDescriptor_t _dropoutDesc = null;
-    CuPtr!byte _stateArray;
+struct ThreadLocalDropout {
+    shared size_t count = 0;
+    static cudnnDropoutDescriptor_t _dropoutDesc = null;
+    static CuPtr!byte _stateArray;
 
     @disable this(this);
     @disable new(size_t);
 
     /// FIXME set global seed
-    this(float ratio, size_t seed=0) {
-        assert(0.0 <= ratio && ratio <= 1.0);
+    void init(size_t seed=0) {
+        if (_dropoutDesc != null) return;
+
         checkCUDNN(cudnnCreateDropoutDescriptor(&_dropoutDesc));
         // How much memory does dropout need for states?
         // These states are used to generate random numbers internally
@@ -749,43 +751,53 @@ struct DropoutDescriptor {
         _stateArray = CuPtr!byte(stateSize);
         checkCUDNN(cudnnSetDropoutDescriptor(_dropoutDesc,
                                              cudnnHandle,
-                                             ratio,
+                                             0f,
                                              cast(void*) _stateArray.ptr,
                                              stateSize,
                                              seed));
+        ++count;
     }
 
-    auto setRatio(float ratio=0.0) {
-        checkCUDNN(cudnnSetDropoutDescriptor(
-                       this._dropoutDesc,
-                       cudnnHandle,
-                       ratio,
-                       null, // if state is null, state won't be updated
-                       0,
-                       0));
+    static descriptor(float ratio=0.0) {
+        this.init();
+        if (ratio != 0.0) {
+            checkCUDNN(cudnnSetDropoutDescriptor(
+                           this._dropoutDesc,
+                           cudnnHandle,
+                           ratio,
+                           null, // if state is null, state won't be updated
+                           0,
+                           0));
+        }
         return this._dropoutDesc;
+    }
+
+    static ref state() {
+        this.init();
+        return this._stateArray;
     }
 }
 
-struct DropoutState {
-    shared size_t count = 0;
-    static DropoutDescriptor _desc;
+struct CudnnDropout {
+    CuPtr!byte reserved;
 
-
-    auto forward(size_t dim)(Variable!(float, dim, DeviceStorage) x) {
+    auto forward(size_t dim)(Variable!(float, dim, DeviceStorage) x, float ratio) {
         auto y = x.uninit;
         auto xt = x.makeCudnnTensor;
+
         size_t reservedSize;
         cudnnDropoutGetReserveSpaceSize(xt, reservedSize);
+        this.reserved = CuPtr!byte(reserved);
+
         checkCUDNN(cudnnDropoutForward(
                        cudnnHandle,
-                       _dropoutDesc,
+                       ThreadLocalDropout.descriptor(ratio),
                        xt,
                        cast(void*) x.ptr,
                        y.makeCudnnTensor,
                        cast(void*) y.ptr,
-                       cast(void*) _stateArray.ptr,
-                       _stateArray.length
+                       cast(void*) this.reserved.ptr,
+                       this.reserved.length
                        ));
         return y;
     }
@@ -794,7 +806,7 @@ struct DropoutState {
         auto gx = gy.uninit;
         checkCUDNN(cudnnDropoutBackward(
                        cudnnHandle,
-                       _dropoutDesc,
+                       ThreadLocalDropout.descriptor,
                        gy.makeCudnnTensor,
                        cast(void*) gy.ptr,
                        gx.makeCudnnTensor,

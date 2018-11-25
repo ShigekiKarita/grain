@@ -5,7 +5,7 @@ module grain.functions.common;
 
 import grain.autograd;
 import grain.cuda;
-import grain.utility : toTuple, fromTuple, castArray;
+import grain.utility : fromTuple, castArray;
 import mir.ndslice : isSlice;
 
 import std.stdio;
@@ -44,7 +44,8 @@ mixin template FunctionCommon() {
     import std.meta : allSatisfy;
     import std.typecons : isTuple, tuple, Tuple, RefCounted;
     import std.traits : arity, Parameters, ReturnType;
-
+    import grain.utility : toTuple;
+    
     @disable this(this); // no copyable
 
     static foreach (i, forward; __traits(getOverloads, typeof(this), "forward")) {
@@ -70,6 +71,7 @@ mixin template FunctionCommon() {
     /// store grain.autograd.BackProp object in returned variables from forward function
     auto applyForward(Args...)(Args args) {
         static import grain.config;
+
         enum isHost = allSatisfy!(isHost, Args);
         static foreach (i, a; args) {
             static if (isHost) _mixin_hargs[i] = a;

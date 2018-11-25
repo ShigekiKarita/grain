@@ -501,12 +501,14 @@ unittest {
     assert(x.unsqueeze!2.shape == [3, 4, 1, 5]);
 }
 
+/// summation
 auto sum(string mode = "fast", T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x) {
     import grain.functions.reduction : Sum;
     auto f = new Sum!(mode, T, dim);
     return f.applyForward(x);
 }
 
+///
 unittest {
     import grain.testing;
     import numir;
@@ -518,4 +520,37 @@ unittest {
     assert(loss.data[0] == 10f);
     loss.backward();
     assert(hx.gradSlice == [1f, 1f, 1f, 1f].sliced(2, 2));
+}
+
+
+/// dropout : apply random mask
+auto dropout(T, size_t dim, alias Storage)(Variable!(T, dim, Storage) x, float ratio=0.5, bool isTrain=false) {
+    import grain.functions.random : Dropout;
+    auto f = new Dropout!(T, dim)(ratio);
+    return f.applyForward(x);
+}
+
+///
+unittest {
+    import grain.testing;
+    import numir;
+    import mir.ndslice;
+    import std.meta;
+    import std.stdio;
+
+    auto hx = [1f, 2f, 3f, 4f].sliced(2, 2).variable(true);
+    auto hy = dropout(hx);
+    hy.sum.backward();
+    auto ghx = hx.gradSliced;
+    foreach (i; 0 .. hx.shape[0]) {
+        foreach (j; 0 .. hx.shape[1]) {
+            if (hy.sliced[i, j] == 2.0 * hx.sliced[i, j]) {
+                assert(ghx[i, j] == 2.0f);
+            }
+            else {
+                assert(hy.sliced[i, j] == 0.0f);
+                assert(ghx[i, j] == 0.0f);
+            }
+        }
+    }
 }
