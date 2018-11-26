@@ -8,8 +8,7 @@ d:
   - dmd
 
 env:
-  - ARCH="x86_64"
-  - ZMQ_VER="4.2.5"
+  - ARCH="x86_64" ZMQ_VER="4.2.5"
 
 addons:
   apt:
