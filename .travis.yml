@@ -29,7 +29,8 @@ script:
   - if [ "$DC" = dmd ]; then
        dub build --build=release --config=repl;
        # libzmq5-dev (4.1.4) is not available in travis
-       wget https://github.com/zeromq/libzmq/releases/download/v4.2.5/zeromq-${ZMQ_VER}.tar.gz -O- | tar xvf;
+       wget https://github.com/zeromq/libzmq/releases/download/v${ZMQ_VER}/zeromq-${ZMQ_VER}.tar.gz;
+       tar xvf zeromq-${ZMQ_VER}.tar.gz;
        cd zeromq-${ZMQ_VER} && ./configure --prefix=/usr && make && sudo make install;
        cd -;
        dub build --build=release --config=jupyterd;
