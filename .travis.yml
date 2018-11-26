@@ -1,5 +1,3 @@
-sudo: false
-
 os:
   - linux
 
@@ -11,13 +9,13 @@ d:
 
 env:
   - ARCH="x86_64"
+  - ZMQ_VER="4.2.5"
 
 addons:
   apt:
     packages:
       - libopenblas-dev
       - libhdf5-dev
-      - libzmq3-dev
 
 cache: apt
 
@@ -31,6 +29,8 @@ script:
   # ldc2 causes linker error with drepl https://github.com/dlang-community/drepl/issues/39
   - if [ "$DC" = dmd ]; then
        dub build --build=release --config=repl;
+       wget https://github.com/zeromq/libzmq/releases/download/v4.2.5/zeromq-${ZMQ_VER}.tar.gz -O- | tar xvf;
+       cd zeromq-${ZMQ_VER}; ./configure; make install; cd -;
        dub build --build=release --config=jupyterd;
     else
        echo "skipping make repl jupyterd in ${DC}";
