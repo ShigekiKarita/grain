@@ -17,7 +17,7 @@ addons:
     packages:
       - libopenblas-dev
       - libhdf5-dev
-      - libzmq3
+      - libzmq3-dev
 
 cache: apt
 
@@ -25,6 +25,12 @@ script:
   - dub test --arch "$ARCH" --build=unittest-cov
   - make NO_CUDA=true test
   - make NO_CUDA=true DUB_BUILD=release examples
+  # ldc2 causes linker error with drepl https://github.com/dlang-community/drepl/issues/39
+  - if [ "$DC" = dmd ]; then
+       make NO_CUDA=true DUB_BUILD=release repl jupyterd;
+    else
+       echo "skipping make repl jupyterd in ${DC}";
+    fi
 
 after_success:
   - if [ "$DC" = dmd ]; then
