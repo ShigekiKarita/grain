@@ -75,6 +75,12 @@ clean:
 example-%:
 	dub build --config=$@ $(DUBOPTS)
 
+repl:
+	dub build --config=$@ $(DUBOPTS)
+
+jupyterd:
+	dub build --config=$@ $(DUBOPTS)
+
 examples: example-mnist example-mnist-cnn example-char-rnn example-cifar example-ptb repl jupyterd
 
 $(HDF5_ROOT):
