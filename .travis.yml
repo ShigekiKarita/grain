@@ -17,7 +17,7 @@ addons:
     packages:
       - libopenblas-dev
       - libhdf5-dev
-      - libzmq5
+      - libzmq3
 
 cache: apt
 
