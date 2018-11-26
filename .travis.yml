@@ -28,8 +28,10 @@ script:
   # ldc2 causes linker error with drepl https://github.com/dlang-community/drepl/issues/39
   - if [ "$DC" = dmd ]; then
        dub build --build=release --config=repl;
+       # libzmq5-dev (4.1.4) is not available in travis
        wget https://github.com/zeromq/libzmq/releases/download/v4.2.5/zeromq-${ZMQ_VER}.tar.gz -O- | tar xvf;
-       cd zeromq-${ZMQ_VER}; ./configure; make install; cd -;
+       cd zeromq-${ZMQ_VER} && ./configure --prefix=/usr && make && sudo make install;
+       cd -;
        dub build --build=release --config=jupyterd;
     else
        echo "skipping make repl jupyterd in ${DC}";
