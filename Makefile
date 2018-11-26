@@ -81,7 +81,7 @@ repl:
 jupyterd:
 	dub build --config=$@ $(DUB_OPTS)
 
-examples: example-mnist example-mnist-cnn example-char-rnn example-cifar example-ptb repl jupyterd
+examples: example-mnist example-mnist-cnn example-char-rnn example-cifar example-ptb
 
 $(HDF5_ROOT):
 	wget $(HDF5_URL)
