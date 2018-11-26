@@ -73,13 +73,13 @@ clean:
 # 	dub --config=example-char-rnn --compiler=ldc2 $(DUB_OPTS)
 
 example-%:
-	dub build --config=$@ $(DUBOPTS)
+	dub build --config=$@ $(DUB_OPTS)
 
 repl:
-	dub build --config=$@ $(DUBOPTS)
+	dub build --config=$@ $(DUB_OPTS)
 
 jupyterd:
-	dub build --config=$@ $(DUBOPTS)
+	dub build --config=$@ $(DUB_OPTS)
 
 examples: example-mnist example-mnist-cnn example-char-rnn example-cifar example-ptb repl jupyterd
 
