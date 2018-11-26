@@ -23,11 +23,15 @@ cache: apt
 
 script:
   - dub test --arch "$ARCH" --build=unittest-cov
-  - make NO_CUDA=true test
-  - make NO_CUDA=true DUB_BUILD=release examples
+  - dub build --build=release --config=example-mnist
+  - dub build --build=release --config=example-mnist-cnn
+  - dub build --build=release --config=example-cifar
+  - dub build --build=release --config=example-char-rnn
+  - dub build --build=release --config=example-ptb
   # ldc2 causes linker error with drepl https://github.com/dlang-community/drepl/issues/39
   - if [ "$DC" = dmd ]; then
-       make NO_CUDA=true DUB_BUILD=release repl jupyterd;
+       dub build --build=release --config=repl;
+       dub build --build=release --config=jupyterd;
     else
        echo "skipping make repl jupyterd in ${DC}";
     fi
