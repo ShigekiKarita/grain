@@ -36,6 +36,7 @@ script:
     else
        echo "skipping make repl jupyterd in ${DC}";
     fi
+  - cat dub.selections.json
 
 after_success:
   - if [ "$DC" = dmd ]; then
