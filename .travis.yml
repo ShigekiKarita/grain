@@ -23,6 +23,7 @@ cache: apt
 script:
   - dub test --arch "$ARCH" --build=unittest-cov
   - make NO_CUDA=true test
+  - make NO_CUDA=true examples
 
 after_success:
   - if [ "$DC" = dmd ]; then
