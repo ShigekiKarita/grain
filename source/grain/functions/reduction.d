@@ -30,14 +30,14 @@ struct Sum(string mode = "fast", T, size_t dim) {
     version (grain_cuda) {
         auto forward(Variable!(T, dim, DeviceStorage) x) {
             import std.algorithm : reduce;
-            import grain.cuda : sum;
+            import grain.cuda : sum, sumNaive;
 
             this.shape = x.shape;
             // auto y = CuPtr!float([0]);
             // Global.kernel!sum.call(x.data.ptr, y.ptr, cast(int) x.data.length)
             //     .launch(cast(uint[3]) [1U,1,1], cast(uint[3]) [1U,1,1], 0U);
             // checkCudaErrors(cuCtxSynchronize());
-            return x.data.sum.variable.to!DeviceStorage;
+            return x.data.sumNaive.variable.to!DeviceStorage;
         }
 
         auto backward(Variable!(T, 0, DeviceStorage) y) {
@@ -64,5 +64,7 @@ unittest {
         auto cx = x.to!DeviceStorage;
         auto cy = func.forward(cx).to!HostStorage;
         assert(cy == 10f.variable);
+        auto cgx = func.backward(1.2f.variable.to!DeviceStorage).to!HostStorage;
+        assert(cgx.sliced == [1.2f, 1.2f, 1.2f, 1.2f].sliced(2, 2));
     }
 }

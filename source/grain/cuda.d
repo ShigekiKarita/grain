@@ -466,62 +466,29 @@ unittest {
     }
 }
 
-extern (C++) float sum_thrust(float*, uint n);
 
-/// test sum
-float sum(S)(ref S a, uint th = 32) if (isDeviceMemory!S) {
-    return sum_thrust(cast(float*) a.ptr, cast(uint) a.length);
-    // import grain.kernel : sum_faster;
-
-    // auto N = cast(uint) a.length;
-    // auto bl = N / th;
-    // auto sm = th * cast(uint) float.sizeof;
-
-    // auto work = CuPtr!float(bl);
-    // Global.kernel!sum_faster.call(a.ptr, work.ptr, N, N)
-    //     .launch([th, 1, 1], [bl, 1, 1], th * cast(uint) float.sizeof);
-    // if (bl > 1)
-    //     Global.kernel!sum_faster.call(work.ptr, work.ptr, N, N)
-    //         .launch([1, 1, 1], [bl, 1, 1], bl * cast(uint) float.sizeof);
-    // // import mir.math : sum;
-    // return work.toHost[0]; // .sum;
-
-    // uint n = N;
-    // uint bl = (N - 1) / (2 * th) + 1;
-    // uint sm = 2 * th * cast(uint) float.sizeof;
-    // auto out1 = CuPtr!float(bl);
-    // auto out2 = CuPtr!float(bl);
-    // auto iptr = a.ptr;
-    // auto optr = out1.ptr;
-    // while (bl > 1) {
-    //     Global.kernel!sum_faster.call(iptr, optr, n, N)
-    //         .launch([th, 1, 1], [bl, 1, 1], sm);
-    //     if (optr == out1.ptr) {
-    //         optr = out2.ptr;
-    //         iptr = out1.ptr;
-    //     } else {
-    //         optr = out1.ptr;
-    //         iptr = out2.ptr;
-    //     }
-    //     n = bl;
-    //     bl = (n - 1) / (2 * th) + 1;
-    //     checkCudaErrors(cuCtxSynchronize()); // ThreadSynchronize?
-    // }
-    // auto b = CuPtr!float([0]);
-    // Global.kernel!sum_faster.call(iptr, b.ptr, n, N)
-    //     .launch([th, 1, 1], [bl, 1, 1], sm);
-    // return b.toHost[0];
-}
-
-unittest {
+float sumNaive(S)(ref S a) if (isDeviceMemory!S) {
     import grain.kernel : sum;
-    auto a = CuPtr!float([3, 4, 5]);
     auto b = CuPtr!float([0]);
     auto N = cast(int) a.length;
     Global.kernel!sum.call(a.ptr, b.ptr, N)
         .launch(cast(uint[3]) [1U,1,1], cast(uint[3]) [1U,1,1], 0U);
     checkCudaErrors(cuCtxSynchronize());
-    assert(b.toHost[0] == 3+4+5);
+    return b.toHost[0];
+}
+
+unittest {
+    auto a = CuPtr!float([3, 4, 5]);
+    assert(a.sumNaive == 3+4+5);
+}
+
+
+
+extern (C++) float sum_thrust(float*, uint n);
+
+/// test sum
+float sum(S)(ref S a) if (isDeviceMemory!S) {
+    return sum_thrust(cast(float*) a.ptr, cast(uint) a.length);
 }
 
 unittest {

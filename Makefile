@@ -10,10 +10,10 @@ DUB_BUILD := unittest
 
 
 ifeq ($(NO_CUDA),true)
-	DUB_OPTS = -b=$(DUB_BUILD)
+	DUB_OPTS = -b=$(DUB_BUILD) --parallel
 else
 	CUDA_DEPS = tool/grain-compute-capability source/grain/kernel.di kernel/kernel_lib.ptx libgrain_thrust.so
-	DUB_OPTS = -b=cuda-$(DUB_BUILD)
+	DUB_OPTS = -b=cuda-$(DUB_BUILD) --parallel
 endif
 
 test: $(CUDA_DEPS)
