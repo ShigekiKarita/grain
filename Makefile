@@ -19,15 +19,17 @@ endif
 test: $(CUDA_DEPS)
 	dub test --compiler=$(DC) $(DUB_OPTS)
 
-deps: libwarpctc.a
+deps: libwarpctc.so
 
 cuda-deps: $(CUDA_DEPS)
 
-libwarpctc.a:
-	git clone https://github.com/baidu-research/warp-ctc
+warp-ctc/README.md:
+	git clone https://github.com/baidu-research/warp-ctc --depth 1
+
+libwarpctc.so: warp-ctc/README.md
+	rm -rf warp-ctc/build
 	cd warp-ctc && mkdir build && cd build && cmake .. && make -j2 && ar rcs libwarpctc.a CMakeFiles/warpctc.dir/src/*.o
 	cp warp-ctc/build/libwarpctc.so .
-	cp warp-ctc/build/libwarpctc.a .
 
 libgrain_thrust.a: kernel/thrust.cu
 	nvcc -c $<
