@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 
-set -euo -pipefall
+set -e
+set -u
+set -o pipefall
 
-sudo apt-get install libopenblas-dev libzmq5-dev
+sudo apt-get install libopenblas-dev libzmq5-dev cmake
 
 source "$(curl -fsS  --retry 3 https://dlang.org/install.sh | bash -s $1 --activate)"
 dub test --arch "$ARCH" --build=unittest-cov
