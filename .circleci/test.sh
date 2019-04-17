@@ -4,7 +4,9 @@ set -e
 set -u
 set -o pipefail
 
-sudo apt-get install libopenblas-dev libzmq3-dev libhdf5-dev cmake
+sudo apt-get install libopenblas-dev libzmq3-dev cmake
+
+make install-hdf5
 
 source "$(curl -fsS  --retry 3 https://dlang.org/install.sh | bash -s $1 --activate)"
 dub test --build=unittest-cov
