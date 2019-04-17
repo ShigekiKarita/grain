@@ -9,8 +9,7 @@
         "lubeck": "~>1.0.0"
     },
     "targetType": "library",
-    "libs": ["hdf5", "stdc++", "gomp"],
-    "sourceFiles": ["libwarpctc.a"],
+    "libs": ["hdf5", "stdc++", "gomp", "warpctc"],
     "preBuildCommands": ["make --silent libwarpctc.a"],
     "buildTypes": {
         "cuda-unittest": {

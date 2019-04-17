@@ -133,8 +133,178 @@ ctcStatus_t get_workspace_size(const(int)* label_lengths,
                                ctcOptions info,
                                size_t* size_bytes);
 
+
+// Numerically stable softmax for a minibatch of 1
+private void softmax(const(float)* acts, int alphabet_size, int T, float *probs)
+{
+    import std.math;
+    for (int t = 0; t < T; ++t)
+    {
+        float max_activation = -float.infinity;
+        for (int a = 0; a < alphabet_size; ++a)
+            max_activation = fmax(max_activation, acts[t*alphabet_size + a]);
+
+        float denom = 0;
+        for (int a = 0; a < alphabet_size; ++a)
+            denom += exp(acts[t*alphabet_size + a] - max_activation);
+
+        for (int a = 0; a < alphabet_size; ++a)
+            probs[t*alphabet_size + a] = exp(acts[t*alphabet_size + a] - max_activation) / denom;
+    }
+}
+
+
+void throw_on_error(ctcStatus_t status, string message)
+{
+    import std.format : format;
+    import std.string : fromStringz;
+
+    assert(status == CTC_STATUS_SUCCESS,
+           format!"%s, stat = %s"(message, ctcGetStatusString(status).fromStringz));
+}
+
+
 unittest
 {
     import std.stdio;
+    import std.math;
+    import core.stdc.stdlib;
     assert(get_warpctc_version() == 2);
+    // https://github.com/baidu-research/warp-ctc/blob/master/tests/test_cpu.cpp
+
+    const int alphabet_size = 5;
+    const int T = 2;
+
+    float[] activations = [0.1, 0.6, 0.1, 0.1, 0.1,
+                           0.1, 0.1, 0.6, 0.1, 0.1];
+
+    // Calculate the score analytically
+    float expected_score;
+    {
+        auto probs = new float[activations.length];
+        softmax(activations.ptr, alphabet_size, T, probs.ptr);
+
+        // Score calculation is specific to the given activations above
+        expected_score = probs[1] * probs[7];
+    }
+
+    int[] labels = [1, 2];
+    int[] label_lengths = [2];
+    int[] lengths = [T];
+
+    float score;
+    ctcOptions options;
+    options.loc = CTC_CPU;
+    options.num_threads = 1;
+
+    size_t cpu_alloc_bytes;
+    throw_on_error(get_workspace_size(label_lengths.ptr, lengths.ptr,
+                                      alphabet_size, cast(int) lengths.length, options,
+                                      &cpu_alloc_bytes),
+                   "Error: get_workspace_size in small_test");
+
+    void* ctc_cpu_workspace = malloc(cpu_alloc_bytes);
+
+    throw_on_error(compute_ctc_loss(activations.ptr, null,
+                                    labels.ptr, label_lengths.ptr,
+                                    lengths.ptr,
+                                    alphabet_size,
+                                    cast(int) lengths.length,
+                                    &score,
+                                    ctc_cpu_workspace,
+                                    options),
+                   "Error: compute_ctc_loss in small_test");
+
+    free(ctc_cpu_workspace);
+    score = exp(-score);
+    const float eps = 1e-6;
+
+    const float lb = expected_score - eps;
+    const float ub = expected_score + eps;
+    assert(score > lb && score < ub);
+}
+
+version (grain_cuda) unittest
+{
+    import derelict.cuda;
+    import grain.cuda;
+    import std.math;
+
+    const int alphabet_size = 5;
+    const int T = 2;
+
+    float[] activations = [0.1, 0.6, 0.1, 0.1, 0.1,
+                           0.1, 0.1, 0.6, 0.1, 0.1];
+
+    // Calculate the score analytically
+    float expected_score;
+    {
+        auto probs = new float[activations.length];
+        softmax(activations.ptr, alphabet_size, T, probs.ptr);
+
+        // Score calculation is specific to the given activations above
+        expected_score = probs[1] * probs[7];
+    }
+
+    CUstream stream;
+    cuStreamCreate(cast(void**) &stream, CU_STREAM_DEFAULT);
+    scope (exit) cuStreamDestroy(stream);
+    // throw_on_error(cudaStreamCreate(&stream),
+    //                "cudaStreamCreate");
+
+    // float *activations_gpu;
+    auto activations_gpu = CuPtr!float(activations);
+    // throw_on_error(cudaMalloc(cast(void**) &activations_gpu,
+    //                activations.length * float.sizeof),
+    //                "cudaMalloc");
+    // throw_on_error(cudaMemcpyAsync(activations_gpu, activations.ptr,
+    //                                activations.length * float.sizeof,
+    //                                cudaMemcpyHostToDevice, stream),
+    //                "cudaMemcpyAsync");
+
+    int[] labels = [1, 2];
+    int[] label_lengths = [2];
+    int[] lengths = [T];
+
+    float score;
+
+    ctcOptions options;
+    options.loc = CTC_GPU;
+    options.stream = cast(CUstream) stream;
+
+    size_t gpu_alloc_bytes;
+    throw_on_error(get_workspace_size(label_lengths.ptr, lengths.ptr,
+                                      alphabet_size, cast(int) lengths.length, options,
+                                      &gpu_alloc_bytes),
+                   "Error: get_workspace_size in small_test");
+
+    // char *ctc_gpu_workspace;
+    auto ctc_gpu_workspace = CuPtr!char(gpu_alloc_bytes);
+    // throw_on_error(cudaMalloc(cast(void**) &ctc_gpu_workspace, gpu_alloc_bytes),
+    //                "cudaMalloc");
+
+    throw_on_error(compute_ctc_loss(activations_gpu.data, null,
+                                    labels.ptr, label_lengths.ptr,
+                                    lengths.ptr,
+                                    alphabet_size,
+                                    cast(int) lengths.length,
+                                    &score,
+                                    ctc_gpu_workspace.data,
+                                    options),
+                   "Error: compute_ctc_loss in small_test");
+
+    score = exp(-score);
+    const float eps = 1e-6;
+
+    const float lb = expected_score - eps;
+    const float ub = expected_score + eps;
+
+    // throw_on_error(cudaFree(activations_gpu),
+    //                "cudaFree");
+    // throw_on_error(cudaFree(ctc_gpu_workspace),
+    //                "cudaFree");
+    // throw_on_error(cudaStreamDestroy(stream),
+    //                "cudaStreamDestroy");
+
+    assert(score > lb && score < ub);
 }

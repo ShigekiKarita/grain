@@ -293,6 +293,10 @@ struct CuPtr(T) {
         if (ptr != 0x0) checkCudaErrors(cuMemFree(ptr));
         ptr = 0x0;
     }
+
+    inout T* data() {
+        return cast(T*) this.ptr;
+    }
 }
 
 
