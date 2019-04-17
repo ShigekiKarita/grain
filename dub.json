@@ -9,32 +9,38 @@
         "lubeck": "~>1.0.0"
     },
     "targetType": "library",
-    "libs": ["hdf5"],
+    "libs": ["hdf5", "stdc++", "gomp"],
+    "sourceFiles": ["libwarpctc.a"],
+    "preBuildCommands": ["make --silent libwarpctc.a"],
     "buildTypes": {
         "cuda-unittest": {
             "buildOptions": ["unittests", "debugMode", "debugInfo"],
             "versions": ["grain_cuda"],
             "preBuildCommands": ["make --silent cuda-deps"],
-            "libs": ["cublas", "grain_thrust"]
+            "libs": ["cublas", "cudart"],
+            "sourceFiles": ["libgrain_thrust.a"]
         },
         "cuda-unittest-cov": {
             "buildOptions": ["unittests", "coverage", "debugMode", "debugInfo"],
             "versions": ["grain_cuda"],
             "preBuildCommands": ["make --silent cuda-deps"],
-            "libs": ["cublas", "grain_thrust"]
+            "libs": ["cublas", "cudart"],
+            "sourceFiles": ["libgrain_thrust.a"]
         },
         "cuda-unittest-release": {
             "buildOptions": ["unittests", "releaseMode", "optimize", "inline", "noBoundsCheck", "debugInfo"],
             "preBuildCommands": ["make --silent cuda-deps"],
             "versions": ["grain_cuda"],
-            "libs": ["cublas", "grain_thrust"]
+            "libs": ["cublas", "cudart"],
+            "sourceFiles": ["libgrain_thrust.a"]
         },
         "cuda-release": {
             "buildOptions":  ["releaseMode", "inline", "noBoundsCheck"],
             "dflags-ldc2": ["-mcpu=native"],
             "versions": ["grain_cuda"],
             "preBuildCommands": ["make --silent cuda-deps"],
-            "libs": ["cublas", "grain_thrust"]
+            "libs": ["cublas", "cudart"],
+            "sourceFiles": ["libgrain_thrust.a"]
         },
         "unittest": {
             "buildOptions": ["unittests", "debugMode", "debugInfo"],

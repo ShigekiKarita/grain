@@ -1,4 +1,4 @@
-.PHONY: test clean kernel example-mnist example-char-rnn cuda-deps install-hdf5 doc examples
+.PHONY: test clean kernel example-mnist example-char-rnn deps cuda-deps install-hdf5 doc examples
 
 HDF5_URL := https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.8/hdf5-1.8.15-patch1/bin/linux-centos7-x86_64/hdf5-1.8.15-patch1-linux-centos7-x86_64-static.tar.gz
 HDF5_ROOT := $(shell basename $(HDF5_URL) .tar.gz)
@@ -12,17 +12,26 @@ DUB_BUILD := unittest
 ifeq ($(NO_CUDA),true)
 	DUB_OPTS = -b=$(DUB_BUILD) --parallel
 else
-	CUDA_DEPS = tool/grain-compute-capability source/grain/kernel.di kernel/kernel_lib.ptx libgrain_thrust.so
+	CUDA_DEPS = tool/grain-compute-capability source/grain/kernel.di kernel/kernel_lib.ptx libgrain_thrust.a
 	DUB_OPTS = -b=cuda-$(DUB_BUILD) --parallel
 endif
 
 test: $(CUDA_DEPS)
 	dub test --compiler=$(DC) $(DUB_OPTS)
 
+deps: libwarpctc.a
+
 cuda-deps: $(CUDA_DEPS)
 
-libgrain_thrust.so: kernel/thrust.cu
-	nvcc -shared $< -o $@ -Xcompiler -fPIC
+libwarpctc.a:
+	git clone https://github.com/baidu-research/warp-ctc
+	cd warp-ctc && mkdir build && cd build && cmake .. && make -j2 && ar rcs libwarpctc.a CMakeFiles/warpctc.dir/src/*.o
+	cp warp-ctc/build/libwarpctc.so .
+	cp warp-ctc/build/libwarpctc.a .
+
+libgrain_thrust.a: kernel/thrust.cu
+	nvcc -c $<
+	ar rcs $@ thrust.o
 
 tool/grain-compute-capability: tool/compute_capability.d
 	cd tool; dub build --config=compute-capability

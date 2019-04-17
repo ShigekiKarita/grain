@@ -16,7 +16,9 @@
 !style.css
 !skeleton.html
 !LICENSE
+
 hdf5-*/
+warp-ctc/
 
 .ipynb_checkpoints
 dub.selections.json
