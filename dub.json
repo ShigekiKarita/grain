@@ -10,6 +10,7 @@
     },
     "targetType": "library",
     "libs": ["hdf5", "stdc++", "gomp", "warpctc"],
+    "lflags": ["-rpath", "$PACKAGE_DIR"],
     "preBuildCommands": ["make --silent libwarpctc.a"],
     "buildTypes": {
         "cuda-unittest": {
