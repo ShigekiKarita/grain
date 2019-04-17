@@ -1,0 +1,52 @@
+version: 2
+workflows:
+  version: 2
+  test:
+    jobs:
+      - test-dmd
+      - test-ldc
+      - docs-deploy:
+          requires:
+            - test-dmd
+          filters:
+            branches:
+              only: master
+jobs:
+  test-dmd:
+    docker:
+      - image: circleci/buildpack-deps:18.04
+    steps:
+      - checkout
+      - run:
+          name: test
+          command: .circleci/test.sh dmd
+      - persist_to_workspace:
+          root: generated-docs
+          paths: .
+  test-ldc:
+    docker:
+      - image: circleci/buildpack-deps:18.04
+    steps:
+      - checkout
+      - run:
+          name: test
+          command: .circleci/test.sh ldc
+  docs-deploy:
+    docker:
+      - image: node:8.10.0
+    steps:
+      - checkout
+      - attach_workspace:
+          at: generated-docs
+      - run:
+          name: Install and configure dependencies
+          command: |
+            npm install -g --silent gh-pages@2.0.1
+            git config user.email "ci-build@karita.net"
+            git config user.name "ci-build"
+      - add_ssh_keys:
+          fingerprints:
+            - "0e:c6:7f:e0:a1:7d:41:39:ba:6f:c9:8f:85:8b:2f:48"
+      - run:
+          name: Deploy docs to gh-pages branch
+          command: gh-pages --dotfiles --message "[skip ci] Updates" --dist generated-docs

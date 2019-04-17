@@ -16,6 +16,7 @@
 !style.css
 !skeleton.html
 !LICENSE
+!.circleci/*
 
 hdf5-*/
 warp-ctc/
