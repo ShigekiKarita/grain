@@ -2,7 +2,7 @@
 
 set -e
 set -u
-set -o pipefall
+set -o pipefail
 
 sudo apt-get install libopenblas-dev libzmq5-dev cmake
 
