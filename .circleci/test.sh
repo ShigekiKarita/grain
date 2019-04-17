@@ -7,7 +7,7 @@ set -o pipefail
 sudo apt-get install libopenblas-dev libzmq5-dev cmake
 
 source "$(curl -fsS  --retry 3 https://dlang.org/install.sh | bash -s $1 --activate)"
-dub test --arch "$ARCH" --build=unittest-cov
+dub test --build=unittest-cov
 dub build --build=release --config=example-mnist
 dub build --build=release --config=example-mnist-cnn
 dub build --build=release --config=example-cifar
