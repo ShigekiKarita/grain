@@ -16,6 +16,7 @@ addons:
       # libzmq5-dev (4.1.4) is not available in travis
       - libopenblas-dev
       - libhdf5-dev
+      - libsz-dev
 
 cache: apt
 
