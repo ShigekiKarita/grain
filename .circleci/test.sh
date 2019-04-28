@@ -4,6 +4,9 @@ set -e
 set -u
 set -o pipefail
 
+git submodule sync
+git submodule update --init
+
 sudo apt-get install libhdf5-dev libopenblas-dev libzmq3-dev cmake
 
 source "$(curl -fsS  --retry 3 https://dlang.org/install.sh | bash -s $1 --activate)"
