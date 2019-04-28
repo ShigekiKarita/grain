@@ -46,13 +46,12 @@ after_success:
        echo "skipping coverage and doc stage in ${DC}";
     fi
 
-deploy:
-  d: dmd
-  provider: pages
-  skip_cleanup: true
-  github_token: $GITHUB_TOKEN # Set in travis-ci.org dashboard
-  local_dir: docs
-  on:
-    branch: master
-    condition: $DC = dmd
-
+# deploy:
+#   d: dmd
+#   provider: pages
+#   skip_cleanup: true
+#   github_token: $GITHUB_TOKEN # Set in travis-ci.org dashboard
+#   local_dir: docs
+#   on:
+#     branch: master
+#     condition: $DC = dmd
