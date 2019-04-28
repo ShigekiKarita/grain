@@ -31,6 +31,22 @@ jobs:
       - run:
           name: test
           command: .circleci/test.sh ldc
+  test-dmd-xenial:
+    docker:
+      - image: circleci/buildpack-deps:16.04
+    steps:
+      - checkout
+      - run:
+          name: test
+          command: .circleci/test.sh dmd
+  test-ldc-xenial:
+    docker:
+      - image: circleci/buildpack-deps:16.04
+    steps:
+      - checkout
+      - run:
+          name: test
+          command: .circleci/test.sh ldc
   docs-deploy:
     docker:
       - image: node:8.10.0
