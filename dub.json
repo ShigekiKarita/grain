@@ -9,10 +9,8 @@
         "lubeck": "~>1.0.0"
     },
     "targetType": "library",
-    "libs": ["hdf5", "sz", "stdc++", "gomp", "warpctc"],
+    "libs": ["hdf5", "stdc++", "gomp", "warpctc"],
     "lflags": ["-rpath", "$PACKAGE_DIR", "-L$PACKAGE_DIR"],
-    "dflags-dmd": ["-fPIC"],
-    "dflags-ldc": ["-relocation-model=pic"],
     "preBuildCommands": ["make --silent deps"],
     "buildTypes": {
         "cuda-unittest": {

@@ -9,6 +9,11 @@ import grain.autograd;
 import grain.hdf5;
 import std.string : toStringz;
 
+shared static this() {
+    H5open();
+}
+
+
 /// enumerate the parameter names inside chain C
 enum variableNames(C) = {
     string[] ret;
@@ -81,7 +86,9 @@ void save(bool verbose = true, C)(C chain, string path) {
     import grain.utility : castArray;
 
     auto file = H5Fcreate(path.toStringz, // path.exists ? H5F_ACC_TRUNC :
-            H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+                          // H5F_ACC_RDWR, //
+                          H5F_ACC_TRUNC,
+                          H5P_DEFAULT, H5P_DEFAULT);
     scope (exit)
         H5Fclose(file);
 

@@ -25,8 +25,8 @@ module grain.hdf5;
 
 extern (C):
 
-///
-alias hid_t = int;
+/// NOTE: changed from int to int64_t at 1.10.0
+alias hid_t = long;
 ///
 alias hsize_t = ulong;
 ///
@@ -154,3 +154,9 @@ herr_t H5Dread(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
 ///
 herr_t H5Dwrite(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
         hid_t file_space_id, hid_t plist_id, const void* buf);
+
+void H5open();
+
+shared static this() {
+    H5open();
+}
