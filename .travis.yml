@@ -1,6 +1,8 @@
 os:
   - linux
 
+dist: xenial
+
 language: d
 
 d:
@@ -8,15 +10,14 @@ d:
   - dmd
 
 env:
-  - ARCH="x86_64" ZMQ_VER="4.2.5"
+  - ARCH="x86_64"
 
 addons:
   apt:
     packages:
-      # libzmq5-dev (4.1.4) is not available in travis
+      - libzmq3-dev
       - libopenblas-dev
       - libhdf5-dev
-      - libsz-dev
 
 cache: apt
 
@@ -30,10 +31,6 @@ script:
   # ldc2 causes linker error with drepl https://github.com/dlang-community/drepl/issues/39
   - if [ "$DC" = dmd ]; then
        dub build --build=release --config=repl;
-       wget https://github.com/zeromq/libzmq/releases/download/v${ZMQ_VER}/zeromq-${ZMQ_VER}.tar.gz;
-       tar xvf zeromq-${ZMQ_VER}.tar.gz;
-       cd zeromq-${ZMQ_VER} && ./configure --prefix=/usr && make && sudo make install;
-       cd -;
        dub build --build=release --config=jupyterd;
     else
        echo "skipping make repl jupyterd in ${DC}";
