@@ -47,7 +47,7 @@
 <a id="L17" href="#L17" class="br">17 </a>      targetId: target integer id of class. shape: (nBatch)
 <a id="L18" href="#L18" class="br">18 </a>      +/</span>
 <a id="L19" href="#L19" class="br">19 </a>
-<a id="L20" href="#L20" class="br">20 </a>    <span class="kwrd">mixin</span> <span class="hid">FunctionCommon</span>;
+<a id="L20" href="#L20" class="br">20 </a>    <span class="kwrd">mixin</span> <a href="grain.functions.common.d.html#L43" title="grain.functions.common.FunctionCommon" class="hid">FunctionCommon</a>;
 <a id="L21" href="#L21" class="br">21 </a>
 <a id="L22" href="#L22" class="br">22 </a>    <span class="type">bool</span> <span class="hid">sizeAverage</span> = <span class="kwrd">true</span>;
 <a id="L23" href="#L23" class="br">23 </a>    <span class="type">int</span> <span class="hid">ignoreIndex</span> = -<span class="num">100</span>;
@@ -88,7 +88,7 @@
 <a id="L58" href="#L58" class="br">58 </a>        <span class="kwrd">import</span> <span class="hid">numir</span>;
 <a id="L59" href="#L59" class="br">59 </a>
 <a id="L60" href="#L60" class="br">60 </a>        <span class="kwrd">auto</span> <span class="hid">nBatch</span> = <span class="kwrd">this</span>.<span class="hid">_htargetId.shape</span>[<span class="num">0</span>];
-<a id="L61" href="#L61" class="br">61 </a>        <span class="kwrd">auto</span> <span class="hid">glogP</span> = <span class="hid">zeros</span>!<span class="hid">F</span>(<span class="hid">nBatch</span>, <span class="kwrd">this</span>.<span class="hid">_nClass</span>);
+<a id="L61" href="#L61" class="br">61 </a>        <span class="kwrd">auto</span> <span class="hid">glogP</span> = <a href="grain.cuda.d.html#L409" title="grain.cuda.zeros" class="hid">zeros</a>!<span class="hid">F</span>(<span class="hid">nBatch</span>, <span class="kwrd">this</span>.<span class="hid">_nClass</span>);
 <a id="L62" href="#L62" class="br">62 </a>        <span class="kwrd">auto</span> <span class="hid">coeff</span> = <span class="hid">gy.data</span>[<span class="num">0</span>] * <span class="kwrd">this</span>.<span class="hid">_normalize</span>;
 <a id="L63" href="#L63" class="br">63 </a>        <span class="kwrd">foreach</span> (<span class="hid">i</span>; <span class="num">0</span> .. <span class="hid">nBatch</span>) {
 <a id="L64" href="#L64" class="br">64 </a>            <span class="kwrd">auto</span> <span class="hid">t</span> = <span class="kwrd">this</span>.<span class="hid">_htargetId.sliced</span>[<span class="hid">i</span>];
@@ -108,11 +108,11 @@
 <a id="L78" href="#L78" class="br">78 </a>            <span class="kwrd">import</span> <span class="hid">grain.kernel</span> : <span class="hid">nll</span>;
 <a id="L79" href="#L79" class="br">79 </a>
 <a id="L80" href="#L80" class="br">80 </a>            <span class="kwrd">this</span>.<span class="hid">_nClass</span> = <span class="hid">logP.shape</span>[<span class="num">1</span>];
-<a id="L81" href="#L81" class="br">81 </a>            <span class="kwrd">auto</span> <span class="hid">dresult</span> = <span class="hid">CuArray</span>!<span class="hid">F</span>([<span class="num">0</span>]); <span class="com">// [result].variable.to!DeviceStorage; &lt;- FIXME</span>
-<a id="L82" href="#L82" class="br">82 </a>            <span class="kwrd">auto</span> <span class="hid">dcount</span> = <span class="hid">CuArray</span>!<span class="type">int</span>([<span class="num">0</span>]); <span class="com">// [count].variable.to!DeviceStorage;</span>
+<a id="L81" href="#L81" class="br">81 </a>            <span class="kwrd">auto</span> <span class="hid">dresult</span> = <a href="grain.cuda.d.html#L316" title="grain.cuda.CuArray" class="hid">CuArray</a>!<span class="hid">F</span>([<span class="num">0</span>]); <span class="com">// [result].variable.to!DeviceStorage; &lt;- FIXME</span>
+<a id="L82" href="#L82" class="br">82 </a>            <span class="kwrd">auto</span> <span class="hid">dcount</span> = <a href="grain.cuda.d.html#L316" title="grain.cuda.CuArray" class="hid">CuArray</a>!<span class="type">int</span>([<span class="num">0</span>]); <span class="com">// [count].variable.to!DeviceStorage;</span>
 <a id="L83" href="#L83" class="br">83 </a>
 <a id="L84" href="#L84" class="br">84 </a>            <span class="kwrd">auto</span> <span class="hid">batchSize</span> = <span class="hid">targetId.shape</span>[<span class="num">0</span>];
-<a id="L85" href="#L85" class="br">85 </a>            <span class="hid">Global.kernel</span>!<span class="hid">nll.call</span>(<span class="hid">dresult.ptr</span>, <span class="hid">dcount.ptr</span>, <span class="hid">logP.data.ptr</span>,
+<a id="L85" href="#L85" class="br">85 </a>            <a href="grain.cuda.d.html#L117" title="grain.cuda.Global.kernel" class="hid">Global.kernel</a>!<span class="hid">nll.call</span>(<span class="hid">dresult.ptr</span>, <span class="hid">dcount.ptr</span>, <span class="hid">logP.data.ptr</span>,
 <a id="L86" href="#L86" class="br">86 </a>                    <span class="hid">targetId.data.ptr</span>, <span class="kwrd">this</span>.<span class="hid">ignoreIndex</span>, <span class="hid">batchSize</span>, <span class="hid">logP.strides</span>[
 <a id="L87" href="#L87" class="br">87 </a>                    <span class="num">0</span>]).<span class="hid">launch</span>(<span class="hid">batchSize</span>);
 <a id="L88" href="#L88" class="br">88 </a>
@@ -139,10 +139,10 @@
 <a id="L109" href="#L109" class="br">109 </a>            <span class="kwrd">import</span> <span class="hid">std.typecons</span> : <span class="hid">tuple</span>;
 <a id="L110" href="#L110" class="br">110 </a>
 <a id="L111" href="#L111" class="br">111 </a>            <span class="kwrd">auto</span> <span class="hid">nBatch</span> = <span class="kwrd">this</span>.<span class="hid">_dtargetId.shape</span>[<span class="num">0</span>];
-<a id="L112" href="#L112" class="br">112 </a>            <span class="kwrd">auto</span> <span class="hid">glogP</span> = <span class="hid">CuArray</span>!<span class="hid">F</span>(<span class="hid">nBatch</span> * <span class="kwrd">this</span>.<span class="hid">_nClass</span>);
+<a id="L112" href="#L112" class="br">112 </a>            <span class="kwrd">auto</span> <span class="hid">glogP</span> = <a href="grain.cuda.d.html#L316" title="grain.cuda.CuArray" class="hid">CuArray</a>!<span class="hid">F</span>(<span class="hid">nBatch</span> * <span class="kwrd">this</span>.<span class="hid">_nClass</span>);
 <a id="L113" href="#L113" class="br">113 </a>            <span class="hid">glogP.zero_</span>();
 <a id="L114" href="#L114" class="br">114 </a>            <span class="kwrd">auto</span> <span class="hid">coeff</span> = <span class="hid">gy.to</span>!<span class="hid">HostStorage.data</span>[<span class="num">0</span>] * <span class="kwrd">this</span>.<span class="hid">_normalize</span>;
-<a id="L115" href="#L115" class="br">115 </a>            <span class="hid">Global.kernel</span>!<span class="hid">nllGrad.call</span>(<span class="hid">glogP.ptr</span>, -<span class="hid">coeff</span>,
+<a id="L115" href="#L115" class="br">115 </a>            <a href="grain.cuda.d.html#L117" title="grain.cuda.Global.kernel" class="hid">Global.kernel</a>!<span class="hid">nllGrad.call</span>(<span class="hid">glogP.ptr</span>, -<span class="hid">coeff</span>,
 <a id="L116" href="#L116" class="br">116 </a>                    <span class="kwrd">this</span>.<span class="hid">_dtargetId.data.ptr</span>,
 <a id="L117" href="#L117" class="br">117 </a>                    <span class="kwrd">this</span>.<span class="hid">ignoreIndex</span>, <span class="hid">nBatch</span>, <span class="kwrd">this</span>.<span class="hid">_nClass</span>).<span class="hid">launch</span>(<span class="hid">nBatch</span>);
 <a id="L118" href="#L118" class="br">118 </a>            <span class="kwrd">auto</span> <span class="hid">v</span> = <span class="hid">Variable</span>!(<span class="hid">F</span>, <span class="num">2</span>, <span class="hid">DeviceStorage</span>)(<span class="kwrd">false</span>, [<span class="hid">nBatch</span>,

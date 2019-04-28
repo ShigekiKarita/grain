@@ -59,9 +59,9 @@
 <a id="L29" href="#L29" class="br">29 </a>    <span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">HostStorage</span>) <span class="hid">ha</span>, <span class="hid">hb</span>;
 <a id="L30" href="#L30" class="br">30 </a>
 <a id="L31" href="#L31" class="br">31 </a>    <span class="kwrd">auto</span> <span class="hid">forward</span>(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">HostStorage</span>) <span class="hid">a</span>, <span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">HostStorage</span>) <span class="hid">b</span>) {
-<a id="L32" href="#L32" class="br">32 </a>        <span class="kwrd">auto</span> <span class="hid">info</span> = <span class="hid">broadcastable</span>(<span class="hid">a</span>, <span class="hid">b</span>);
+<a id="L32" href="#L32" class="br">32 </a>        <span class="kwrd">auto</span> <span class="hid">info</span> = <a href="grain.functions.common.d.html#L181" title="grain.functions.common.broadcastable" class="hid">broadcastable</a>(<span class="hid">a</span>, <span class="hid">b</span>);
 <a id="L33" href="#L33" class="br">33 </a>        <span class="kwrd">assert</span>(<span class="hid">info.ok</span>);
-<a id="L34" href="#L34" class="br">34 </a>        <span class="kwrd">auto</span> <span class="hid">abx</span> = <span class="hid">broadcast</span>(<span class="hid">a.sliced</span>, <span class="hid">b.sliced</span>);
+<a id="L34" href="#L34" class="br">34 </a>        <span class="kwrd">auto</span> <span class="hid">abx</span> = <a href="grain.functions.common.d.html#L244" title="grain.functions.common.broadcast" class="hid">broadcast</a>(<span class="hid">a.sliced</span>, <span class="hid">b.sliced</span>);
 <a id="L35" href="#L35" class="br">35 </a>        <span class="kwrd">auto</span> <span class="hid">ax</span> = <span class="hid">abx</span>[<span class="num">0</span>];
 <a id="L36" href="#L36" class="br">36 </a>        <span class="kwrd">auto</span> <span class="hid">bx</span> = <span class="hid">abx</span>[<span class="num">1</span>];
 <a id="L37" href="#L37" class="br">37 </a>        <span class="kwrd">auto</span> <span class="hid">c</span> = <span class="hid">slice</span>(<span class="kwrd">this</span>.<span class="hid">alpha1</span> * <span class="hid">ax</span>);
@@ -84,16 +84,16 @@
 <a id="L54" href="#L54" class="br">54 </a>
 <a id="L55" href="#L55" class="br">55 </a>    <span class="kwrd">auto</span> <span class="hid">backward</span>(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">HostStorage</span>) <span class="hid">gc</span>) {
 <a id="L56" href="#L56" class="br">56 </a>        <span class="kwrd">import</span> <span class="hid">numir</span>;
-<a id="L57" href="#L57" class="br">57 </a>        <span class="kwrd">import</span> <span class="hid">mir.math</span> : <span class="hid">sum</span>;
+<a id="L57" href="#L57" class="br">57 </a>        <span class="kwrd">import</span> <span class="hid">mir.math</span> : <a href="grain.cuda.d.html#L494" title="grain.cuda.sum" class="hid">sum</a>;
 <a id="L58" href="#L58" class="br">58 </a>        <span class="kwrd">import</span> <span class="hid">mir.ndslice</span>;
 <a id="L59" href="#L59" class="br">59 </a>        <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="hid">ops</span> == <span class="str">&quot;+&quot;</span>) {
 <a id="L60" href="#L60" class="br">60 </a>            <span class="kwrd">auto</span> <span class="hid">ga</span> = <span class="kwrd">this</span>.<span class="hid">alpha1</span> == <span class="num">1</span> ? <span class="hid">gc.sliced.slice.universal</span> : <span class="hid">slice</span>(<span class="kwrd">this</span>.<span class="hid">alpha1</span> * <span class="hid">gc.sliced</span>).<span class="hid">universal</span>;
 <a id="L61" href="#L61" class="br">61 </a>            <span class="kwrd">if</span> (<span class="hid">ga.shape</span> != <span class="kwrd">this</span>.<span class="hid">shape1</span>) {
-<a id="L62" href="#L62" class="br">62 </a>                <span class="hid">ga</span> = <span class="hid">reduceShape</span>!(<span class="hid">sum</span>!<span class="str">&quot;fast&quot;</span>)(<span class="hid">ga</span>, <span class="kwrd">this</span>.<span class="hid">shape1.castArray</span>!<span class="hid">size_t</span>).<span class="hid">universal</span>;
+<a id="L62" href="#L62" class="br">62 </a>                <span class="hid">ga</span> = <a href="grain.functions.common.d.html#L271" title="grain.functions.common.reduceShape" class="hid">reduceShape</a>!(<a href="grain.cuda.d.html#L494" title="grain.cuda.sum" class="hid">sum</a>!<span class="str">&quot;fast&quot;</span>)(<span class="hid">ga</span>, <span class="kwrd">this</span>.<span class="hid">shape1.castArray</span>!<span class="hid">size_t</span>).<span class="hid">universal</span>;
 <a id="L63" href="#L63" class="br">63 </a>            }
 <a id="L64" href="#L64" class="br">64 </a>            <span class="kwrd">auto</span> <span class="hid">gb</span> = <span class="kwrd">this</span>.<span class="hid">alpha2</span> == <span class="num">1</span> ? <span class="hid">gc.sliced.slice.universal</span> : <span class="hid">slice</span>(<span class="kwrd">this</span>.<span class="hid">alpha2</span> * <span class="hid">gc.sliced</span>).<span class="hid">universal</span>;
 <a id="L65" href="#L65" class="br">65 </a>            <span class="kwrd">if</span> (<span class="hid">gb.shape</span> != <span class="kwrd">this</span>.<span class="hid">shape2</span>) {
-<a id="L66" href="#L66" class="br">66 </a>                <span class="hid">gb</span> = <span class="hid">reduceShape</span>!(<span class="hid">sum</span>!<span class="str">&quot;fast&quot;</span>)(<span class="hid">gb</span>, <span class="kwrd">this</span>.<span class="hid">shape2.castArray</span>!<span class="hid">size_t</span>).<span class="hid">universal</span>;
+<a id="L66" href="#L66" class="br">66 </a>                <span class="hid">gb</span> = <a href="grain.functions.common.d.html#L271" title="grain.functions.common.reduceShape" class="hid">reduceShape</a>!(<a href="grain.cuda.d.html#L494" title="grain.cuda.sum" class="hid">sum</a>!<span class="str">&quot;fast&quot;</span>)(<span class="hid">gb</span>, <span class="kwrd">this</span>.<span class="hid">shape2.castArray</span>!<span class="hid">size_t</span>).<span class="hid">universal</span>;
 <a id="L67" href="#L67" class="br">67 </a>            }
 <a id="L68" href="#L68" class="br">68 </a>            <span class="kwrd">return</span> <span class="hid">tuple</span>(<span class="hid">ga.variable</span>, <span class="hid">gb.variable</span>);
 <a id="L69" href="#L69" class="br">69 </a>        } <span class="kwrd">else</span> <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="hid">ops</span> == <span class="str">&quot;*&quot;</span>) {
@@ -102,12 +102,12 @@
 <a id="L72" href="#L72" class="br">72 </a>            <span class="kwrd">auto</span> <span class="hid">ga</span> = <span class="hid">gc.sliced.slice.universal</span>;
 <a id="L73" href="#L73" class="br">73 </a>            <span class="hid">ga</span>[] *= <span class="kwrd">this</span>.<span class="hid">alpha1</span> * <span class="kwrd">this</span>.<span class="hid">alpha2</span> * <span class="kwrd">this</span>.<span class="hid">hb.sliced</span>;
 <a id="L74" href="#L74" class="br">74 </a>            <span class="kwrd">if</span> (<span class="hid">ga.shape</span> != <span class="kwrd">this</span>.<span class="hid">shape1</span>) {
-<a id="L75" href="#L75" class="br">75 </a>                <span class="hid">ga</span> = <span class="hid">reduceShape</span>!(<span class="hid">sum</span>!<span class="str">&quot;fast&quot;</span>)(<span class="hid">ga</span>, <span class="kwrd">this</span>.<span class="hid">shape1.castArray</span>!<span class="hid">size_t</span>).<span class="hid">universal</span>;
+<a id="L75" href="#L75" class="br">75 </a>                <span class="hid">ga</span> = <a href="grain.functions.common.d.html#L271" title="grain.functions.common.reduceShape" class="hid">reduceShape</a>!(<a href="grain.cuda.d.html#L494" title="grain.cuda.sum" class="hid">sum</a>!<span class="str">&quot;fast&quot;</span>)(<span class="hid">ga</span>, <span class="kwrd">this</span>.<span class="hid">shape1.castArray</span>!<span class="hid">size_t</span>).<span class="hid">universal</span>;
 <a id="L76" href="#L76" class="br">76 </a>            }
 <a id="L77" href="#L77" class="br">77 </a>            <span class="kwrd">auto</span> <span class="hid">gb</span> = <span class="hid">gc.sliced.slice.universal</span>;
 <a id="L78" href="#L78" class="br">78 </a>            <span class="hid">gb</span>[] *= <span class="kwrd">this</span>.<span class="hid">alpha1</span> * <span class="kwrd">this</span>.<span class="hid">alpha2</span> * <span class="kwrd">this</span>.<span class="hid">ha.sliced</span>;
 <a id="L79" href="#L79" class="br">79 </a>            <span class="kwrd">if</span> (<span class="hid">gb.shape</span> != <span class="kwrd">this</span>.<span class="hid">shape2</span>) {
-<a id="L80" href="#L80" class="br">80 </a>                <span class="hid">gb</span> = <span class="hid">reduceShape</span>!(<span class="hid">sum</span>!<span class="str">&quot;fast&quot;</span>)(<span class="hid">gb</span>, <span class="kwrd">this</span>.<span class="hid">shape2.castArray</span>!<span class="hid">size_t</span>).<span class="hid">universal</span>;
+<a id="L80" href="#L80" class="br">80 </a>                <span class="hid">gb</span> = <a href="grain.functions.common.d.html#L271" title="grain.functions.common.reduceShape" class="hid">reduceShape</a>!(<a href="grain.cuda.d.html#L494" title="grain.cuda.sum" class="hid">sum</a>!<span class="str">&quot;fast&quot;</span>)(<span class="hid">gb</span>, <span class="kwrd">this</span>.<span class="hid">shape2.castArray</span>!<span class="hid">size_t</span>).<span class="hid">universal</span>;
 <a id="L81" href="#L81" class="br">81 </a>            }
 <a id="L82" href="#L82" class="br">82 </a>            <span class="kwrd">return</span> <span class="hid">tuple</span>(<span class="hid">ga.variable</span>, <span class="hid">gb.variable</span>);
 <a id="L83" href="#L83" class="br">83 </a>        } <span class="kwrd">else</span> {
@@ -203,7 +203,7 @@
 <a id="L173" href="#L173" class="br">173 </a>        }
 <a id="L174" href="#L174" class="br">174 </a>    }
 <a id="L175" href="#L175" class="br">175 </a>
-<a id="L176" href="#L176" class="br">176 </a>    <span class="kwrd">mixin</span> <span class="hid">FunctionCommon</span>;
+<a id="L176" href="#L176" class="br">176 </a>    <span class="kwrd">mixin</span> <a href="grain.functions.common.d.html#L43" title="grain.functions.common.FunctionCommon" class="hid">FunctionCommon</a>;
 <a id="L177" href="#L177" class="br">177 </a>}
 <a id="L178" href="#L178" class="br">178 </a>
 <a id="L179" href="#L179" class="br">179 </a><span class="com">///</span>
@@ -319,7 +319,7 @@
 <a id="L289" href="#L289" class="br">289 </a>    <span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="num">2</span>, <span class="hid">HostStorage</span>) <span class="hid">ha</span>, <span class="hid">hb</span>;
 <a id="L290" href="#L290" class="br">290 </a>
 <a id="L291" href="#L291" class="br">291 </a>    <span class="com">// TODO uncomment this line</span>
-<a id="L292" href="#L292" class="br">292 </a>    <span class="kwrd">mixin</span> <span class="hid">FunctionCommon</span>;
+<a id="L292" href="#L292" class="br">292 </a>    <span class="kwrd">mixin</span> <a href="grain.functions.common.d.html#L43" title="grain.functions.common.FunctionCommon" class="hid">FunctionCommon</a>;
 <a id="L293" href="#L293" class="br">293 </a>
 <a id="L294" href="#L294" class="br">294 </a>    <span class="kwrd">auto</span> <span class="hid">forward</span>(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="num">2</span>, <span class="hid">HostStorage</span>) <span class="hid">a</span>, <span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="num">2</span>, <span class="hid">HostStorage</span>) <span class="hid">b</span>) {
 <a id="L295" href="#L295" class="br">295 </a>        <span class="com">// TODO if training</span>
@@ -349,7 +349,7 @@
 <a id="L319" href="#L319" class="br">319 </a>
 <a id="L320" href="#L320" class="br">320 </a>            <span class="kwrd">import</span> <span class="hid">std.typecons</span> : <span class="hid">RefCounted</span>;
 <a id="L321" href="#L321" class="br">321 </a>            <span class="kwrd">assert</span>(<span class="hid">a.shape</span>[<span class="num">1</span>] == <span class="hid">b.shape</span>[<span class="num">0</span>]);
-<a id="L322" href="#L322" class="br">322 </a>            <span class="kwrd">auto</span> <span class="hid">cdata</span> = <span class="hid">CuArray</span>!<span class="hid">T</span>(<span class="hid">a.shape</span>[<span class="num">0</span>] * <span class="hid">b.shape</span>[<span class="num">1</span>]);
+<a id="L322" href="#L322" class="br">322 </a>            <span class="kwrd">auto</span> <span class="hid">cdata</span> = <a href="grain.cuda.d.html#L316" title="grain.cuda.CuArray" class="hid">CuArray</a>!<span class="hid">T</span>(<span class="hid">a.shape</span>[<span class="num">0</span>] * <span class="hid">b.shape</span>[<span class="num">1</span>]);
 <a id="L323" href="#L323" class="br">323 </a>            <span class="kwrd">auto</span> <span class="hid">c</span> = <span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="num">2</span>, <span class="hid">DeviceStorage</span>)(
 <a id="L324" href="#L324" class="br">324 </a>                <span class="hid">a.requiresGrad</span> || <span class="hid">b.requiresGrad</span>,
 <a id="L325" href="#L325" class="br">325 </a>                [<span class="hid">a.shape</span>[<span class="num">0</span>], <span class="hid">b.shape</span>[<span class="num">1</span>]], [<span class="hid">b.shape</span>[<span class="num">1</span>], <span class="num">1</span>], <span class="hid">cdata</span>);
@@ -359,7 +359,7 @@
 <a id="L329" href="#L329" class="br">329 </a>            <span class="com">// TODO if train</span>
 <a id="L330" href="#L330" class="br">330 </a>            <span class="kwrd">this</span>.<span class="hid">da</span> = <span class="hid">a</span>;
 <a id="L331" href="#L331" class="br">331 </a>            <span class="kwrd">this</span>.<span class="hid">db</span> = <span class="hid">b</span>;
-<a id="L332" href="#L332" class="br">332 </a>            <span class="hid">checkCublasErrors</span>(<span class="hid">gemm</span>(<span class="hid">cublasHandle</span>, <span class="hid">CUBLAS_OP_N</span>, <span class="hid">CUBLAS_OP_N</span>,
+<a id="L332" href="#L332" class="br">332 </a>            <a href="grain.cuda.d.html#L431" title="grain.cuda.checkCublasErrors" class="hid">checkCublasErrors</a>(<span class="hid">gemm</span>(<a href="grain.cuda.d.html#L22" title="grain.cuda.cublasHandle" class="hid">cublasHandle</a>, <span class="hid">CUBLAS_OP_N</span>, <span class="hid">CUBLAS_OP_N</span>,
 <a id="L333" href="#L333" class="br">333 </a>                                   <span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">b.shape</span>[<span class="num">1</span>],
 <a id="L334" href="#L334" class="br">334 </a>                                   <span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">a.shape</span>[<span class="num">0</span>], <span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">a.shape</span>[<span class="num">1</span>],
 <a id="L335" href="#L335" class="br">335 </a>                                   &amp;<span class="hid">alpha</span>,
@@ -382,7 +382,7 @@
 <a id="L352" href="#L352" class="br">352 </a>            <span class="kwrd">auto</span> <span class="hid">ga</span> = <span class="kwrd">this</span>.<span class="hid">da.dup</span>;
 <a id="L353" href="#L353" class="br">353 </a>            <span class="kwrd">auto</span> <span class="hid">gb</span> = <span class="kwrd">this</span>.<span class="hid">db.dup</span>;
 <a id="L354" href="#L354" class="br">354 </a>            <span class="com">// auto ga = mtimes(gc.sliced, this.hb.sliced.transposed).variable;</span>
-<a id="L355" href="#L355" class="br">355 </a>            <span class="hid">checkCublasErrors</span>(<span class="hid">gemm</span>(<span class="hid">cublasHandle</span>, <span class="hid">CUBLAS_OP_T</span>, <span class="hid">CUBLAS_OP_N</span>,
+<a id="L355" href="#L355" class="br">355 </a>            <a href="grain.cuda.d.html#L431" title="grain.cuda.checkCublasErrors" class="hid">checkCublasErrors</a>(<span class="hid">gemm</span>(<a href="grain.cuda.d.html#L22" title="grain.cuda.cublasHandle" class="hid">cublasHandle</a>, <span class="hid">CUBLAS_OP_T</span>, <span class="hid">CUBLAS_OP_N</span>,
 <a id="L356" href="#L356" class="br">356 </a>                                   <span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">ga.shape</span>[<span class="num">1</span>],
 <a id="L357" href="#L357" class="br">357 </a>                                   <span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">ga.shape</span>[<span class="num">0</span>], <span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">gc.shape</span>[<span class="num">1</span>],
 <a id="L358" href="#L358" class="br">358 </a>                                   &amp;<span class="hid">alpha</span>,
@@ -391,7 +391,7 @@
 <a id="L361" href="#L361" class="br">361 </a>                                   &amp;<span class="hid">beta</span>,
 <a id="L362" href="#L362" class="br">362 </a>                                   <span class="kwrd">cast</span>(<span class="hid">T</span>*) <span class="hid">ga.data.ptr</span>, <span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">ga.strides</span>[<span class="num">0</span>]));
 <a id="L363" href="#L363" class="br">363 </a>            <span class="com">// auto gb = mtimes(this.ha.sliced.transposed, gc.sliced).variable;</span>
-<a id="L364" href="#L364" class="br">364 </a>            <span class="hid">checkCublasErrors</span>(<span class="hid">gemm</span>(<span class="hid">cublasHandle</span>, <span class="hid">CUBLAS_OP_N</span>, <span class="hid">CUBLAS_OP_T</span>,
+<a id="L364" href="#L364" class="br">364 </a>            <a href="grain.cuda.d.html#L431" title="grain.cuda.checkCublasErrors" class="hid">checkCublasErrors</a>(<span class="hid">gemm</span>(<a href="grain.cuda.d.html#L22" title="grain.cuda.cublasHandle" class="hid">cublasHandle</a>, <span class="hid">CUBLAS_OP_N</span>, <span class="hid">CUBLAS_OP_T</span>,
 <a id="L365" href="#L365" class="br">365 </a>                                   <span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">gb.shape</span>[<span class="num">1</span>],
 <a id="L366" href="#L366" class="br">366 </a>                                   <span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">gb.shape</span>[<span class="num">0</span>], <span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">da.shape</span>[<span class="num">0</span>],
 <a id="L367" href="#L367" class="br">367 </a>                                   &amp;<span class="hid">alpha</span>,
@@ -461,7 +461,7 @@
 <a id="L431" href="#L431" class="br">431 </a>   TODO: generalize to broadcastable addition (use cudnnAddTensor)
 <a id="L432" href="#L432" class="br">432 </a>*/</span>
 <a id="L433" href="#L433" class="br">433 </a><span class="kwrd">struct</span> <a href="grain.functions.binary.d.html#L433" title="grain.functions.binary.AddBias" class="hid">AddBias</a>(<span class="hid">T</span>) {
-<a id="L434" href="#L434" class="br">434 </a>    <span class="kwrd">mixin</span> <span class="hid">FunctionCommon</span>;
+<a id="L434" href="#L434" class="br">434 </a>    <span class="kwrd">mixin</span> <a href="grain.functions.common.d.html#L43" title="grain.functions.common.FunctionCommon" class="hid">FunctionCommon</a>;
 <a id="L435" href="#L435" class="br">435 </a>
 <a id="L436" href="#L436" class="br">436 </a>    <span class="kwrd">import</span> <span class="hid">mir.ndslice</span> : <span class="hid">map</span>, <span class="hid">slice</span>;
 <a id="L437" href="#L437" class="br">437 </a>    <span class="kwrd">import</span> <span class="hid">std.typecons</span> : <span class="hid">tuple</span>;
@@ -476,7 +476,7 @@
 <a id="L446" href="#L446" class="br">446 </a>
 <a id="L447" href="#L447" class="br">447 </a>    <span class="kwrd">auto</span> <span class="hid">backward</span>(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="num">2</span>, <span class="hid">HostStorage</span>) <span class="hid">gy</span>) {
 <a id="L448" href="#L448" class="br">448 </a>        <span class="kwrd">import</span> <span class="hid">numir</span> : <span class="hid">alongDim</span>;
-<a id="L449" href="#L449" class="br">449 </a>        <span class="kwrd">import</span> <span class="hid">mir.math</span> : <span class="hid">sum</span>;
+<a id="L449" href="#L449" class="br">449 </a>        <span class="kwrd">import</span> <span class="hid">mir.math</span> : <a href="grain.cuda.d.html#L494" title="grain.cuda.sum" class="hid">sum</a>;
 <a id="L450" href="#L450" class="br">450 </a>        <span class="kwrd">auto</span> <span class="hid">gb</span> = <span class="hid">gy.sliced.alongDim</span>!<span class="num">0</span>.<span class="hid">map</span>!<span class="hid">sum.slice.variable</span>;
 <a id="L451" href="#L451" class="br">451 </a>        <span class="kwrd">return</span> <span class="hid">tuple</span>(<span class="hid">gy</span>, <span class="hid">gb</span>);
 <a id="L452" href="#L452" class="br">452 </a>    }
@@ -489,17 +489,17 @@
 <a id="L459" href="#L459" class="br">459 </a>            <span class="kwrd">auto</span> <span class="hid">y</span> = <span class="hid">a.dup</span>;
 <a id="L460" href="#L460" class="br">460 </a>            <span class="kwrd">auto</span> <span class="hid">n</span> = <span class="kwrd">cast</span>(<span class="type">uint</span>) <span class="hid">y.data.length</span>;
 <a id="L461" href="#L461" class="br">461 </a>            <span class="kwrd">auto</span> <span class="hid">blen</span> = <span class="kwrd">cast</span>(<span class="type">uint</span>) <span class="hid">b.data.length</span>;
-<a id="L462" href="#L462" class="br">462 </a>            <span class="hid">Global.kernel</span>!<span class="hid">addBias</span>
+<a id="L462" href="#L462" class="br">462 </a>            <a href="grain.cuda.d.html#L117" title="grain.cuda.Global.kernel" class="hid">Global.kernel</a>!<span class="hid">addBias</span>
 <a id="L463" href="#L463" class="br">463 </a>                .<span class="hid">call</span>(<span class="hid">y.data.ptr</span>, <span class="hid">b.data.ptr</span>, <span class="hid">blen</span>, <span class="hid">n</span>).<span class="hid">launch</span>(<span class="hid">n</span>);
 <a id="L464" href="#L464" class="br">464 </a>            <span class="kwrd">return</span> <span class="hid">y</span>;
 <a id="L465" href="#L465" class="br">465 </a>        }
 <a id="L466" href="#L466" class="br">466 </a>
 <a id="L467" href="#L467" class="br">467 </a>        <span class="kwrd">auto</span> <span class="hid">backward</span>(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="num">2</span>, <span class="hid">DeviceStorage</span>) <span class="hid">gy</span>) {
-<a id="L468" href="#L468" class="br">468 </a>            <span class="kwrd">auto</span> <span class="hid">gb</span> = <span class="hid">CuArray</span>!<span class="hid">T</span>(<span class="hid">gy.shape</span>[<span class="num">1</span>]);
+<a id="L468" href="#L468" class="br">468 </a>            <span class="kwrd">auto</span> <span class="hid">gb</span> = <a href="grain.cuda.d.html#L316" title="grain.cuda.CuArray" class="hid">CuArray</a>!<span class="hid">T</span>(<span class="hid">gy.shape</span>[<span class="num">1</span>]);
 <a id="L469" href="#L469" class="br">469 </a>            <span class="hid">gb.zero_</span>();
 <a id="L470" href="#L470" class="br">470 </a>            <span class="kwrd">auto</span> <span class="hid">n</span> = <span class="kwrd">cast</span>(<span class="type">uint</span>) <span class="hid">gy.data.length</span>;
 <a id="L471" href="#L471" class="br">471 </a>            <span class="kwrd">auto</span> <span class="hid">blen</span> = <span class="kwrd">cast</span>(<span class="type">uint</span>) <span class="hid">gb.length</span>;
-<a id="L472" href="#L472" class="br">472 </a>            <span class="hid">Global.kernel</span>!<span class="hid">addBiasGrad</span>
+<a id="L472" href="#L472" class="br">472 </a>            <a href="grain.cuda.d.html#L117" title="grain.cuda.Global.kernel" class="hid">Global.kernel</a>!<span class="hid">addBiasGrad</span>
 <a id="L473" href="#L473" class="br">473 </a>                .<span class="hid">call</span>(<span class="hid">gy.data.ptr</span>, <span class="hid">gb.ptr</span>, <span class="hid">blen</span>, <span class="hid">n</span>).<span class="hid">launch</span>(<span class="hid">n</span>);
 <a id="L474" href="#L474" class="br">474 </a>            <span class="kwrd">return</span> <span class="hid">tuple</span>(<span class="hid">gy</span>, <span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="num">1</span>, <span class="hid">DeviceStorage</span>)(<span class="kwrd">false</span>, [<span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">blen</span>], [<span class="num">1</span>], <span class="hid">gb</span>));
 <a id="L475" href="#L475" class="br">475 </a>        }
@@ -541,7 +541,7 @@
 <a id="L511" href="#L511" class="br">511 </a><span class="com">/// Emebedding ID into vector. TODO: support N-dim input. support sparse weight matrix</span>
 <a id="L512" href="#L512" class="br">512 </a><span class="kwrd">struct</span> <a href="grain.functions.binary.d.html#L512" title="grain.functions.binary.Embedding" class="hid">Embedding</a>(<span class="hid">T</span>) {
 <a id="L513" href="#L513" class="br">513 </a>    <span class="kwrd">import</span> <span class="hid">std.range</span> : <span class="hid">enumerate</span>;
-<a id="L514" href="#L514" class="br">514 </a>    <span class="kwrd">import</span> <span class="hid">numir</span> : <span class="hid">view</span>, <span class="hid">empty</span>, <span class="hid">zeros</span>;
+<a id="L514" href="#L514" class="br">514 </a>    <span class="kwrd">import</span> <span class="hid">numir</span> : <span class="hid">view</span>, <a href="grain.cuda.d.html#L229" title="grain.cuda.empty" class="hid">empty</a>, <a href="grain.cuda.d.html#L409" title="grain.cuda.zeros" class="hid">zeros</a>;
 <a id="L515" href="#L515" class="br">515 </a>
 <a id="L516" href="#L516" class="br">516 </a>    <span class="hid">Variable</span>!(<span class="type">int</span>, <span class="num">1</span>, <span class="hid">HostStorage</span>) <span class="hid">hx</span>;
 <a id="L517" href="#L517" class="br">517 </a>    <span class="type">uint</span>[<span class="num">2</span>] <span class="hid">wshape</span>;
@@ -549,7 +549,7 @@
 <a id="L519" href="#L519" class="br">519 </a>    <span class="kwrd">auto</span> <span class="hid">forward</span>(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="num">2</span>, <span class="hid">HostStorage</span>) <span class="hid">weight</span>, <span class="hid">Variable</span>!(<span class="type">int</span>, <span class="num">1</span>, <span class="hid">HostStorage</span>) <span class="hid">ids</span>) {
 <a id="L520" href="#L520" class="br">520 </a>        <span class="kwrd">this</span>.<span class="hid">hx</span> = <span class="hid">ids</span>; <span class="com">// TODO if train</span>
 <a id="L521" href="#L521" class="br">521 </a>        <span class="kwrd">this</span>.<span class="hid">wshape</span> = <span class="hid">weight.shape</span>; <span class="com">// TODO if train</span>
-<a id="L522" href="#L522" class="br">522 </a>        <span class="kwrd">auto</span> <span class="hid">ys</span> = <span class="hid">empty</span>!<span class="hid">T</span>(<span class="hid">ids.shape</span>[<span class="num">0</span>], <span class="hid">weight.shape</span>[<span class="num">1</span>]);
+<a id="L522" href="#L522" class="br">522 </a>        <span class="kwrd">auto</span> <span class="hid">ys</span> = <a href="grain.cuda.d.html#L229" title="grain.cuda.empty" class="hid">empty</a>!<span class="hid">T</span>(<span class="hid">ids.shape</span>[<span class="num">0</span>], <span class="hid">weight.shape</span>[<span class="num">1</span>]);
 <a id="L523" href="#L523" class="br">523 </a>        <span class="kwrd">foreach</span> (<span class="hid">i</span>, <span class="hid">id</span>; <span class="hid">ids.sliced.enumerate</span>) {
 <a id="L524" href="#L524" class="br">524 </a>            <span class="hid">ys</span>[<span class="hid">i</span>, <span class="num">0</span>..$] = <span class="hid">weight.sliced</span>[<span class="hid">id</span>, <span class="num">0</span>..$];
 <a id="L525" href="#L525" class="br">525 </a>        }
@@ -557,7 +557,7 @@
 <a id="L527" href="#L527" class="br">527 </a>    }
 <a id="L528" href="#L528" class="br">528 </a>
 <a id="L529" href="#L529" class="br">529 </a>    <span class="kwrd">auto</span> <span class="hid">backward</span>(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="num">2</span>, <span class="hid">HostStorage</span>) <span class="hid">gy</span>) {
-<a id="L530" href="#L530" class="br">530 </a>        <span class="kwrd">auto</span> <span class="hid">gw</span> = <span class="hid">zeros</span>!<span class="hid">T</span>(<span class="kwrd">this</span>.<span class="hid">wshape.castArray</span>!<span class="hid">size_t</span>);
+<a id="L530" href="#L530" class="br">530 </a>        <span class="kwrd">auto</span> <span class="hid">gw</span> = <a href="grain.cuda.d.html#L409" title="grain.cuda.zeros" class="hid">zeros</a>!<span class="hid">T</span>(<span class="kwrd">this</span>.<span class="hid">wshape.castArray</span>!<span class="hid">size_t</span>);
 <a id="L531" href="#L531" class="br">531 </a>        <span class="kwrd">foreach</span> (<span class="hid">i</span>, <span class="hid">id</span>; <span class="kwrd">this</span>.<span class="hid">hx.sliced.enumerate</span>) {
 <a id="L532" href="#L532" class="br">532 </a>            <span class="hid">gw</span>[<span class="hid">id</span>, <span class="num">0</span>..$] += <span class="hid">gy.sliced</span>[<span class="hid">i</span>];
 <a id="L533" href="#L533" class="br">533 </a>        }
@@ -572,7 +572,7 @@
 <a id="L542" href="#L542" class="br">542 </a>            <span class="kwrd">this</span>.<span class="hid">dx</span> = <span class="hid">ids</span>; <span class="com">// TODO if train</span>
 <a id="L543" href="#L543" class="br">543 </a>            <span class="kwrd">this</span>.<span class="hid">wshape</span> = <span class="hid">weight.shape</span>; <span class="com">// TODO if train</span>
 <a id="L544" href="#L544" class="br">544 </a>            <span class="kwrd">auto</span> <span class="hid">ys</span> = <span class="hid">uninitVariable</span>!(<span class="hid">T</span>, <span class="hid">DeviceStorage</span>, <span class="num">2</span>)([<span class="hid">ids.shape</span>[<span class="num">0</span>], <span class="hid">weight.shape</span>[<span class="num">1</span>]], <span class="hid">weight.requiresGrad</span>);
-<a id="L545" href="#L545" class="br">545 </a>            <span class="hid">Global.kernel</span>!<span class="hid">embedding</span>
+<a id="L545" href="#L545" class="br">545 </a>            <a href="grain.cuda.d.html#L117" title="grain.cuda.Global.kernel" class="hid">Global.kernel</a>!<span class="hid">embedding</span>
 <a id="L546" href="#L546" class="br">546 </a>                .<span class="hid">call</span>(<span class="hid">weight.data.ptr</span>, <span class="hid">ids.data.ptr</span>, <span class="hid">ys.data.ptr</span>, <span class="hid">weight.shape</span>[<span class="num">0</span>], <span class="hid">weight.shape</span>[<span class="num">1</span>], <span class="hid">ids.shape</span>[<span class="num">0</span>])
 <a id="L547" href="#L547" class="br">547 </a>                .<span class="hid">launch</span>(<span class="hid">weight.shape</span>[<span class="num">1</span>] * <span class="hid">ids.shape</span>[<span class="num">0</span>]);
 <a id="L548" href="#L548" class="br">548 </a>            <span class="kwrd">return</span> <span class="hid">ys</span>;
@@ -581,14 +581,14 @@
 <a id="L551" href="#L551" class="br">551 </a>        <span class="kwrd">auto</span> <span class="hid">backward</span>(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="num">2</span>, <span class="hid">DeviceStorage</span>) <span class="hid">gy</span>) {
 <a id="L552" href="#L552" class="br">552 </a>            <span class="kwrd">import</span> <span class="hid">grain.kernel</span> : <span class="hid">embeddingGrad</span>;
 <a id="L553" href="#L553" class="br">553 </a>            <span class="kwrd">auto</span> <span class="hid">gw</span> = <span class="hid">uninitVariable</span>!(<span class="hid">T</span>, <span class="hid">DeviceStorage</span>, <span class="num">2</span>)(<span class="kwrd">this</span>.<span class="hid">wshape</span>, <span class="hid">gy.requiresGrad</span>);
-<a id="L554" href="#L554" class="br">554 </a>            <span class="hid">Global.kernel</span>!<span class="hid">embeddingGrad</span>
+<a id="L554" href="#L554" class="br">554 </a>            <a href="grain.cuda.d.html#L117" title="grain.cuda.Global.kernel" class="hid">Global.kernel</a>!<span class="hid">embeddingGrad</span>
 <a id="L555" href="#L555" class="br">555 </a>                .<span class="hid">call</span>(<span class="hid">gw.data.ptr</span>, <span class="kwrd">this</span>.<span class="hid">dx.data.ptr</span>, <span class="hid">gy.data.ptr</span>, <span class="kwrd">this</span>.<span class="hid">wshape</span>[<span class="num">0</span>], <span class="kwrd">this</span>.<span class="hid">wshape</span>[<span class="num">1</span>], <span class="kwrd">this</span>.<span class="hid">dx.shape</span>[<span class="num">0</span>])
 <a id="L556" href="#L556" class="br">556 </a>                .<span class="hid">launch</span>(<span class="kwrd">this</span>.<span class="hid">wshape</span>[<span class="num">1</span>] * <span class="kwrd">this</span>.<span class="hid">dx.shape</span>[<span class="num">0</span>]);
 <a id="L557" href="#L557" class="br">557 </a>            <span class="kwrd">return</span> <span class="hid">tuple</span>(<span class="hid">gw</span>, <span class="kwrd">typeof</span>(<span class="kwrd">this</span>.<span class="hid">dx</span>)());
 <a id="L558" href="#L558" class="br">558 </a>        }
 <a id="L559" href="#L559" class="br">559 </a>    }
 <a id="L560" href="#L560" class="br">560 </a>
-<a id="L561" href="#L561" class="br">561 </a>    <span class="kwrd">mixin</span> <span class="hid">FunctionCommon</span>;
+<a id="L561" href="#L561" class="br">561 </a>    <span class="kwrd">mixin</span> <a href="grain.functions.common.d.html#L43" title="grain.functions.common.FunctionCommon" class="hid">FunctionCommon</a>;
 <a id="L562" href="#L562" class="br">562 </a>}
 <a id="L563" href="#L563" class="br">563 </a>
 <a id="L564" href="#L564" class="br">564 </a><span class="com">///</span>
@@ -658,7 +658,7 @@
 <a id="L628" href="#L628" class="br">628 </a>    <span class="kwrd">assert</span>(<span class="hid">length</span> == <span class="hid">strides.length</span>);
 <a id="L629" href="#L629" class="br">629 </a>    <span class="kwrd">import</span> <span class="hid">mir.ndslice</span>;
 <a id="L630" href="#L630" class="br">630 </a>    <span class="kwrd">import</span> <span class="hid">mir.math</span>;
-<a id="L631" href="#L631" class="br">631 </a>    <span class="kwrd">return</span> <span class="hid">sum</span>(<span class="hid">ids.sliced</span> * <span class="hid">strides.sliced</span>);
+<a id="L631" href="#L631" class="br">631 </a>    <span class="kwrd">return</span> <a href="grain.cuda.d.html#L494" title="grain.cuda.sum" class="hid">sum</a>(<span class="hid">ids.sliced</span> * <span class="hid">strides.sliced</span>);
 <a id="L632" href="#L632" class="br">632 </a>}
 <a id="L633" href="#L633" class="br">633 </a>
 <a id="L634" href="#L634" class="br">634 </a><span class="com">/// Reference CPU implementation of Convolution function</span>
@@ -855,7 +855,7 @@
 <a id="L825" href="#L825" class="br">825 </a>        <span class="kwrd">assert</span>(<span class="hid">diffDims</span>[<span class="num">1</span>]  == <span class="hid">filDims</span>[<span class="num">0</span>]) ;
 <a id="L826" href="#L826" class="br">826 </a>
 <a id="L827" href="#L827" class="br">827 </a>    } <span class="kwrd">do</span> {
-<a id="L828" href="#L828" class="br">828 </a>        <span class="kwrd">import</span> <span class="hid">std.algorithm</span> : <span class="hid">all</span>, <span class="hid">sum</span>, <span class="hid">map</span>, <span class="hid">reduce</span>;
+<a id="L828" href="#L828" class="br">828 </a>        <span class="kwrd">import</span> <span class="hid">std.algorithm</span> : <span class="hid">all</span>, <a href="grain.cuda.d.html#L494" title="grain.cuda.sum" class="hid">sum</a>, <span class="hid">map</span>, <span class="hid">reduce</span>;
 <a id="L829" href="#L829" class="br">829 </a>        <span class="kwrd">import</span> <span class="hid">std.range</span> : <span class="hid">iota</span>;
 <a id="L830" href="#L830" class="br">830 </a>
 <a id="L831" href="#L831" class="br">831 </a>        <span class="com">// Number of pixels in output</span>
@@ -1028,7 +1028,7 @@
 <a id="L998" href="#L998" class="br">998 </a>
 <a id="L999" href="#L999" class="br">999 </a>    }
 <a id="L1000" href="#L1000" class="br">1000 </a>
-<a id="L1001" href="#L1001" class="br">1001 </a>    <span class="kwrd">mixin</span> <span class="hid">FunctionCommon</span>;
+<a id="L1001" href="#L1001" class="br">1001 </a>    <span class="kwrd">mixin</span> <a href="grain.functions.common.d.html#L43" title="grain.functions.common.FunctionCommon" class="hid">FunctionCommon</a>;
 <a id="L1002" href="#L1002" class="br">1002 </a>}
 <a id="L1003" href="#L1003" class="br">1003 </a>
 <a id="L1004" href="#L1004" class="br">1004 </a><span class="com">/** Conv1d pytorch equality test

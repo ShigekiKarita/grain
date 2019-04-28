@@ -42,7 +42,7 @@
 <a id="L12" href="#L12" class="br">12 </a>    <span class="type">uint</span>[<span class="hid">dim</span>] <span class="hid">shape</span>;
 <a id="L13" href="#L13" class="br">13 </a>
 <a id="L14" href="#L14" class="br">14 </a>    <span class="kwrd">auto</span> <span class="hid">forward</span>(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">HostStorage</span>) <span class="hid">x</span>) {
-<a id="L15" href="#L15" class="br">15 </a>        <span class="kwrd">import</span> <span class="hid">mir.math</span> : <span class="hid">sum</span>;
+<a id="L15" href="#L15" class="br">15 </a>        <span class="kwrd">import</span> <span class="hid">mir.math</span> : <a href="grain.cuda.d.html#L494" title="grain.cuda.sum" class="hid">sum</a>;
 <a id="L16" href="#L16" class="br">16 </a>
 <a id="L17" href="#L17" class="br">17 </a>        <span class="com">// TODO if train</span>
 <a id="L18" href="#L18" class="br">18 </a>        <span class="kwrd">this</span>.<span class="hid">shape</span> = <span class="hid">x.shape</span>;
@@ -60,7 +60,7 @@
 <a id="L30" href="#L30" class="br">30 </a>    <span class="kwrd">version</span> (<span class="hid">grain_cuda</span>) {
 <a id="L31" href="#L31" class="br">31 </a>        <span class="kwrd">auto</span> <span class="hid">forward</span>(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">DeviceStorage</span>) <span class="hid">x</span>) {
 <a id="L32" href="#L32" class="br">32 </a>            <span class="kwrd">import</span> <span class="hid">std.algorithm</span> : <span class="hid">reduce</span>;
-<a id="L33" href="#L33" class="br">33 </a>            <span class="kwrd">import</span> <span class="hid">grain.cuda</span> : <span class="hid">sum</span>, <span class="hid">sumNaive</span>;
+<a id="L33" href="#L33" class="br">33 </a>            <span class="kwrd">import</span> <span class="hid">grain.cuda</span> : <a href="grain.cuda.d.html#L494" title="grain.cuda.sum" class="hid">sum</a>, <a href="grain.cuda.d.html#L474" title="grain.cuda.sumNaive" class="hid">sumNaive</a>;
 <a id="L34" href="#L34" class="br">34 </a>
 <a id="L35" href="#L35" class="br">35 </a>            <span class="kwrd">this</span>.<span class="hid">shape</span> = <span class="hid">x.shape</span>;
 <a id="L36" href="#L36" class="br">36 </a>            <span class="com">// auto y = CuPtr!float([0]);</span>
@@ -77,7 +77,7 @@
 <a id="L47" href="#L47" class="br">47 </a>        }
 <a id="L48" href="#L48" class="br">48 </a>    }
 <a id="L49" href="#L49" class="br">49 </a>
-<a id="L50" href="#L50" class="br">50 </a>    <span class="kwrd">mixin</span> <span class="hid">FunctionCommon</span>;
+<a id="L50" href="#L50" class="br">50 </a>    <span class="kwrd">mixin</span> <a href="grain.functions.common.d.html#L43" title="grain.functions.common.FunctionCommon" class="hid">FunctionCommon</a>;
 <a id="L51" href="#L51" class="br">51 </a>}
 <a id="L52" href="#L52" class="br">52 </a>
 <a id="L53" href="#L53" class="br">53 </a>
