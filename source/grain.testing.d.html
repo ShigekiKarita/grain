@@ -36,8 +36,8 @@
 <a id="L6" href="#L6" class="br">6 </a><span class="kwrd">import</span> <span class="hid">std.traits</span> : <span class="hid">isIntegral</span>;
 <a id="L7" href="#L7" class="br">7 </a><span class="kwrd">import</span> <span class="hid">std.typecons</span>  : <span class="hid">isTuple</span>, <span class="hid">tuple</span>;
 <a id="L8" href="#L8" class="br">8 </a>
-<a id="L9" href="#L9" class="br">9 </a><span class="kwrd">import</span> <span class="hid">grain.autograd</span> : <span class="hid">variable</span>, <span class="hid">ElementType</span>;
-<a id="L10" href="#L10" class="br">10 </a><span class="kwrd">import</span> <span class="hid">grain.utility</span> : <a href="grain.utility.d.html#L27" title="grain.utility.castArray" class="hid">castArray</a>, <a href="grain.utility.d.html#L9" title="grain.utility.toTuple" class="hid">toTuple</a>;
+<a id="L9" href="#L9" class="br">9 </a><span class="kwrd">import</span> <span class="hid">grain.autograd</span> : <a href="grain.autograd.d.html#L532" title="grain.autograd.variable" class="hid">variable</a>, <a href="grain.autograd.d.html#L522" title="grain.autograd.ElementType" class="hid">ElementType</a>;
+<a id="L10" href="#L10" class="br">10 </a><span class="kwrd">import</span> <span class="hid">grain.utility</span> : <span class="hid">castArray</span>, <span class="hid">toTuple</span>;
 <a id="L11" href="#L11" class="br">11 </a><span class="kwrd">import</span> <span class="hid">grain.functions.common</span> : <span class="hid">isFunction</span>;
 <a id="L12" href="#L12" class="br">12 </a>
 <a id="L13" href="#L13" class="br">13 </a>
@@ -48,7 +48,7 @@
 <a id="L18" href="#L18" class="br">18 </a>    <span class="kwrd">import</span> <span class="hid">mir.math</span> : <span class="hid">sum</span>;
 <a id="L19" href="#L19" class="br">19 </a>    <span class="hid">In</span> <span class="hid">gradInputs</span>;
 <a id="L20" href="#L20" class="br">20 </a>    <span class="kwrd">foreach</span> (<span class="hid">n</span>, <span class="hid">x</span>; <span class="hid">inputs.toTuple</span>) {
-<a id="L21" href="#L21" class="br">21 </a>        <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="hid">isIntegral</span>!(<span class="hid">ElementType</span>!(<span class="kwrd">typeof</span>(<span class="hid">x</span>)))) {
+<a id="L21" href="#L21" class="br">21 </a>        <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="hid">isIntegral</span>!(<a href="grain.autograd.d.html#L522" title="grain.autograd.ElementType" class="hid">ElementType</a>!(<span class="kwrd">typeof</span>(<span class="hid">x</span>)))) {
 <a id="L22" href="#L22" class="br">22 </a>            <span class="kwrd">continue</span>;
 <a id="L23" href="#L23" class="br">23 </a>        } <span class="kwrd">else</span> {
 <a id="L24" href="#L24" class="br">24 </a>            <span class="kwrd">auto</span> <span class="hid">xFlat</span> = <span class="hid">x.sliced.view</span>(-<span class="num">1</span>);
@@ -57,16 +57,16 @@
 <a id="L27" href="#L27" class="br">27 </a>                <span class="kwrd">auto</span> <span class="hid">origin</span> = <span class="hid">xFlat</span>[<span class="hid">i</span>];
 <a id="L28" href="#L28" class="br">28 </a>                <span class="hid">xFlat</span>[<span class="hid">i</span>] = <span class="hid">origin</span> + <span class="hid">eps</span>;
 <a id="L29" href="#L29" class="br">29 </a>                <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="hid">isFunction</span>!<span class="hid">F</span>) {
-<a id="L30" href="#L30" class="br">30 </a>                    <span class="kwrd">auto</span> <span class="hid">a</span> = <span class="hid">func.forward</span>(<span class="hid">inputs.toTuple.expand</span>).<a href="grain.utility.d.html#L9" title="grain.utility.toTuple" class="hid">toTuple</a>;
+<a id="L30" href="#L30" class="br">30 </a>                    <span class="kwrd">auto</span> <span class="hid">a</span> = <span class="hid">func.forward</span>(<span class="hid">inputs.toTuple.expand</span>).<span class="hid">toTuple</span>;
 <a id="L31" href="#L31" class="br">31 </a>                } <span class="kwrd">else</span> {
-<a id="L32" href="#L32" class="br">32 </a>                    <span class="kwrd">auto</span> <span class="hid">a</span> = <span class="hid">func</span>(<span class="hid">inputs.toTuple.expand</span>).<a href="grain.utility.d.html#L9" title="grain.utility.toTuple" class="hid">toTuple</a>;
+<a id="L32" href="#L32" class="br">32 </a>                    <span class="kwrd">auto</span> <span class="hid">a</span> = <span class="hid">func</span>(<span class="hid">inputs.toTuple.expand</span>).<span class="hid">toTuple</span>;
 <a id="L33" href="#L33" class="br">33 </a>                }
 <a id="L34" href="#L34" class="br">34 </a>                <span class="hid">xFlat</span>[<span class="hid">i</span>] = <span class="hid">origin</span> - <span class="hid">eps</span>;
 <a id="L35" href="#L35" class="br">35 </a>
 <a id="L36" href="#L36" class="br">36 </a>                <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="hid">isFunction</span>!<span class="hid">F</span>) {
-<a id="L37" href="#L37" class="br">37 </a>                    <span class="kwrd">auto</span> <span class="hid">b</span> = <span class="hid">func.forward</span>(<span class="hid">inputs.toTuple.expand</span>).<a href="grain.utility.d.html#L9" title="grain.utility.toTuple" class="hid">toTuple</a>;
+<a id="L37" href="#L37" class="br">37 </a>                    <span class="kwrd">auto</span> <span class="hid">b</span> = <span class="hid">func.forward</span>(<span class="hid">inputs.toTuple.expand</span>).<span class="hid">toTuple</span>;
 <a id="L38" href="#L38" class="br">38 </a>                } <span class="kwrd">else</span> {
-<a id="L39" href="#L39" class="br">39 </a>                   <span class="kwrd">auto</span> <span class="hid">b</span> = <span class="hid">func</span>(<span class="hid">inputs.toTuple.expand</span>).<a href="grain.utility.d.html#L9" title="grain.utility.toTuple" class="hid">toTuple</a>;
+<a id="L39" href="#L39" class="br">39 </a>                   <span class="kwrd">auto</span> <span class="hid">b</span> = <span class="hid">func</span>(<span class="hid">inputs.toTuple.expand</span>).<span class="hid">toTuple</span>;
 <a id="L40" href="#L40" class="br">40 </a>                }
 <a id="L41" href="#L41" class="br">41 </a>
 <a id="L42" href="#L42" class="br">42 </a>                <span class="hid">xFlat</span>[<span class="hid">i</span>] = <span class="hid">origin</span>;
@@ -93,7 +93,7 @@
 <a id="L63" href="#L63" class="br">63 </a>    <span class="kwrd">import</span> <span class="hid">mir.math</span> : <span class="hid">sum</span>;
 <a id="L64" href="#L64" class="br">64 </a>    <span class="hid">In</span> <span class="hid">gradInputs</span>;
 <a id="L65" href="#L65" class="br">65 </a>    <span class="kwrd">foreach</span> (<span class="hid">n</span>, <span class="hid">x</span>; <span class="hid">inputs.toTuple</span>) {
-<a id="L66" href="#L66" class="br">66 </a>        <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="hid">isIntegral</span>!(<span class="hid">ElementType</span>!(<span class="kwrd">typeof</span>(<span class="hid">x</span>)))) {
+<a id="L66" href="#L66" class="br">66 </a>        <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="hid">isIntegral</span>!(<a href="grain.autograd.d.html#L522" title="grain.autograd.ElementType" class="hid">ElementType</a>!(<span class="kwrd">typeof</span>(<span class="hid">x</span>)))) {
 <a id="L67" href="#L67" class="br">67 </a>            <span class="kwrd">continue</span>;
 <a id="L68" href="#L68" class="br">68 </a>        } <span class="kwrd">else</span> {
 <a id="L69" href="#L69" class="br">69 </a>            <span class="kwrd">auto</span> <span class="hid">xFlat</span> = <span class="hid">x.sliced.view</span>(-<span class="num">1</span>);
@@ -101,9 +101,9 @@
 <a id="L71" href="#L71" class="br">71 </a>            <span class="kwrd">foreach</span> (<span class="hid">i</span>; <span class="num">0</span> .. <span class="hid">xFlat.length</span>) {
 <a id="L72" href="#L72" class="br">72 </a>                <span class="kwrd">auto</span> <span class="hid">origin</span> = <span class="hid">xFlat</span>[<span class="hid">i</span>];
 <a id="L73" href="#L73" class="br">73 </a>                <span class="hid">xFlat</span>[<span class="hid">i</span>] = <span class="hid">origin</span> + <span class="hid">eps</span>;
-<a id="L74" href="#L74" class="br">74 </a>                <span class="kwrd">auto</span> <span class="hid">a</span> = <span class="hid">func</span>(<span class="hid">inputs.toTuple.expand</span>).<a href="grain.utility.d.html#L9" title="grain.utility.toTuple" class="hid">toTuple</a>;
+<a id="L74" href="#L74" class="br">74 </a>                <span class="kwrd">auto</span> <span class="hid">a</span> = <span class="hid">func</span>(<span class="hid">inputs.toTuple.expand</span>).<span class="hid">toTuple</span>;
 <a id="L75" href="#L75" class="br">75 </a>                <span class="hid">xFlat</span>[<span class="hid">i</span>] = <span class="hid">origin</span> - <span class="hid">eps</span>;
-<a id="L76" href="#L76" class="br">76 </a>                <span class="kwrd">auto</span> <span class="hid">b</span> = <span class="hid">func</span>(<span class="hid">inputs.toTuple.expand</span>).<a href="grain.utility.d.html#L9" title="grain.utility.toTuple" class="hid">toTuple</a>;
+<a id="L76" href="#L76" class="br">76 </a>                <span class="kwrd">auto</span> <span class="hid">b</span> = <span class="hid">func</span>(<span class="hid">inputs.toTuple.expand</span>).<span class="hid">toTuple</span>;
 <a id="L77" href="#L77" class="br">77 </a>
 <a id="L78" href="#L78" class="br">78 </a>                <span class="hid">xFlat</span>[<span class="hid">i</span>] = <span class="hid">origin</span>;
 <a id="L79" href="#L79" class="br">79 </a>                <span class="kwrd">foreach</span> (<span class="hid">m</span>, <span class="hid">gy</span>; <span class="hid">gradOutputs.toTuple</span>) {
@@ -128,26 +128,26 @@
 <a id="L98" href="#L98" class="br">98 </a>    <span class="kwrd">import</span> <span class="hid">std.format</span> : <span class="hid">format</span>;
 <a id="L99" href="#L99" class="br">99 </a>    <span class="kwrd">import</span> <span class="hid">numir.testing</span> : <span class="hid">approxEqual</span>;
 <a id="L100" href="#L100" class="br">100 </a>    <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="hid">isFunction</span>!<span class="hid">F</span>) {
-<a id="L101" href="#L101" class="br">101 </a>        <span class="kwrd">auto</span> <span class="hid">ys</span> = <span class="hid">func.forward</span>(<span class="hid">inputs.toTuple.expand</span>).<a href="grain.utility.d.html#L9" title="grain.utility.toTuple" class="hid">toTuple</a>;
-<a id="L102" href="#L102" class="br">102 </a>        <span class="kwrd">auto</span> <span class="hid">agrad</span> = <span class="hid">func.backward</span>(<span class="hid">gradOutputs.toTuple.expand</span>).<a href="grain.utility.d.html#L9" title="grain.utility.toTuple" class="hid">toTuple</a>;
+<a id="L101" href="#L101" class="br">101 </a>        <span class="kwrd">auto</span> <span class="hid">ys</span> = <span class="hid">func.forward</span>(<span class="hid">inputs.toTuple.expand</span>).<span class="hid">toTuple</span>;
+<a id="L102" href="#L102" class="br">102 </a>        <span class="kwrd">auto</span> <span class="hid">agrad</span> = <span class="hid">func.backward</span>(<span class="hid">gradOutputs.toTuple.expand</span>).<span class="hid">toTuple</span>;
 <a id="L103" href="#L103" class="br">103 </a>    } <span class="kwrd">else</span> {
 <a id="L104" href="#L104" class="br">104 </a>        <span class="kwrd">auto</span> <span class="hid">xs</span> = <span class="hid">inputs.toTuple</span>;
-<a id="L105" href="#L105" class="br">105 </a>        <span class="kwrd">auto</span> <span class="hid">ys</span> = <span class="hid">func</span>(<span class="hid">xs.expand</span>).<a href="grain.utility.d.html#L9" title="grain.utility.toTuple" class="hid">toTuple</a>;
+<a id="L105" href="#L105" class="br">105 </a>        <span class="kwrd">auto</span> <span class="hid">ys</span> = <span class="hid">func</span>(<span class="hid">xs.expand</span>).<span class="hid">toTuple</span>;
 <a id="L106" href="#L106" class="br">106 </a>        <span class="kwrd">auto</span> <span class="hid">gys</span> = <span class="hid">gradOutputs.toTuple</span>;
 <a id="L107" href="#L107" class="br">107 </a>        <span class="kwrd">foreach</span> (<span class="hid">o</span>, <span class="hid">y</span>; <span class="hid">ys</span>) {
 <a id="L108" href="#L108" class="br">108 </a>            <span class="kwrd">import</span> <span class="hid">grain.autograd</span>;
-<a id="L109" href="#L109" class="br">109 </a>            <span class="kwrd">auto</span> <span class="hid">u</span> = <span class="hid">UntypedVariable</span>(<span class="hid">gys</span>[<span class="hid">o</span>]);
+<a id="L109" href="#L109" class="br">109 </a>            <span class="kwrd">auto</span> <span class="hid">u</span> = <a href="grain.autograd.d.html#L117" title="grain.autograd.UntypedVariable" class="hid">UntypedVariable</a>(<span class="hid">gys</span>[<span class="hid">o</span>]);
 <a id="L110" href="#L110" class="br">110 </a>            <span class="hid">y.backward</span>(&amp;<span class="hid">u</span>);
 <a id="L111" href="#L111" class="br">111 </a>        }
 <a id="L112" href="#L112" class="br">112 </a>        <span class="kwrd">typeof</span>(<span class="hid">inputs.toTuple</span>) <span class="hid">agrad</span>;
 <a id="L113" href="#L113" class="br">113 </a>        <span class="kwrd">foreach</span> (<span class="hid">i</span>, <span class="hid">a</span>; <span class="hid">agrad</span>) {
-<a id="L114" href="#L114" class="br">114 </a>            <span class="hid">agrad</span>[<span class="hid">i</span>] = <span class="hid">xs</span>[<span class="hid">i</span>].<span class="hid">gradSlice.variable</span>; <span class="com">// TODO support CUDA</span>
+<a id="L114" href="#L114" class="br">114 </a>            <span class="hid">agrad</span>[<span class="hid">i</span>] = <span class="hid">xs</span>[<span class="hid">i</span>].<a href="grain.autograd.d.html#L532" title="grain.autograd.variable" class="hid">gradSlice.variable</a>; <span class="com">// TODO support CUDA</span>
 <a id="L115" href="#L115" class="br">115 </a>        }
 <a id="L116" href="#L116" class="br">116 </a>    }
 <a id="L117" href="#L117" class="br">117 </a>    <span class="com">// FIXME transfer device variable to host before computing numericGrad</span>
-<a id="L118" href="#L118" class="br">118 </a>    <span class="kwrd">auto</span> <span class="hid">ngrad</span> = <a href="grain.testing.d.html#L15" title="grain.testing.numericGrad" class="hid">numericGrad</a>(<span class="hid">func</span>, <span class="hid">inputs.toTuple</span>, <span class="hid">gradOutputs.toTuple</span>, <span class="hid">eps</span>).<a href="grain.utility.d.html#L9" title="grain.utility.toTuple" class="hid">toTuple</a>;
+<a id="L118" href="#L118" class="br">118 </a>    <span class="kwrd">auto</span> <span class="hid">ngrad</span> = <a href="grain.testing.d.html#L15" title="grain.testing.numericGrad" class="hid">numericGrad</a>(<span class="hid">func</span>, <span class="hid">inputs.toTuple</span>, <span class="hid">gradOutputs.toTuple</span>, <span class="hid">eps</span>).<span class="hid">toTuple</span>;
 <a id="L119" href="#L119" class="br">119 </a>    <span class="kwrd">static</span> <span class="kwrd">foreach</span> (<span class="hid">i</span>; <span class="num">0</span> .. <span class="hid">inputs.toTuple.length</span>) {
-<a id="L120" href="#L120" class="br">120 </a>        <span class="kwrd">static</span> <span class="kwrd">if</span> (!<span class="hid">isIntegral</span>!(<span class="hid">ElementType</span>!(<span class="kwrd">typeof</span>(<span class="hid">inputs.toTuple</span>[<span class="hid">i</span>])))) {
+<a id="L120" href="#L120" class="br">120 </a>        <span class="kwrd">static</span> <span class="kwrd">if</span> (!<span class="hid">isIntegral</span>!(<a href="grain.autograd.d.html#L522" title="grain.autograd.ElementType" class="hid">ElementType</a>!(<span class="kwrd">typeof</span>(<span class="hid">inputs.toTuple</span>[<span class="hid">i</span>])))) {
 <a id="L121" href="#L121" class="br">121 </a>            <span class="kwrd">assert</span>(<span class="hid">approxEqual</span>(<span class="hid">agrad</span>[<span class="hid">i</span>].<span class="hid">sliced</span>, <span class="hid">ngrad</span>[<span class="hid">i</span>].<span class="hid">sliced</span>, <span class="hid">rtol</span>, <span class="hid">atol</span>),
 <a id="L122" href="#L122" class="br">122 </a>                   <span class="hid">format</span>!<span class="str">&quot;%d th input grad %s (backprop) != %s (numeric) from %s %d&quot;</span>(<span class="hid">i</span>, <span class="hid">agrad</span>[<span class="hid">i</span>].<span class="hid">sliced</span>, <span class="hid">ngrad</span>[<span class="hid">i</span>].<span class="hid">sliced</span>, <span class="hid">file</span> , <span class="hid">line</span>));
 <a id="L123" href="#L123" class="br">123 </a>        }
@@ -161,11 +161,11 @@
 <a id="L131" href="#L131" class="br">131 </a>    <span class="kwrd">import</span> <span class="hid">std.format</span> : <span class="hid">format</span>;
 <a id="L132" href="#L132" class="br">132 </a>    <span class="kwrd">import</span> <span class="hid">numir.testing</span> : <span class="hid">approxEqual</span>;
 <a id="L133" href="#L133" class="br">133 </a>    <span class="kwrd">auto</span> <span class="hid">xs</span> = <span class="hid">inputs.toTuple</span>;
-<a id="L134" href="#L134" class="br">134 </a>    <span class="kwrd">auto</span> <span class="hid">ys</span> = <span class="hid">func</span>(<span class="hid">xs.expand</span>).<a href="grain.utility.d.html#L9" title="grain.utility.toTuple" class="hid">toTuple</a>;
+<a id="L134" href="#L134" class="br">134 </a>    <span class="kwrd">auto</span> <span class="hid">ys</span> = <span class="hid">func</span>(<span class="hid">xs.expand</span>).<span class="hid">toTuple</span>;
 <a id="L135" href="#L135" class="br">135 </a>    <span class="kwrd">auto</span> <span class="hid">gys</span> = <span class="hid">gradOutputs.toTuple</span>;
 <a id="L136" href="#L136" class="br">136 </a>    <span class="kwrd">foreach</span> (<span class="hid">o</span>, <span class="kwrd">ref</span> <span class="hid">y</span>; <span class="hid">ys</span>) {
 <a id="L137" href="#L137" class="br">137 </a>        <span class="kwrd">import</span> <span class="hid">grain.autograd</span>;
-<a id="L138" href="#L138" class="br">138 </a>        <span class="kwrd">auto</span> <span class="hid">u</span> = <span class="hid">UntypedVariable</span>(<span class="hid">gys</span>[<span class="hid">o</span>]);
+<a id="L138" href="#L138" class="br">138 </a>        <span class="kwrd">auto</span> <span class="hid">u</span> = <a href="grain.autograd.d.html#L117" title="grain.autograd.UntypedVariable" class="hid">UntypedVariable</a>(<span class="hid">gys</span>[<span class="hid">o</span>]);
 <a id="L139" href="#L139" class="br">139 </a>        <span class="hid">y.backward</span>(&amp;<span class="hid">u</span>);
 <a id="L140" href="#L140" class="br">140 </a>    }
 <a id="L141" href="#L141" class="br">141 </a>    <span class="kwrd">typeof</span>(<span class="hid">inputs.toTuple</span>) <span class="hid">agrad</span>;
@@ -174,9 +174,9 @@
 <a id="L144" href="#L144" class="br">144 </a>    }
 <a id="L145" href="#L145" class="br">145 </a>
 <a id="L146" href="#L146" class="br">146 </a>    <span class="com">// FIXME transfer device variable to host before computing numericGrad</span>
-<a id="L147" href="#L147" class="br">147 </a>    <span class="kwrd">auto</span> <span class="hid">ngrad</span> = <a href="grain.testing.d.html#L60" title="grain.testing.numericGradChain" class="hid">numericGradChain</a>!<span class="hid">func</span>(<span class="hid">inputs.toTuple</span>, <span class="hid">gradOutputs.toTuple</span>, <span class="hid">eps</span>).<a href="grain.utility.d.html#L9" title="grain.utility.toTuple" class="hid">toTuple</a>;
+<a id="L147" href="#L147" class="br">147 </a>    <span class="kwrd">auto</span> <span class="hid">ngrad</span> = <a href="grain.testing.d.html#L60" title="grain.testing.numericGradChain" class="hid">numericGradChain</a>!<span class="hid">func</span>(<span class="hid">inputs.toTuple</span>, <span class="hid">gradOutputs.toTuple</span>, <span class="hid">eps</span>).<span class="hid">toTuple</span>;
 <a id="L148" href="#L148" class="br">148 </a>    <span class="kwrd">static</span> <span class="kwrd">foreach</span> (<span class="hid">i</span>; <span class="num">0</span> .. <span class="hid">inputs.toTuple.length</span>) {
-<a id="L149" href="#L149" class="br">149 </a>        <span class="kwrd">static</span> <span class="kwrd">if</span> (!<span class="hid">isIntegral</span>!(<span class="hid">ElementType</span>!(<span class="kwrd">typeof</span>(<span class="hid">inputs.toTuple</span>[<span class="hid">i</span>])))) {
+<a id="L149" href="#L149" class="br">149 </a>        <span class="kwrd">static</span> <span class="kwrd">if</span> (!<span class="hid">isIntegral</span>!(<a href="grain.autograd.d.html#L522" title="grain.autograd.ElementType" class="hid">ElementType</a>!(<span class="kwrd">typeof</span>(<span class="hid">inputs.toTuple</span>[<span class="hid">i</span>])))) {
 <a id="L150" href="#L150" class="br">150 </a>            <span class="kwrd">assert</span>(<span class="hid">approxEqual</span>(<span class="hid">agrad</span>[<span class="hid">i</span>].<span class="hid">sliced</span>, <span class="hid">ngrad</span>[<span class="hid">i</span>].<span class="hid">sliced</span>, <span class="hid">rtol</span>, <span class="hid">atol</span>),
 <a id="L151" href="#L151" class="br">151 </a>                   <span class="hid">format</span>!<span class="str">&quot;%d th input grad %s != %s from %s %d&quot;</span>(<span class="hid">i</span>, <span class="hid">agrad</span>[<span class="hid">i</span>].<span class="hid">sliced</span>, <span class="hid">ngrad</span>[<span class="hid">i</span>].<span class="hid">sliced</span>, <span class="hid">file</span> , <span class="hid">line</span>));
 <a id="L152" href="#L152" class="br">152 </a>        }

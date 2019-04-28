@@ -49,7 +49,7 @@
 <a id="L19" href="#L19" class="br">19 </a>
 <a id="L20" href="#L20" class="br">20 </a><span class="com">// TODO: support multiple GPU devices (context)</span>
 <a id="L21" href="#L21" class="br">21 </a><span class="kwrd">__gshared</span> <span class="hid">CUcontext</span> <a href="grain.cuda.d.html#L21" title="grain.cuda.context" class="hid">context</a>;
-<a id="L22" href="#L22" class="br">22 </a><span class="kwrd">__gshared</span> <a href="grain.cublas.d.html#L31" title="grain.cublas.cublasHandle_t" class="hid">cublasHandle_t</a> <a href="grain.cuda.d.html#L22" title="grain.cuda.cublasHandle" class="hid">cublasHandle</a>;
+<a id="L22" href="#L22" class="br">22 </a><span class="kwrd">__gshared</span> <span class="hid">cublasHandle_t</span> <a href="grain.cuda.d.html#L22" title="grain.cuda.cublasHandle" class="hid">cublasHandle</a>;
 <a id="L23" href="#L23" class="br">23 </a><span class="kwrd">__gshared</span> <span class="hid">cudnnHandle_t</span> <a href="grain.cuda.d.html#L23" title="grain.cuda.cudnnHandle" class="hid">cudnnHandle</a>;
 <a id="L24" href="#L24" class="br">24 </a>
 <a id="L25" href="#L25" class="br">25 </a><span class="com">/// global cuda init</span>
@@ -65,7 +65,7 @@
 <a id="L35" href="#L35" class="br">35 </a>
 <a id="L36" href="#L36" class="br">36 </a>
 <a id="L37" href="#L37" class="br">37 </a>    <span class="com">// init CUDA libraries</span>
-<a id="L38" href="#L38" class="br">38 </a>    <a href="grain.cuda.d.html#L431" title="grain.cuda.checkCublasErrors" class="hid">checkCublasErrors</a>(<a href="grain.cublas.d.html#L44" title="grain.cublas.cublasCreate_v2" class="hid">cublasCreate_v2</a>(&amp;<a href="grain.cuda.d.html#L22" title="grain.cuda.cublasHandle" class="hid">cublasHandle</a>));
+<a id="L38" href="#L38" class="br">38 </a>    <a href="grain.cuda.d.html#L431" title="grain.cuda.checkCublasErrors" class="hid">checkCublasErrors</a>(<span class="hid">cublasCreate_v2</span>(&amp;<a href="grain.cuda.d.html#L22" title="grain.cuda.cublasHandle" class="hid">cublasHandle</a>));
 <a id="L39" href="#L39" class="br">39 </a>    <span class="hid">DerelictCuDNN7.load</span>();
 <a id="L40" href="#L40" class="br">40 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnCreate</span>(&amp;<a href="grain.cuda.d.html#L23" title="grain.cuda.cudnnHandle" class="hid">cudnnHandle</a>) );
 <a id="L41" href="#L41" class="br">41 </a>}
@@ -74,7 +74,7 @@
 <a id="L44" href="#L44" class="br">44 </a><span class="kwrd">shared</span> <span class="kwrd">static</span> ~<span class="kwrd">this</span>() {
 <a id="L45" href="#L45" class="br">45 </a>    <span class="kwrd">import</span> <span class="hid">core.memory</span> : <span class="hid">GC</span>;
 <a id="L46" href="#L46" class="br">46 </a>    <span class="hid">GC.collect</span>();
-<a id="L47" href="#L47" class="br">47 </a>    <a href="grain.cublas.d.html#L46" title="grain.cublas.cublasDestroy_v2" class="hid">cublasDestroy_v2</a>(<a href="grain.cuda.d.html#L22" title="grain.cuda.cublasHandle" class="hid">cublasHandle</a>);
+<a id="L47" href="#L47" class="br">47 </a>    <span class="hid">cublasDestroy_v2</span>(<a href="grain.cuda.d.html#L22" title="grain.cuda.cublasHandle" class="hid">cublasHandle</a>);
 <a id="L48" href="#L48" class="br">48 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnDestroy</span>(<a href="grain.cuda.d.html#L23" title="grain.cuda.cudnnHandle" class="hid">cudnnHandle</a>) );
 <a id="L49" href="#L49" class="br">49 </a>    <a href="grain.cuda.d.html#L418" title="grain.cuda.checkCudaErrors" class="hid">checkCudaErrors</a>(<span class="hid">cuCtxDestroy</span>(<a href="grain.cuda.d.html#L21" title="grain.cuda.context" class="hid">context</a>));
 <a id="L50" href="#L50" class="br">50 </a>}
@@ -458,8 +458,8 @@
 <a id="L428" href="#L428" class="br">428 </a>}
 <a id="L429" href="#L429" class="br">429 </a>
 <a id="L430" href="#L430" class="br">430 </a><span class="com">/// cublas error checker</span>
-<a id="L431" href="#L431" class="br">431 </a><span class="type">void</span> <a href="grain.cuda.d.html#L431" title="grain.cuda.checkCublasErrors" class="hid">checkCublasErrors</a>(<a href="grain.cublas.d.html#L13" title="grain.cublas.cublasStatus_t" class="hid">cublasStatus_t</a> <span class="hid">err</span>) {
-<a id="L432" href="#L432" class="br">432 </a>    <span class="kwrd">assert</span>(<span class="hid">err</span> == <a href="grain.cublas.d.html#L15" title="grain.cublas.CUBLAS_STATUS_SUCCESS" class="hid">CUBLAS_STATUS_SUCCESS</a>, <a href="grain.cublas.d.html#L77" title="grain.cublas.cublasGetErrorEnum" class="hid">cublasGetErrorEnum</a>(<span class="hid">err</span>));
+<a id="L431" href="#L431" class="br">431 </a><span class="type">void</span> <a href="grain.cuda.d.html#L431" title="grain.cuda.checkCublasErrors" class="hid">checkCublasErrors</a>(<span class="hid">cublasStatus_t</span> <span class="hid">err</span>) {
+<a id="L432" href="#L432" class="br">432 </a>    <span class="kwrd">assert</span>(<span class="hid">err</span> == <span class="hid">CUBLAS_STATUS_SUCCESS</span>, <span class="hid">cublasGetErrorEnum</span>(<span class="hid">err</span>));
 <a id="L433" href="#L433" class="br">433 </a>}
 <a id="L434" href="#L434" class="br">434 </a>
 <a id="L435" href="#L435" class="br">435 </a><span class="com">/// cudnn error checker</span>
@@ -560,16 +560,16 @@
 <a id="L530" href="#L530" class="br">530 </a><span class="com">/// high-level axpy (y = alpha * x + y) wrapper for CuPtr</span>
 <a id="L531" href="#L531" class="br">531 </a><span class="type">void</span> <a href="grain.cuda.d.html#L531" title="grain.cuda.axpy" class="hid">axpy</a>(<span class="hid">T</span>)(<span class="kwrd">const</span> <span class="kwrd">ref</span> <a href="grain.cuda.d.html#L316" title="grain.cuda.CuArray" class="hid">CuArray</a>!<span class="hid">T</span> <span class="hid">x</span>, <span class="kwrd">ref</span> <a href="grain.cuda.d.html#L316" title="grain.cuda.CuArray" class="hid">CuArray</a>!<span class="hid">T</span> <span class="hid">y</span>, <span class="hid">T</span> <span class="hid">alpha</span>=<span class="num">1</span>, <span class="type">int</span> <span class="hid">incx</span>=<span class="num">1</span>, <span class="type">int</span> <span class="hid">incy</span>=<span class="num">1</span>)  {
 <a id="L532" href="#L532" class="br">532 </a>    <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="kwrd">is</span>(<span class="hid">T</span> == <span class="type">float</span>)) {
-<a id="L533" href="#L533" class="br">533 </a>        <span class="kwrd">alias</span> <span class="hid">axpy_</span> = <a href="grain.cublas.d.html#L70" title="grain.cublas.cublasSaxpy_v2" class="hid">cublasSaxpy_v2</a>;
+<a id="L533" href="#L533" class="br">533 </a>        <span class="kwrd">alias</span> <span class="hid">axpy_</span> = <span class="hid">cublasSaxpy_v2</span>;
 <a id="L534" href="#L534" class="br">534 </a>    } <span class="kwrd">else</span> <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="kwrd">is</span>(<span class="hid">T</span> == <span class="type">double</span>)) {
-<a id="L535" href="#L535" class="br">535 </a>        <span class="kwrd">alias</span> <span class="hid">axpy_</span> = <a href="grain.cublas.d.html#L73" title="grain.cublas.cublasDaxpy_v2" class="hid">cublasDaxpy_v2</a>;
+<a id="L535" href="#L535" class="br">535 </a>        <span class="kwrd">alias</span> <span class="hid">axpy_</span> = <span class="hid">cublasDaxpy_v2</span>;
 <a id="L536" href="#L536" class="br">536 </a>    } <span class="kwrd">else</span> {
 <a id="L537" href="#L537" class="br">537 </a>        <span class="kwrd">static</span> <span class="kwrd">assert</span>(<span class="kwrd">false</span>, <span class="str">&quot;unsupported type: &quot;</span> ~ <span class="hid">T.stringof</span>);
 <a id="L538" href="#L538" class="br">538 </a>    }
 <a id="L539" href="#L539" class="br">539 </a>    <span class="kwrd">auto</span> <span class="hid">status</span> = <span class="hid">axpy_</span>(<a href="grain.cuda.d.html#L22" title="grain.cuda.cublasHandle" class="hid">cublasHandle</a>, <span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">x.length</span>, &amp;<span class="hid">alpha</span>,
 <a id="L540" href="#L540" class="br">540 </a>                        <span class="kwrd">cast</span>(<span class="kwrd">const</span> <span class="hid">T</span>*) <span class="hid">x.ptr</span>, <span class="hid">incx</span>,
 <a id="L541" href="#L541" class="br">541 </a>                        <span class="kwrd">cast</span>(<span class="hid">T</span>*) <span class="hid">y.ptr</span>, <span class="hid">incy</span>);
-<a id="L542" href="#L542" class="br">542 </a>    <span class="kwrd">assert</span>(<span class="hid">status</span> == <a href="grain.cublas.d.html#L15" title="grain.cublas.CUBLAS_STATUS_SUCCESS" class="hid">CUBLAS_STATUS_SUCCESS</a>, <a href="grain.cublas.d.html#L77" title="grain.cublas.cublasGetErrorEnum" class="hid">cublasGetErrorEnum</a>(<span class="hid">status</span>));
+<a id="L542" href="#L542" class="br">542 </a>    <span class="kwrd">assert</span>(<span class="hid">status</span> == <span class="hid">CUBLAS_STATUS_SUCCESS</span>, <span class="hid">cublasGetErrorEnum</span>(<span class="hid">status</span>));
 <a id="L543" href="#L543" class="br">543 </a>}
 <a id="L544" href="#L544" class="br">544 </a>
 <a id="L545" href="#L545" class="br">545 </a><span class="com">/// cublas tests</span>

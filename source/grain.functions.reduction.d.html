@@ -33,7 +33,7 @@
 <a id="L3" href="#L3" class="br">3 </a><span class="kwrd">import</span> <span class="hid">grain.autograd</span>;
 <a id="L4" href="#L4" class="br">4 </a><span class="kwrd">import</span> <span class="hid">grain.cuda</span>;
 <a id="L5" href="#L5" class="br">5 </a><span class="kwrd">import</span> <span class="hid">grain.functions.common</span>;
-<a id="L6" href="#L6" class="br">6 </a><span class="kwrd">import</span> <span class="hid">grain.utility</span> : <a href="grain.utility.d.html#L9" title="grain.utility.toTuple" class="hid">toTuple</a>, <a href="grain.utility.d.html#L18" title="grain.utility.fromTuple" class="hid">fromTuple</a>, <a href="grain.utility.d.html#L27" title="grain.utility.castArray" class="hid">castArray</a>;
+<a id="L6" href="#L6" class="br">6 </a><span class="kwrd">import</span> <span class="hid">grain.utility</span> : <span class="hid">toTuple</span>, <span class="hid">fromTuple</span>, <span class="hid">castArray</span>;
 <a id="L7" href="#L7" class="br">7 </a>
 <a id="L8" href="#L8" class="br">8 </a><span class="kwrd">struct</span> <a href="grain.functions.reduction.d.html#L8" title="grain.functions.reduction.Sum" class="hid">Sum</a>(<span class="type">string</span> <span class="hid">mode</span> = <span class="str">&quot;fast&quot;</span>, <span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>) {
 <a id="L9" href="#L9" class="br">9 </a>    <span class="kwrd">import</span> <span class="hid">std.traits</span> : <span class="hid">isFloatingPoint</span>;
@@ -41,8 +41,8 @@
 <a id="L11" href="#L11" class="br">11 </a>
 <a id="L12" href="#L12" class="br">12 </a>    <span class="type">uint</span>[<span class="hid">dim</span>] <span class="hid">shape</span>;
 <a id="L13" href="#L13" class="br">13 </a>
-<a id="L14" href="#L14" class="br">14 </a>    <span class="kwrd">auto</span> <span class="hid">forward</span>(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">HostStorage</span>) <span class="hid">x</span>) {
-<a id="L15" href="#L15" class="br">15 </a>        <span class="kwrd">import</span> <span class="hid">mir.math</span> : <span class="hid">sum</span>;
+<a id="L14" href="#L14" class="br">14 </a>    <span class="kwrd">auto</span> <span class="hid">forward</span>(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <a href="grain.autograd.d.html#L22" title="grain.autograd.HostStorage" class="hid">HostStorage</a>) <span class="hid">x</span>) {
+<a id="L15" href="#L15" class="br">15 </a>        <span class="kwrd">import</span> <span class="hid">mir.math</span> : <a href="grain.cuda.d.html#L494" title="grain.cuda.sum" class="hid">sum</a>;
 <a id="L16" href="#L16" class="br">16 </a>
 <a id="L17" href="#L17" class="br">17 </a>        <span class="com">// TODO if train</span>
 <a id="L18" href="#L18" class="br">18 </a>        <span class="kwrd">this</span>.<span class="hid">shape</span> = <span class="hid">x.shape</span>;
@@ -50,28 +50,28 @@
 <a id="L20" href="#L20" class="br">20 </a>        <span class="kwrd">return</span> <span class="hid">result.variable</span>;
 <a id="L21" href="#L21" class="br">21 </a>    }
 <a id="L22" href="#L22" class="br">22 </a>
-<a id="L23" href="#L23" class="br">23 </a>    <span class="kwrd">auto</span> <span class="hid">backward</span>(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="num">0</span>, <span class="hid">HostStorage</span>) <span class="hid">y</span>) {
-<a id="L24" href="#L24" class="br">24 </a>        <span class="kwrd">auto</span> <span class="hid">gx</span> = <span class="hid">uninitVariable</span>!<span class="hid">T</span>(<span class="kwrd">this</span>.<span class="hid">shape</span>, <span class="hid">y.requiresGrad</span>);
+<a id="L23" href="#L23" class="br">23 </a>    <span class="kwrd">auto</span> <span class="hid">backward</span>(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="num">0</span>, <a href="grain.autograd.d.html#L22" title="grain.autograd.HostStorage" class="hid">HostStorage</a>) <span class="hid">y</span>) {
+<a id="L24" href="#L24" class="br">24 </a>        <span class="kwrd">auto</span> <span class="hid">gx</span> = <a href="grain.autograd.d.html#L53" title="grain.autograd.uninitVariable" class="hid">uninitVariable</a>!<span class="hid">T</span>(<span class="kwrd">this</span>.<span class="hid">shape</span>, <span class="hid">y.requiresGrad</span>);
 <a id="L25" href="#L25" class="br">25 </a>        <span class="kwrd">import</span> <span class="hid">std.algorithm</span> : <span class="hid">fill</span>;
 <a id="L26" href="#L26" class="br">26 </a>        <span class="hid">fill</span>(<span class="hid">gx.data</span>, <span class="hid">y.data</span>[<span class="num">0</span>]);
 <a id="L27" href="#L27" class="br">27 </a>        <span class="kwrd">return</span> <span class="hid">gx</span>;
 <a id="L28" href="#L28" class="br">28 </a>    }
 <a id="L29" href="#L29" class="br">29 </a>
 <a id="L30" href="#L30" class="br">30 </a>    <span class="kwrd">version</span> (<span class="hid">grain_cuda</span>) {
-<a id="L31" href="#L31" class="br">31 </a>        <span class="kwrd">auto</span> <span class="hid">forward</span>(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">DeviceStorage</span>) <span class="hid">x</span>) {
+<a id="L31" href="#L31" class="br">31 </a>        <span class="kwrd">auto</span> <span class="hid">forward</span>(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <a href="grain.autograd.d.html#L91" title="grain.autograd.DeviceStorage" class="hid">DeviceStorage</a>) <span class="hid">x</span>) {
 <a id="L32" href="#L32" class="br">32 </a>            <span class="kwrd">import</span> <span class="hid">std.algorithm</span> : <span class="hid">reduce</span>;
-<a id="L33" href="#L33" class="br">33 </a>            <span class="kwrd">import</span> <span class="hid">grain.cuda</span> : <span class="hid">sum</span>, <span class="hid">sumNaive</span>;
+<a id="L33" href="#L33" class="br">33 </a>            <span class="kwrd">import</span> <span class="hid">grain.cuda</span> : <a href="grain.cuda.d.html#L494" title="grain.cuda.sum" class="hid">sum</a>, <a href="grain.cuda.d.html#L474" title="grain.cuda.sumNaive" class="hid">sumNaive</a>;
 <a id="L34" href="#L34" class="br">34 </a>
 <a id="L35" href="#L35" class="br">35 </a>            <span class="kwrd">this</span>.<span class="hid">shape</span> = <span class="hid">x.shape</span>;
 <a id="L36" href="#L36" class="br">36 </a>            <span class="com">// auto y = CuPtr!float([0]);</span>
 <a id="L37" href="#L37" class="br">37 </a>            <span class="com">// Global.kernel!sum.call(x.data.ptr, y.ptr, cast(int) x.data.length)</span>
 <a id="L38" href="#L38" class="br">38 </a>            <span class="com">//     .launch(cast(uint[3]) [1U,1,1], cast(uint[3]) [1U,1,1], 0U);</span>
 <a id="L39" href="#L39" class="br">39 </a>            <span class="com">// checkCudaErrors(cuCtxSynchronize());</span>
-<a id="L40" href="#L40" class="br">40 </a>            <span class="kwrd">return</span> <span class="hid">x.data.sumNaive.variable.to</span>!<span class="hid">DeviceStorage</span>;
+<a id="L40" href="#L40" class="br">40 </a>            <span class="kwrd">return</span> <span class="hid">x.data.sumNaive.variable.to</span>!<a href="grain.autograd.d.html#L91" title="grain.autograd.DeviceStorage" class="hid">DeviceStorage</a>;
 <a id="L41" href="#L41" class="br">41 </a>        }
 <a id="L42" href="#L42" class="br">42 </a>
-<a id="L43" href="#L43" class="br">43 </a>        <span class="kwrd">auto</span> <span class="hid">backward</span>(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="num">0</span>, <span class="hid">DeviceStorage</span>) <span class="hid">y</span>) {
-<a id="L44" href="#L44" class="br">44 </a>            <span class="kwrd">auto</span> <span class="hid">gx</span> = <span class="hid">uninitVariable</span>!(<span class="hid">T</span>, <span class="hid">DeviceStorage</span>)(<span class="kwrd">this</span>.<span class="hid">shape</span>, <span class="hid">y.requiresGrad</span>);
+<a id="L43" href="#L43" class="br">43 </a>        <span class="kwrd">auto</span> <span class="hid">backward</span>(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="num">0</span>, <a href="grain.autograd.d.html#L91" title="grain.autograd.DeviceStorage" class="hid">DeviceStorage</a>) <span class="hid">y</span>) {
+<a id="L44" href="#L44" class="br">44 </a>            <span class="kwrd">auto</span> <span class="hid">gx</span> = <a href="grain.autograd.d.html#L53" title="grain.autograd.uninitVariable" class="hid">uninitVariable</a>!(<span class="hid">T</span>, <a href="grain.autograd.d.html#L91" title="grain.autograd.DeviceStorage" class="hid">DeviceStorage</a>)(<span class="kwrd">this</span>.<span class="hid">shape</span>, <span class="hid">y.requiresGrad</span>);
 <a id="L45" href="#L45" class="br">45 </a>            <span class="hid">gx.data.fill_</span>(<span class="hid">y.data.toHost</span>[<span class="num">0</span>]);
 <a id="L46" href="#L46" class="br">46 </a>            <span class="kwrd">return</span> <span class="hid">gx</span>;
 <a id="L47" href="#L47" class="br">47 </a>        }
@@ -84,17 +84,17 @@
 <a id="L54" href="#L54" class="br">54 </a><span class="kwrd">unittest</span> {
 <a id="L55" href="#L55" class="br">55 </a>    <span class="kwrd">import</span> <span class="hid">mir.ndslice</span>;
 <a id="L56" href="#L56" class="br">56 </a>    <span class="kwrd">import</span> <span class="hid">mir.math</span>;
-<a id="L57" href="#L57" class="br">57 </a>    <span class="kwrd">auto</span> <span class="hid">x</span> = [<span class="num">1f</span>, <span class="num">2f</span>, <span class="num">3f</span>, <span class="num">4f</span>].<span class="hid">sliced</span>(<span class="num">2</span>, <span class="num">2</span>).<span class="hid">variable</span>;
+<a id="L57" href="#L57" class="br">57 </a>    <span class="kwrd">auto</span> <span class="hid">x</span> = [<span class="num">1f</span>, <span class="num">2f</span>, <span class="num">3f</span>, <span class="num">4f</span>].<span class="hid">sliced</span>(<span class="num">2</span>, <span class="num">2</span>).<a href="grain.autograd.d.html#L532" title="grain.autograd.variable" class="hid">variable</a>;
 <a id="L58" href="#L58" class="br">58 </a>    <a href="grain.functions.reduction.d.html#L8" title="grain.functions.reduction.Sum" class="hid">Sum</a>!(<span class="str">&quot;fast&quot;</span>, <span class="type">float</span>, <span class="num">2</span>) <span class="hid">func</span>;
 <a id="L59" href="#L59" class="br">59 </a>    <span class="kwrd">auto</span> <span class="hid">y</span> = <span class="hid">func.forward</span>(<span class="hid">x</span>);
-<a id="L60" href="#L60" class="br">60 </a>    <span class="kwrd">assert</span>(<span class="hid">y</span> == <span class="num">10f</span>.<span class="hid">variable</span>);
-<a id="L61" href="#L61" class="br">61 </a>    <span class="kwrd">assert</span>(<span class="hid">func.backward</span>(<span class="num">1.2f</span>.<span class="hid">variable</span>) == [<span class="num">1.2f</span>, <span class="num">1.2f</span>, <span class="num">1.2f</span>, <span class="num">1.2f</span>].<span class="hid">sliced</span>(<span class="num">2</span>, <span class="num">2</span>).<span class="hid">variable</span>);
+<a id="L60" href="#L60" class="br">60 </a>    <span class="kwrd">assert</span>(<span class="hid">y</span> == <span class="num">10f</span>.<a href="grain.autograd.d.html#L532" title="grain.autograd.variable" class="hid">variable</a>);
+<a id="L61" href="#L61" class="br">61 </a>    <span class="kwrd">assert</span>(<span class="hid">func.backward</span>(<span class="num">1.2f</span>.<a href="grain.autograd.d.html#L532" title="grain.autograd.variable" class="hid">variable</a>) == [<span class="num">1.2f</span>, <span class="num">1.2f</span>, <span class="num">1.2f</span>, <span class="num">1.2f</span>].<span class="hid">sliced</span>(<span class="num">2</span>, <span class="num">2</span>).<a href="grain.autograd.d.html#L532" title="grain.autograd.variable" class="hid">variable</a>);
 <a id="L62" href="#L62" class="br">62 </a>
 <a id="L63" href="#L63" class="br">63 </a>    <span class="kwrd">version</span> (<span class="hid">grain_cuda</span>) {
-<a id="L64" href="#L64" class="br">64 </a>        <span class="kwrd">auto</span> <span class="hid">cx</span> = <span class="hid">x.to</span>!<span class="hid">DeviceStorage</span>;
-<a id="L65" href="#L65" class="br">65 </a>        <span class="kwrd">auto</span> <span class="hid">cy</span> = <span class="hid">func.forward</span>(<span class="hid">cx</span>).<span class="hid">to</span>!<span class="hid">HostStorage</span>;
-<a id="L66" href="#L66" class="br">66 </a>        <span class="kwrd">assert</span>(<span class="hid">cy</span> == <span class="num">10f</span>.<span class="hid">variable</span>);
-<a id="L67" href="#L67" class="br">67 </a>        <span class="kwrd">auto</span> <span class="hid">cgx</span> = <span class="hid">func.backward</span>(<span class="num">1.2f</span>.<span class="hid">variable.to</span>!<span class="hid">DeviceStorage</span>).<span class="hid">to</span>!<span class="hid">HostStorage</span>;
+<a id="L64" href="#L64" class="br">64 </a>        <span class="kwrd">auto</span> <span class="hid">cx</span> = <span class="hid">x.to</span>!<a href="grain.autograd.d.html#L91" title="grain.autograd.DeviceStorage" class="hid">DeviceStorage</a>;
+<a id="L65" href="#L65" class="br">65 </a>        <span class="kwrd">auto</span> <span class="hid">cy</span> = <span class="hid">func.forward</span>(<span class="hid">cx</span>).<a href="grain.autograd.d.html#L97" title="grain.autograd.to" class="hid">to</a>!<a href="grain.autograd.d.html#L22" title="grain.autograd.HostStorage" class="hid">HostStorage</a>;
+<a id="L66" href="#L66" class="br">66 </a>        <span class="kwrd">assert</span>(<span class="hid">cy</span> == <span class="num">10f</span>.<a href="grain.autograd.d.html#L532" title="grain.autograd.variable" class="hid">variable</a>);
+<a id="L67" href="#L67" class="br">67 </a>        <span class="kwrd">auto</span> <span class="hid">cgx</span> = <span class="hid">func.backward</span>(<span class="num">1.2f</span>.<a href="grain.autograd.d.html#L97" title="grain.autograd.to" class="hid">variable.to</a>!<a href="grain.autograd.d.html#L91" title="grain.autograd.DeviceStorage" class="hid">DeviceStorage</a>).<a href="grain.autograd.d.html#L97" title="grain.autograd.to" class="hid">to</a>!<a href="grain.autograd.d.html#L22" title="grain.autograd.HostStorage" class="hid">HostStorage</a>;
 <a id="L68" href="#L68" class="br">68 </a>        <span class="kwrd">assert</span>(<span class="hid">cgx.sliced</span> == [<span class="num">1.2f</span>, <span class="num">1.2f</span>, <span class="num">1.2f</span>, <span class="num">1.2f</span>].<span class="hid">sliced</span>(<span class="num">2</span>, <span class="num">2</span>));
 <a id="L69" href="#L69" class="br">69 </a>    }
 <a id="L70" href="#L70" class="br">70 </a>}</pre></div>
