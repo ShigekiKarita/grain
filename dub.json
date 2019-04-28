@@ -206,7 +206,7 @@
         },
         {
 			      "name": "makedeps",
-			      "dflags": ["-deps=deps.txt"]
+			      "dflags": ["-deps=deps-lock.txt"]
 		    }
     ],
     "-ddoxTool": "scod",

@@ -120,12 +120,12 @@ doc: adrdox/doc2 generated-docs/grain.svg
 	# mv generated-docs docs
 
 
-deps.txt:
+deps-lock.txt:
 	dub build -c makedeps
 
-deps.dot:
+deps.dot: deps-lock.txt
 	dub fetch ddeps
-	dub run ddeps -- --focus=grain -i deps.txt -o deps.dot -e std -e core -e mir -e numir -e ldc
+	dub run ddeps -- --focus=grain -i deps-lock.txt -o deps.dot -e std -e core -e mir -e numir -e ldc
 
 generated-docs/grain.svg: deps.dot
 	awk -f ./tool/add_url.awk deps.dot | dot -Tsvg | sed 's/xlink:href/target="_blank" xlink:href/g' > $@
