@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Convolution (grain.functions.binary.Convolution)</title>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+        <link rel="stylesheet" href="style.css" />
+        <script type="text/javascript" src="script.js"></script>
+
+    
+    <link rel="prefetch" href="search-results.html" />
+</head>
+<body>
+    <div id="page-header">
+        <div id="logotype">
+        <span>Documentation</span>
+        <nav>
+            <a href="https://github.com/ShigekiKarita/grain">GitHub</a>
+            <a href="https://github.com/ShigekiKarita/grain/tree/master/example">Example</a>
+            <a href="http://dlang.org/">Dlang.org</a>
+        </nav>
+        </div>
+
+        <form action="search-docs.html" id="search">
+            <input type="search" placeholder="Find a symbol name..." name="searchTerm" />
+            <input type="submit" value="Go" />
+        </form>
+    </div>
+    <div id="page-body">
+        <div id="page-content">
+        <h1>Convolution</h1><div class="breadcrumbs"><a href="grain.html" class="breadcrumb">grain</a><a href="grain.functions.html" class="breadcrumb">functions</a><a href="grain.functions.binary.html" class="breadcrumb">binary</a></div><div><div class="documentation-comment synopsis"><div><p>Convolution/Cross-correration function</p><p>TODO add cudnn wrapped functions</p></div></div></div><div class="annotated-prototype"><div class="aggregate-prototype"><div class="attributes"></div><span class="builtin-type">struct</span> Convolution (<div class="parameters-list toplevel"><div class="template-parameter-item parameter-item">	<span><span data-ident="T" class="name">T</span></span></div><div class="template-parameter-item parameter-item">	<span><span data-ident="size_t" class="name">size_t</span> <span data-ident="imDims" class="name">imDims</span></span></div><div class="template-parameter-item parameter-item">	<span><span class="builtin-type">bool</span> <span data-ident="isConv" class="name">isConv</span> = false</span></div><div class="template-parameter-item parameter-item">	<span><span class="builtin-type">bool</span> <span data-ident="isNchw" class="name">isNchw</span> = true</span></div></div>) {<div class="aggregate-member"><tt class="highlighted"><span class="type">int</span>[<span class="hid">imDims</span>]</tt> <span class="name">stride</span>;</div><div class="aggregate-member"><tt class="highlighted"><span class="type">int</span>[<span class="hid">imDims</span>]</tt> <span class="name">pad</span>;</div><div class="aggregate-member"><tt class="highlighted"><span class="type">int</span>[<span class="hid">imDims</span>]</tt> <span class="name">dilation</span>;</div><div class="aggregate-member"><tt class="highlighted"><span class="kwrd">enum</span></tt> <tt class="highlighted"><span class="type">int</span></tt> <span class="name">nbDims</span>;</div><div class="aggregate-member"><tt class="highlighted"><span class="kwrd">enum</span></tt> <tt class="highlighted"><span class="type">int</span></tt> <span class="name">ngroup</span>;</div><div class="aggregate-member"><tt class="highlighted"><span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">nbDims</span>, <span class="hid">HostStorage</span>)</tt> <span class="name">hx</span>;</div><div class="aggregate-member"><tt class="highlighted"><span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">nbDims</span>, <span class="hid">HostStorage</span>)</tt> <span class="name">hw</span>;</div><div class="aggregate-member"><a href="grain.functions.binary.Convolution.outShape.html"><span class="lang-feature">auto</span>  <span class="name">outShape</span><tt class="highlighted">(<span class="type">uint</span>[<span class="hid">nbDims</span>] <span class="hid">inShape</span>, <span class="type">uint</span>[<span class="hid">nbDims</span>] <span class="hid">weightShape</span>)</tt>;</a></div><div class="aggregate-member"><tt class="highlighted"><span class="hid">cudnnConvolutionFwdAlgo_t</span></tt> <span class="name">forwardAlgo</span>;</div><div class="aggregate-member"><tt class="highlighted"><span class="hid">cudnnConvolutionBwdDataAlgo_t</span></tt> <span class="name">backwardAlgo</span>;</div><div class="aggregate-member"><tt class="highlighted"><span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">nbDims</span>, <span class="hid">DeviceStorage</span>)</tt> <span class="name">dx</span>;</div><div class="aggregate-member"><tt class="highlighted"><span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">nbDims</span>, <span class="hid">DeviceStorage</span>)</tt> <span class="name">dw</span>;</div>}</div></div><h2 id="members"><a href="#members" class="header-anchor">Members</a></h2><h3 id="function" class="member-list-header hide-from-toc"><a href="#function" class="header-anchor">Functions</a></h3><dl class="member-list native"><dt><a href="grain.functions.binary.Convolution.outShape.html">outShape</a><div style="max-width: 68ch;" class="simplified-prototype"><span class="lang-feature">auto</span>  <span class="name">outShape</span><tt class="highlighted">(<span class="type">uint</span>[<span class="hid">nbDims</span>] <span class="hid">inShape</span>, <span class="type">uint</span>[<span class="hid">nbDims</span>] <span class="hid">weightShape</span>)</tt></div></dt><dd><div><p><a href="https://pytorch.org/docs/master/nn.html#convolution-layers">https://pytorch.org/docs/master/nn.html#convolution-layers</a></p></div></dd></dl><div><h2 id="examples"><a href="#examples" class="header-anchor">Examples</a></h2><div class="documentation-comment"><div></div></div><div class="unittest-example-holder"><div class="documentation-comment"><p>Conv1d pytorch equality test</p><pre data-language="python" class="block-code with-line-wrappers"><span class="br">1 </span>&gt;&gt;&gt; iota = <span class="highlighted-keyword">lambda</span> s: torch.arange(torch.prod(torch.tensor(s))).view(s)
+<span class="br">2 </span>&gt;&gt;&gt; torch.nn.functional.conv<span class="highlighted-number">1d</span>(iota([<span class="highlighted-number">2</span>, <span class="highlighted-number">3</span>, <span class="highlighted-number">4</span>]), iota([<span class="highlighted-number">5</span>, <span class="highlighted-number">3</span>, <span class="highlighted-number">3</span>]))
+<span class="br">3 </span>tensor([[[  <span class="highlighted-number">258.</span>,   <span class="highlighted-number">294.</span>],
+<span class="br">4 </span>         [  <span class="highlighted-number">663.</span>,   <span class="highlighted-number">780.</span>],
+<span class="br">5 </span>         [ <span class="highlighted-number">1068.</span>,  <span class="highlighted-number">1266.</span>],
+<span class="br">6 </span>         [ <span class="highlighted-number">1473.</span>,  <span class="highlighted-number">1752.</span>],
+<span class="br">7 </span>         [ <span class="highlighted-number">1878.</span>,  <span class="highlighted-number">2238.</span>]],
+<span class="br">8 </span>
+<span class="br">9 </span>        [[  <span class="highlighted-number">690.</span>,   <span class="highlighted-number">726.</span>],
+<span class="br">10 </span>         [ <span class="highlighted-number">2067.</span>,  <span class="highlighted-number">2184.</span>],
+<span class="br">11 </span>         [ <span class="highlighted-number">3444.</span>,  <span class="highlighted-number">3642.</span>],
+<span class="br">12 </span>         [ <span class="highlighted-number">4821.</span>,  <span class="highlighted-number">5100.</span>],
+<span class="br">13 </span>         [ <span class="highlighted-number">6198.</span>,  <span class="highlighted-number">6558.</span>]]])
+<span class="br">14 </span>&gt;&gt;&gt; y.shape
+<span class="br">15 </span>[<span class="highlighted-number">2</span>, <span class="highlighted-number">5</span>, <span class="highlighted-number">2</span>]
+<span class="br">16 </span>
+<span class="br">17 </span>&gt;&gt;&gt; x = iota([<span class="highlighted-number">2</span>, <span class="highlighted-number">3</span>, <span class="highlighted-number">4</span>])
+<span class="br">18 </span>&gt;&gt;&gt; x.requires_grad = <span class="highlighted-number">True</span>
+<span class="br">19 </span>&gt;&gt;&gt; w = iota([<span class="highlighted-number">5</span>, <span class="highlighted-number">3</span>, <span class="highlighted-number">3</span>])
+<span class="br">20 </span>&gt;&gt;&gt; w.requires_grad = <span class="highlighted-number">True</span>
+<span class="br">21 </span>&gt;&gt;&gt; y = torch.nn.functional.conv<span class="highlighted-number">1d</span>(x, w)
+<span class="br">22 </span>&gt;&gt;&gt; y.backward(torch.ones_like(y))
+<span class="br">23 </span>&gt;&gt;&gt; x.grad
+<span class="br">24 </span>tensor(
+<span class="br">25 </span>    [[[  <span class="highlighted-number">90.</span>,  <span class="highlighted-number">185.</span>,  <span class="highlighted-number">195.</span>,  <span class="highlighted-number">100.</span>],
+<span class="br">26 </span>      [ <span class="highlighted-number">105.</span>,  <span class="highlighted-number">215.</span>,  <span class="highlighted-number">225.</span>,  <span class="highlighted-number">115.</span>],
+<span class="br">27 </span>      [ <span class="highlighted-number">120.</span>,  <span class="highlighted-number">245.</span>,  <span class="highlighted-number">255.</span>,  <span class="highlighted-number">130.</span>]],
+<span class="br">28 </span>
+<span class="br">29 </span>     [[  <span class="highlighted-number">90.</span>,  <span class="highlighted-number">185.</span>,  <span class="highlighted-number">195.</span>,  <span class="highlighted-number">100.</span>],
+<span class="br">30 </span>      [ <span class="highlighted-number">105.</span>,  <span class="highlighted-number">215.</span>,  <span class="highlighted-number">225.</span>,  <span class="highlighted-number">115.</span>],
+<span class="br">31 </span>      [ <span class="highlighted-number">120.</span>,  <span class="highlighted-number">245.</span>,  <span class="highlighted-number">255.</span>,  <span class="highlighted-number">130.</span>]]])
+<span class="br">32 </span>&gt;&gt;&gt; w.grad
+<span class="br">33 </span>tensor([[[ <span class="highlighted-number">26.</span>,  <span class="highlighted-number">30.</span>,  <span class="highlighted-number">34.</span>],
+<span class="br">34 </span>         [ <span class="highlighted-number">42.</span>,  <span class="highlighted-number">46.</span>,  <span class="highlighted-number">50.</span>],
+<span class="br">35 </span>         [ <span class="highlighted-number">58.</span>,  <span class="highlighted-number">62.</span>,  <span class="highlighted-number">66.</span>]],
+<span class="br">36 </span>
+<span class="br">37 </span>        [[ <span class="highlighted-number">26.</span>,  <span class="highlighted-number">30.</span>,  <span class="highlighted-number">34.</span>],
+<span class="br">38 </span>         [ <span class="highlighted-number">42.</span>,  <span class="highlighted-number">46.</span>,  <span class="highlighted-number">50.</span>],
+<span class="br">39 </span>         [ <span class="highlighted-number">58.</span>,  <span class="highlighted-number">62.</span>,  <span class="highlighted-number">66.</span>]],
+<span class="br">40 </span>
+<span class="br">41 </span>        [[ <span class="highlighted-number">26.</span>,  <span class="highlighted-number">30.</span>,  <span class="highlighted-number">34.</span>],
+<span class="br">42 </span>         [ <span class="highlighted-number">42.</span>,  <span class="highlighted-number">46.</span>,  <span class="highlighted-number">50.</span>],
+<span class="br">43 </span>         [ <span class="highlighted-number">58.</span>,  <span class="highlighted-number">62.</span>,  <span class="highlighted-number">66.</span>]],
+<span class="br">44 </span>
+<span class="br">45 </span>        [[ <span class="highlighted-number">26.</span>,  <span class="highlighted-number">30.</span>,  <span class="highlighted-number">34.</span>],
+<span class="br">46 </span>         [ <span class="highlighted-number">42.</span>,  <span class="highlighted-number">46.</span>,  <span class="highlighted-number">50.</span>],
+<span class="br">47 </span>         [ <span class="highlighted-number">58.</span>,  <span class="highlighted-number">62.</span>,  <span class="highlighted-number">66.</span>]],
+<span class="br">48 </span>
+<span class="br">49 </span>        [[ <span class="highlighted-number">26.</span>,  <span class="highlighted-number">30.</span>,  <span class="highlighted-number">34.</span>],
+<span class="br">50 </span>         [ <span class="highlighted-number">42.</span>,  <span class="highlighted-number">46.</span>,  <span class="highlighted-number">50.</span>],
+<span class="br">51 </span>         [ <span class="highlighted-number">58.</span>,  <span class="highlighted-number">62.</span>,  <span class="highlighted-number">66.</span>]]])</pre></div><pre class="d_code highlighted with-line-wrappers"><span class="br">1 </span><span class="kwrd">import</span> <span class="hid">std</span>.<span class="hid">stdio</span>;
+<span class="br">2 </span><span class="kwrd">import</span> <span class="hid">mir</span>.<span class="hid">ndslice</span>;
+<span class="br">3 </span><span class="kwrd">import</span> <span class="hid">numir</span>;
+<span class="br">4 </span><span class="kwrd">auto</span> <span class="hid">x</span> = <span class="hid">iota</span>(<span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>).<span class="hid">as</span>!<span class="type">float</span>.<span class="hid">slice</span>.<span class="hid">variable</span>;
+<span class="br">5 </span><span class="kwrd">auto</span> <span class="hid">w</span> = <span class="hid">iota</span>(<span class="num">5</span>, <span class="num">3</span>, <span class="num">3</span>).<span class="hid">as</span>!<span class="type">float</span>.<span class="hid">slice</span>.<span class="hid">variable</span>;
+<span class="br">6 </span><span class="hid">Convolution</span>!(<span class="type">float</span>, <span class="num">1</span>) <span class="hid">conv</span>;
+<span class="br">7 </span><span class="kwrd">auto</span> <span class="hid">y</span> = <span class="hid">conv</span>.<span class="hid">forward</span>(<span class="hid">x</span>, <span class="hid">w</span>);
+<span class="br">8 </span><span class="kwrd">auto</span> <span class="hid">yx</span> = [[[  <span class="num">258.</span>,   <span class="num">294.</span>],
+<span class="br">9 </span>            [  <span class="num">663.</span>,   <span class="num">780.</span>],
+<span class="br">10 </span>            [ <span class="num">1068.</span>,  <span class="num">1266.</span>],
+<span class="br">11 </span>            [ <span class="num">1473.</span>,  <span class="num">1752.</span>],
+<span class="br">12 </span>            [ <span class="num">1878.</span>,  <span class="num">2238.</span>]],
+<span class="br">13 </span>
+<span class="br">14 </span>           [[  <span class="num">690.</span>,   <span class="num">726.</span>],
+<span class="br">15 </span>            [ <span class="num">2067.</span>,  <span class="num">2184.</span>],
+<span class="br">16 </span>            [ <span class="num">3444.</span>,  <span class="num">3642.</span>],
+<span class="br">17 </span>            [ <span class="num">4821.</span>,  <span class="num">5100.</span>],
+<span class="br">18 </span>            [ <span class="num">6198.</span>,  <span class="num">6558.</span>]]];
+<span class="br">19 </span><span class="kwrd">assert</span>(<span class="hid">y</span>.<span class="hid">sliced</span> == <span class="hid">yx</span>);
+<span class="br">20 </span>
+<span class="br">21 </span><span class="com">// test backward</span>
+<span class="br">22 </span><span class="kwrd">auto</span> <span class="hid">gy</span> = <span class="hid">y</span>.<span class="hid">uninit</span>;
+<span class="br">23 </span><span class="hid">gy</span>.<span class="hid">data</span>[] = <span class="num">1</span>;
+<span class="br">24 </span><span class="kwrd">auto</span> <span class="hid">gs</span> = <span class="hid">conv</span>.<span class="hid">backward</span>(<span class="hid">gy</span>);
+<span class="br">25 </span><span class="kwrd">auto</span> <span class="hid">gx</span> = <span class="hid">gs</span>[<span class="num">0</span>];
+<span class="br">26 </span><span class="kwrd">auto</span> <span class="hid">gw</span> = <span class="hid">gs</span>[<span class="num">1</span>];
+<span class="br">27 </span>
+<span class="br">28 </span><span class="kwrd">auto</span> <span class="hid">gxx</span> = [[[  <span class="num">90.</span>,  <span class="num">185.</span>,  <span class="num">195.</span>,  <span class="num">100.</span>],
+<span class="br">29 </span>             [ <span class="num">105.</span>,  <span class="num">215.</span>,  <span class="num">225.</span>,  <span class="num">115.</span>],
+<span class="br">30 </span>             [ <span class="num">120.</span>,  <span class="num">245.</span>,  <span class="num">255.</span>,  <span class="num">130.</span>]],
+<span class="br">31 </span>
+<span class="br">32 </span>            [[  <span class="num">90.</span>,  <span class="num">185.</span>,  <span class="num">195.</span>,  <span class="num">100.</span>],
+<span class="br">33 </span>             [ <span class="num">105.</span>,  <span class="num">215.</span>,  <span class="num">225.</span>,  <span class="num">115.</span>],
+<span class="br">34 </span>             [ <span class="num">120.</span>,  <span class="num">245.</span>,  <span class="num">255.</span>,  <span class="num">130.</span>]]];
+<span class="br">35 </span><span class="kwrd">assert</span>(<span class="hid">gx</span>.<span class="hid">sliced</span> == <span class="hid">gxx</span>);
+<span class="br">36 </span>
+<span class="br">37 </span><span class="kwrd">auto</span> <span class="hid">gwx</span> = [[[ <span class="num">26.</span>,  <span class="num">30.</span>,  <span class="num">34.</span>],
+<span class="br">38 </span>             [ <span class="num">42.</span>,  <span class="num">46.</span>,  <span class="num">50.</span>],
+<span class="br">39 </span>             [ <span class="num">58.</span>,  <span class="num">62.</span>,  <span class="num">66.</span>]],
+<span class="br">40 </span>
+<span class="br">41 </span>            [[ <span class="num">26.</span>,  <span class="num">30.</span>,  <span class="num">34.</span>],
+<span class="br">42 </span>             [ <span class="num">42.</span>,  <span class="num">46.</span>,  <span class="num">50.</span>],
+<span class="br">43 </span>             [ <span class="num">58.</span>,  <span class="num">62.</span>,  <span class="num">66.</span>]],
+<span class="br">44 </span>
+<span class="br">45 </span>            [[ <span class="num">26.</span>,  <span class="num">30.</span>,  <span class="num">34.</span>],
+<span class="br">46 </span>             [ <span class="num">42.</span>,  <span class="num">46.</span>,  <span class="num">50.</span>],
+<span class="br">47 </span>             [ <span class="num">58.</span>,  <span class="num">62.</span>,  <span class="num">66.</span>]],
+<span class="br">48 </span>
+<span class="br">49 </span>            [[ <span class="num">26.</span>,  <span class="num">30.</span>,  <span class="num">34.</span>],
+<span class="br">50 </span>             [ <span class="num">42.</span>,  <span class="num">46.</span>,  <span class="num">50.</span>],
+<span class="br">51 </span>             [ <span class="num">58.</span>,  <span class="num">62.</span>,  <span class="num">66.</span>]],
+<span class="br">52 </span>
+<span class="br">53 </span>            [[ <span class="num">26.</span>,  <span class="num">30.</span>,  <span class="num">34.</span>],
+<span class="br">54 </span>             [ <span class="num">42.</span>,  <span class="num">46.</span>,  <span class="num">50.</span>],
+<span class="br">55 </span>             [ <span class="num">58.</span>,  <span class="num">62.</span>,  <span class="num">66.</span>]]];
+<span class="br">56 </span><span class="kwrd">assert</span>(<span class="hid">gw</span>.<span class="hid">sliced</span> == <span class="hid">gwx</span>);
+<span class="br">57 </span>
+<span class="br">58 </span><span class="kwrd">import</span> <span class="hid">grain</span>.<span class="hid">testing</span> : <span class="hid">gradCheck</span>;
+<span class="br">59 </span><span class="kwrd">auto</span> <span class="hid">hx</span> = <span class="hid">uniform</span>!<span class="type">float</span>(<span class="hid">x</span>.<span class="hid">shape</span>.<span class="hid">castArray</span>!<span class="hid">size_t</span>).<span class="hid">slice</span>.<span class="hid">variable</span>;
+<span class="br">60 </span><span class="kwrd">auto</span> <span class="hid">hw</span> = <span class="hid">uniform</span>!<span class="type">float</span>(<span class="hid">w</span>.<span class="hid">shape</span>.<span class="hid">castArray</span>!<span class="hid">size_t</span>).<span class="hid">slice</span>.<span class="hid">variable</span>;
+<span class="br">61 </span><span class="kwrd">auto</span> <span class="hid">hgy</span> = <span class="hid">uniform</span>!<span class="type">float</span>(<span class="hid">y</span>.<span class="hid">shape</span>.<span class="hid">castArray</span>!<span class="hid">size_t</span>).<span class="hid">slice</span>.<span class="hid">variable</span>;
+<span class="br">62 </span><span class="kwrd">auto</span> <span class="hid">hy</span> = <span class="hid">conv</span>.<span class="hid">forward</span>(<span class="hid">hx</span>, <span class="hid">hw</span>);
+<span class="br">63 </span><span class="kwrd">auto</span> <span class="hid">hgx</span> = <span class="hid">conv</span>.<span class="hid">backward</span>(<span class="hid">hgy</span>);
+<span class="br">64 </span><span class="hid">gradCheck</span>(<span class="hid">conv</span>, <span class="hid">tuple</span>(<span class="hid">hx</span>, <span class="hid">hw</span>), <span class="hid">hgy</span>, <span class="num">1e-3</span>, <span class="num">1e-3</span>, <span class="num">1e-2</span>);
+<span class="br">65 </span>
+<span class="br">66 </span><span class="kwrd">version</span> (<span class="hid">grain_cuda</span>) {
+<span class="br">67 </span>    <span class="kwrd">auto</span> <span class="hid">dy</span> = <span class="hid">conv</span>.<span class="hid">forward</span>(<span class="hid">hx</span>.<span class="hid">to</span>!<span class="hid">DeviceStorage</span>, <span class="hid">hw</span>.<span class="hid">to</span>!<span class="hid">DeviceStorage</span>);
+<span class="br">68 </span>    <span class="kwrd">auto</span> <span class="hid">dgx</span> = <span class="hid">conv</span>.<span class="hid">backward</span>(<span class="hid">hgy</span>.<span class="hid">to</span>!<span class="hid">DeviceStorage</span>);
+<span class="br">69 </span>    <span class="kwrd">assert</span>(<span class="hid">approxEqual</span>(<span class="hid">dy</span>.<span class="hid">to</span>!<span class="hid">HostStorage</span>.<span class="hid">sliced</span>, <span class="hid">hy</span>.<span class="hid">sliced</span>));
+<span class="br">70 </span>    <span class="kwrd">assert</span>(<span class="hid">approxEqual</span>(<span class="hid">dgx</span>[<span class="num">0</span>].<span class="hid">to</span>!<span class="hid">HostStorage</span>.<span class="hid">sliced</span>, <span class="hid">hgx</span>[<span class="num">0</span>].<span class="hid">sliced</span>));
+<span class="br">71 </span>    <span class="kwrd">assert</span>(<span class="hid">approxEqual</span>(<span class="hid">dgx</span>[<span class="num">1</span>].<span class="hid">to</span>!<span class="hid">HostStorage</span>.<span class="hid">sliced</span>, <span class="hid">hgx</span>[<span class="num">1</span>].<span class="hid">sliced</span>));
+<span class="br">72 </span>}</pre></div><div class="unittest-example-holder"><div class="documentation-comment"><p>Conv2d pytorch equality test</p><pre data-language="python" class="block-code with-line-wrappers"><span class="br">1 </span>&gt;&gt;&gt; <span class="highlighted-preprocessor-directive">import</span> torch
+<span class="br">2 </span>&gt;&gt;&gt; iota = <span class="highlighted-keyword">lambda</span> s: torch.arange(torch.prod(torch.tensor(s))).view(s)
+<span class="br">3 </span>&gt;&gt;&gt; x = iota([<span class="highlighted-number">2</span>, <span class="highlighted-number">3</span>, <span class="highlighted-number">4</span>, <span class="highlighted-number">4</span>])
+<span class="br">4 </span>&gt;&gt;&gt; px.requires_grad = <span class="highlighted-number">True</span>
+<span class="br">5 </span>&gt;&gt;&gt; w = iota([<span class="highlighted-number">2</span>, <span class="highlighted-number">3</span>, <span class="highlighted-number">3</span>, <span class="highlighted-number">3</span>])
+<span class="br">6 </span>&gt;&gt;&gt; w.requires_grad = <span class="highlighted-number">True</span>
+<span class="br">7 </span>&gt;&gt;&gt; y = torch.nn.functional.conv<span class="highlighted-number">2d</span>(x, w)
+<span class="br">8 </span>&gt;&gt;&gt; y
+<span class="br">9 </span>tensor([[[[ <span class="highlighted-number">10197.</span>,  <span class="highlighted-number">10548.</span>],
+<span class="br">10 </span>          [ <span class="highlighted-number">11601.</span>,  <span class="highlighted-number">11952.</span>]],
+<span class="br">11 </span>
+<span class="br">12 </span>         [[ <span class="highlighted-number">25506.</span>,  <span class="highlighted-number">26586.</span>],
+<span class="br">13 </span>          [ <span class="highlighted-number">29826.</span>,  <span class="highlighted-number">30906.</span>]]],
+<span class="br">14 </span>
+<span class="br">15 </span>
+<span class="br">16 </span>         [[[ <span class="highlighted-number">27045.</span>,  <span class="highlighted-number">27396.</span>],
+<span class="br">17 </span>           [ <span class="highlighted-number">28449.</span>,  <span class="highlighted-number">28800.</span>]],
+<span class="br">18 </span>
+<span class="br">19 </span>          [[ <span class="highlighted-number">77346.</span>,  <span class="highlighted-number">78426.</span>],
+<span class="br">20 </span>           [ <span class="highlighted-number">81666.</span>,  <span class="highlighted-number">82746.</span>]]]])
+<span class="br">21 </span>
+<span class="br">22 </span>&gt;&gt;&gt; y = torch.nn.functional.conv<span class="highlighted-number">1d</span>(iota([<span class="highlighted-number">2</span>, <span class="highlighted-number">3</span>, <span class="highlighted-number">4</span>]), w)
+<span class="br">23 </span>&gt;&gt;&gt; y.backward(torch.ones_like(y))
+<span class="br">24 </span>&gt;&gt;&gt; x.grad
+<span class="br">25 </span>tensor(
+<span class="br">26 </span>    [[[[  <span class="highlighted-number">27.</span>,   <span class="highlighted-number">56.</span>,   <span class="highlighted-number">60.</span>,   <span class="highlighted-number">31.</span>],
+<span class="br">27 </span>       [  <span class="highlighted-number">60.</span>,  <span class="highlighted-number">124.</span>,  <span class="highlighted-number">132.</span>,   <span class="highlighted-number">68.</span>],
+<span class="br">28 </span>       [  <span class="highlighted-number">72.</span>,  <span class="highlighted-number">148.</span>,  <span class="highlighted-number">156.</span>,   <span class="highlighted-number">80.</span>],
+<span class="br">29 </span>       [  <span class="highlighted-number">39.</span>,   <span class="highlighted-number">80.</span>,   <span class="highlighted-number">84.</span>,   <span class="highlighted-number">43.</span>]],
+<span class="br">30 </span>
+<span class="br">31 </span>      [[  <span class="highlighted-number">45.</span>,   <span class="highlighted-number">92.</span>,   <span class="highlighted-number">96.</span>,   <span class="highlighted-number">49.</span>],
+<span class="br">32 </span>       [  <span class="highlighted-number">96.</span>,  <span class="highlighted-number">196.</span>,  <span class="highlighted-number">204.</span>,  <span class="highlighted-number">104.</span>],
+<span class="br">33 </span>       [ <span class="highlighted-number">108.</span>,  <span class="highlighted-number">220.</span>,  <span class="highlighted-number">228.</span>,  <span class="highlighted-number">116.</span>],
+<span class="br">34 </span>       [  <span class="highlighted-number">57.</span>,  <span class="highlighted-number">116.</span>,  <span class="highlighted-number">120.</span>,   <span class="highlighted-number">61.</span>]],
+<span class="br">35 </span>
+<span class="br">36 </span>      [[  <span class="highlighted-number">63.</span>,  <span class="highlighted-number">128.</span>,  <span class="highlighted-number">132.</span>,   <span class="highlighted-number">67.</span>],
+<span class="br">37 </span>       [ <span class="highlighted-number">132.</span>,  <span class="highlighted-number">268.</span>,  <span class="highlighted-number">276.</span>,  <span class="highlighted-number">140.</span>],
+<span class="br">38 </span>       [ <span class="highlighted-number">144.</span>,  <span class="highlighted-number">292.</span>,  <span class="highlighted-number">300.</span>,  <span class="highlighted-number">152.</span>],
+<span class="br">39 </span>       [  <span class="highlighted-number">75.</span>,  <span class="highlighted-number">152.</span>,  <span class="highlighted-number">156.</span>,   <span class="highlighted-number">79.</span>]]],
+<span class="br">40 </span>
+<span class="br">41 </span>
+<span class="br">42 </span>     [[[  <span class="highlighted-number">27.</span>,   <span class="highlighted-number">56.</span>,   <span class="highlighted-number">60.</span>,   <span class="highlighted-number">31.</span>],
+<span class="br">43 </span>       [  <span class="highlighted-number">60.</span>,  <span class="highlighted-number">124.</span>,  <span class="highlighted-number">132.</span>,   <span class="highlighted-number">68.</span>],
+<span class="br">44 </span>       [  <span class="highlighted-number">72.</span>,  <span class="highlighted-number">148.</span>,  <span class="highlighted-number">156.</span>,   <span class="highlighted-number">80.</span>],
+<span class="br">45 </span>       [  <span class="highlighted-number">39.</span>,   <span class="highlighted-number">80.</span>,   <span class="highlighted-number">84.</span>,   <span class="highlighted-number">43.</span>]],
+<span class="br">46 </span>
+<span class="br">47 </span>      [[  <span class="highlighted-number">45.</span>,   <span class="highlighted-number">92.</span>,   <span class="highlighted-number">96.</span>,   <span class="highlighted-number">49.</span>],
+<span class="br">48 </span>       [  <span class="highlighted-number">96.</span>,  <span class="highlighted-number">196.</span>,  <span class="highlighted-number">204.</span>,  <span class="highlighted-number">104.</span>],
+<span class="br">49 </span>       [ <span class="highlighted-number">108.</span>,  <span class="highlighted-number">220.</span>,  <span class="highlighted-number">228.</span>,  <span class="highlighted-number">116.</span>],
+<span class="br">50 </span>       [  <span class="highlighted-number">57.</span>,  <span class="highlighted-number">116.</span>,  <span class="highlighted-number">120.</span>,   <span class="highlighted-number">61.</span>]],
+<span class="br">51 </span>
+<span class="br">52 </span>      [[  <span class="highlighted-number">63.</span>,  <span class="highlighted-number">128.</span>,  <span class="highlighted-number">132.</span>,   <span class="highlighted-number">67.</span>],
+<span class="br">53 </span>       [ <span class="highlighted-number">132.</span>,  <span class="highlighted-number">268.</span>,  <span class="highlighted-number">276.</span>,  <span class="highlighted-number">140.</span>],
+<span class="br">54 </span>       [ <span class="highlighted-number">144.</span>,  <span class="highlighted-number">292.</span>,  <span class="highlighted-number">300.</span>,  <span class="highlighted-number">152.</span>],
+<span class="br">55 </span>       [  <span class="highlighted-number">75.</span>,  <span class="highlighted-number">152.</span>,  <span class="highlighted-number">156.</span>,   <span class="highlighted-number">79.</span>]]]])
+<span class="br">56 </span>&gt;&gt;&gt; w.grad
+<span class="br">57 </span>tensor(
+<span class="br">58 </span>    [[[[ <span class="highlighted-number">212.</span>,  <span class="highlighted-number">220.</span>,  <span class="highlighted-number">228.</span>],
+<span class="br">59 </span>       [ <span class="highlighted-number">244.</span>,  <span class="highlighted-number">252.</span>,  <span class="highlighted-number">260.</span>],
+<span class="br">60 </span>       [ <span class="highlighted-number">276.</span>,  <span class="highlighted-number">284.</span>,  <span class="highlighted-number">292.</span>]],
+<span class="br">61 </span>
+<span class="br">62 </span>      [[ <span class="highlighted-number">340.</span>,  <span class="highlighted-number">348.</span>,  <span class="highlighted-number">356.</span>],
+<span class="br">63 </span>       [ <span class="highlighted-number">372.</span>,  <span class="highlighted-number">380.</span>,  <span class="highlighted-number">388.</span>],
+<span class="br">64 </span>       [ <span class="highlighted-number">404.</span>,  <span class="highlighted-number">412.</span>,  <span class="highlighted-number">420.</span>]],
+<span class="br">65 </span>
+<span class="br">66 </span>      [[ <span class="highlighted-number">468.</span>,  <span class="highlighted-number">476.</span>,  <span class="highlighted-number">484.</span>],
+<span class="br">67 </span>       [ <span class="highlighted-number">500.</span>,  <span class="highlighted-number">508.</span>,  <span class="highlighted-number">516.</span>],
+<span class="br">68 </span>       [ <span class="highlighted-number">532.</span>,  <span class="highlighted-number">540.</span>,  <span class="highlighted-number">548.</span>]]],
+<span class="br">69 </span>
+<span class="br">70 </span>
+<span class="br">71 </span>     [[[ <span class="highlighted-number">212.</span>,  <span class="highlighted-number">220.</span>,  <span class="highlighted-number">228.</span>],
+<span class="br">72 </span>       [ <span class="highlighted-number">244.</span>,  <span class="highlighted-number">252.</span>,  <span class="highlighted-number">260.</span>],
+<span class="br">73 </span>       [ <span class="highlighted-number">276.</span>,  <span class="highlighted-number">284.</span>,  <span class="highlighted-number">292.</span>]],
+<span class="br">74 </span>
+<span class="br">75 </span>      [[ <span class="highlighted-number">340.</span>,  <span class="highlighted-number">348.</span>,  <span class="highlighted-number">356.</span>],
+<span class="br">76 </span>       [ <span class="highlighted-number">372.</span>,  <span class="highlighted-number">380.</span>,  <span class="highlighted-number">388.</span>],
+<span class="br">77 </span>       [ <span class="highlighted-number">404.</span>,  <span class="highlighted-number">412.</span>,  <span class="highlighted-number">420.</span>]],
+<span class="br">78 </span>
+<span class="br">79 </span>      [[ <span class="highlighted-number">468.</span>,  <span class="highlighted-number">476.</span>,  <span class="highlighted-number">484.</span>],
+<span class="br">80 </span>       [ <span class="highlighted-number">500.</span>,  <span class="highlighted-number">508.</span>,  <span class="highlighted-number">516.</span>],
+<span class="br">81 </span>       [ <span class="highlighted-number">532.</span>,  <span class="highlighted-number">540.</span>,  <span class="highlighted-number">548.</span>]]]])</pre></div><pre class="d_code highlighted with-line-wrappers"><span class="br">1 </span><span class="kwrd">import</span> <span class="hid">std</span>.<span class="hid">stdio</span>;
+<span class="br">2 </span><span class="kwrd">import</span> <span class="hid">mir</span>.<span class="hid">ndslice</span>;
+<span class="br">3 </span><span class="kwrd">import</span> <span class="hid">numir</span>;
+<span class="br">4 </span><span class="kwrd">auto</span> <span class="hid">x</span> = <span class="hid">iota</span>(<span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">4</span>).<span class="hid">as</span>!<span class="type">float</span>.<span class="hid">slice</span>.<span class="hid">variable</span>;
+<span class="br">5 </span><span class="kwrd">auto</span> <span class="hid">w</span> = <span class="hid">iota</span>(<span class="num">2</span>, <span class="num">3</span>, <span class="num">3</span>, <span class="num">3</span>).<span class="hid">as</span>!<span class="type">float</span>.<span class="hid">slice</span>.<span class="hid">variable</span>;
+<span class="br">6 </span><span class="hid">Convolution</span>!(<span class="type">float</span>, <span class="num">2</span>) <span class="hid">conv</span>;
+<span class="br">7 </span><span class="kwrd">auto</span> <span class="hid">y</span> = <span class="hid">conv</span>.<span class="hid">forward</span>(<span class="hid">x</span>, <span class="hid">w</span>);
+<span class="br">8 </span><span class="kwrd">auto</span> <span class="hid">yx</span> = [[[[ <span class="num">10197.</span>,  <span class="num">10548.</span>],
+<span class="br">9 </span>             [ <span class="num">11601.</span>,  <span class="num">11952.</span>]],
+<span class="br">10 </span>            [[ <span class="num">25506.</span>,  <span class="num">26586.</span>],
+<span class="br">11 </span>             [ <span class="num">29826.</span>,  <span class="num">30906.</span>]]],
+<span class="br">12 </span>           [[[ <span class="num">27045.</span>,  <span class="num">27396.</span>],
+<span class="br">13 </span>             [ <span class="num">28449.</span>,  <span class="num">28800.</span>]],
+<span class="br">14 </span>            [[ <span class="num">77346.</span>,  <span class="num">78426.</span>],
+<span class="br">15 </span>             [ <span class="num">81666.</span>,  <span class="num">82746.</span>]]]];
+<span class="br">16 </span><span class="kwrd">assert</span>(<span class="hid">y</span>.<span class="hid">sliced</span> == <span class="hid">yx</span>);
+<span class="br">17 </span>
+<span class="br">18 </span><span class="com">// test backward</span>
+<span class="br">19 </span><span class="kwrd">auto</span> <span class="hid">gy</span> = <span class="hid">y</span>.<span class="hid">uninit</span>;
+<span class="br">20 </span><span class="hid">gy</span>.<span class="hid">data</span>[] = <span class="num">1</span>;
+<span class="br">21 </span><span class="kwrd">auto</span> <span class="hid">gs</span> = <span class="hid">conv</span>.<span class="hid">backward</span>(<span class="hid">gy</span>);
+<span class="br">22 </span><span class="kwrd">auto</span> <span class="hid">gx</span> = <span class="hid">gs</span>[<span class="num">0</span>];
+<span class="br">23 </span><span class="kwrd">auto</span> <span class="hid">gw</span> = <span class="hid">gs</span>[<span class="num">1</span>];
+<span class="br">24 </span>
+<span class="br">25 </span><span class="kwrd">auto</span> <span class="hid">gxx</span> = [[[[  <span class="num">27.</span>,   <span class="num">56.</span>,   <span class="num">60.</span>,   <span class="num">31.</span>],
+<span class="br">26 </span>              [  <span class="num">60.</span>,  <span class="num">124.</span>,  <span class="num">132.</span>,   <span class="num">68.</span>],
+<span class="br">27 </span>              [  <span class="num">72.</span>,  <span class="num">148.</span>,  <span class="num">156.</span>,   <span class="num">80.</span>],
+<span class="br">28 </span>              [  <span class="num">39.</span>,   <span class="num">80.</span>,   <span class="num">84.</span>,   <span class="num">43.</span>]],
+<span class="br">29 </span>
+<span class="br">30 </span>             [[  <span class="num">45.</span>,   <span class="num">92.</span>,   <span class="num">96.</span>,   <span class="num">49.</span>],
+<span class="br">31 </span>              [  <span class="num">96.</span>,  <span class="num">196.</span>,  <span class="num">204.</span>,  <span class="num">104.</span>],
+<span class="br">32 </span>              [ <span class="num">108.</span>,  <span class="num">220.</span>,  <span class="num">228.</span>,  <span class="num">116.</span>],
+<span class="br">33 </span>              [  <span class="num">57.</span>,  <span class="num">116.</span>,  <span class="num">120.</span>,   <span class="num">61.</span>]],
+<span class="br">34 </span>
+<span class="br">35 </span>             [[  <span class="num">63.</span>,  <span class="num">128.</span>,  <span class="num">132.</span>,   <span class="num">67.</span>],
+<span class="br">36 </span>              [ <span class="num">132.</span>,  <span class="num">268.</span>,  <span class="num">276.</span>,  <span class="num">140.</span>],
+<span class="br">37 </span>              [ <span class="num">144.</span>,  <span class="num">292.</span>,  <span class="num">300.</span>,  <span class="num">152.</span>],
+<span class="br">38 </span>              [  <span class="num">75.</span>,  <span class="num">152.</span>,  <span class="num">156.</span>,   <span class="num">79.</span>]]],
+<span class="br">39 </span>
+<span class="br">40 </span>
+<span class="br">41 </span>            [[[  <span class="num">27.</span>,   <span class="num">56.</span>,   <span class="num">60.</span>,   <span class="num">31.</span>],
+<span class="br">42 </span>              [  <span class="num">60.</span>,  <span class="num">124.</span>,  <span class="num">132.</span>,   <span class="num">68.</span>],
+<span class="br">43 </span>              [  <span class="num">72.</span>,  <span class="num">148.</span>,  <span class="num">156.</span>,   <span class="num">80.</span>],
+<span class="br">44 </span>              [  <span class="num">39.</span>,   <span class="num">80.</span>,   <span class="num">84.</span>,   <span class="num">43.</span>]],
+<span class="br">45 </span>
+<span class="br">46 </span>             [[  <span class="num">45.</span>,   <span class="num">92.</span>,   <span class="num">96.</span>,   <span class="num">49.</span>],
+<span class="br">47 </span>              [  <span class="num">96.</span>,  <span class="num">196.</span>,  <span class="num">204.</span>,  <span class="num">104.</span>],
+<span class="br">48 </span>              [ <span class="num">108.</span>,  <span class="num">220.</span>,  <span class="num">228.</span>,  <span class="num">116.</span>],
+<span class="br">49 </span>              [  <span class="num">57.</span>,  <span class="num">116.</span>,  <span class="num">120.</span>,   <span class="num">61.</span>]],
+<span class="br">50 </span>
+<span class="br">51 </span>             [[  <span class="num">63.</span>,  <span class="num">128.</span>,  <span class="num">132.</span>,   <span class="num">67.</span>],
+<span class="br">52 </span>              [ <span class="num">132.</span>,  <span class="num">268.</span>,  <span class="num">276.</span>,  <span class="num">140.</span>],
+<span class="br">53 </span>              [ <span class="num">144.</span>,  <span class="num">292.</span>,  <span class="num">300.</span>,  <span class="num">152.</span>],
+<span class="br">54 </span>              [  <span class="num">75.</span>,  <span class="num">152.</span>,  <span class="num">156.</span>,   <span class="num">79.</span>]]]];
+<span class="br">55 </span><span class="kwrd">assert</span>(<span class="hid">gx</span>.<span class="hid">sliced</span> == <span class="hid">gxx</span>);
+<span class="br">56 </span>
+<span class="br">57 </span><span class="kwrd">auto</span> <span class="hid">gwx</span> = [[[[ <span class="num">212.</span>,  <span class="num">220.</span>,  <span class="num">228.</span>],
+<span class="br">58 </span>              [ <span class="num">244.</span>,  <span class="num">252.</span>,  <span class="num">260.</span>],
+<span class="br">59 </span>              [ <span class="num">276.</span>,  <span class="num">284.</span>,  <span class="num">292.</span>]],
+<span class="br">60 </span>             [[ <span class="num">340.</span>,  <span class="num">348.</span>,  <span class="num">356.</span>],
+<span class="br">61 </span>              [ <span class="num">372.</span>,  <span class="num">380.</span>,  <span class="num">388.</span>],
+<span class="br">62 </span>              [ <span class="num">404.</span>,  <span class="num">412.</span>,  <span class="num">420.</span>]],
+<span class="br">63 </span>             [[ <span class="num">468.</span>,  <span class="num">476.</span>,  <span class="num">484.</span>],
+<span class="br">64 </span>              [ <span class="num">500.</span>,  <span class="num">508.</span>,  <span class="num">516.</span>],
+<span class="br">65 </span>              [ <span class="num">532.</span>,  <span class="num">540.</span>,  <span class="num">548.</span>]]],
+<span class="br">66 </span>            [[[ <span class="num">212.</span>,  <span class="num">220.</span>,  <span class="num">228.</span>],
+<span class="br">67 </span>              [ <span class="num">244.</span>,  <span class="num">252.</span>,  <span class="num">260.</span>],
+<span class="br">68 </span>              [ <span class="num">276.</span>,  <span class="num">284.</span>,  <span class="num">292.</span>]],
+<span class="br">69 </span>             [[ <span class="num">340.</span>,  <span class="num">348.</span>,  <span class="num">356.</span>],
+<span class="br">70 </span>              [ <span class="num">372.</span>,  <span class="num">380.</span>,  <span class="num">388.</span>],
+<span class="br">71 </span>              [ <span class="num">404.</span>,  <span class="num">412.</span>,  <span class="num">420.</span>]],
+<span class="br">72 </span>             [[ <span class="num">468.</span>,  <span class="num">476.</span>,  <span class="num">484.</span>],
+<span class="br">73 </span>              [ <span class="num">500.</span>,  <span class="num">508.</span>,  <span class="num">516.</span>],
+<span class="br">74 </span>              [ <span class="num">532.</span>,  <span class="num">540.</span>,  <span class="num">548.</span>]]]];
+<span class="br">75 </span><span class="kwrd">assert</span>(<span class="hid">gw</span>.<span class="hid">sliced</span> == <span class="hid">gwx</span>);
+<span class="br">76 </span>
+<span class="br">77 </span><span class="kwrd">import</span> <span class="hid">grain</span>.<span class="hid">testing</span> : <span class="hid">gradCheck</span>;
+<span class="br">78 </span><span class="kwrd">auto</span> <span class="hid">hx</span> = <span class="hid">uniform</span>!<span class="type">float</span>(<span class="hid">x</span>.<span class="hid">shape</span>.<span class="hid">castArray</span>!<span class="hid">size_t</span>).<span class="hid">slice</span>.<span class="hid">variable</span>;
+<span class="br">79 </span><span class="kwrd">auto</span> <span class="hid">hw</span> = <span class="hid">uniform</span>!<span class="type">float</span>(<span class="hid">w</span>.<span class="hid">shape</span>.<span class="hid">castArray</span>!<span class="hid">size_t</span>).<span class="hid">slice</span>.<span class="hid">variable</span>;
+<span class="br">80 </span><span class="kwrd">auto</span> <span class="hid">hgy</span> = <span class="hid">uniform</span>!<span class="type">float</span>(<span class="hid">y</span>.<span class="hid">shape</span>.<span class="hid">castArray</span>!<span class="hid">size_t</span>).<span class="hid">slice</span>.<span class="hid">variable</span>;
+<span class="br">81 </span><span class="kwrd">auto</span> <span class="hid">hy</span> = <span class="hid">conv</span>.<span class="hid">forward</span>(<span class="hid">hx</span>, <span class="hid">hw</span>);
+<span class="br">82 </span><span class="kwrd">auto</span> <span class="hid">hgx</span> = <span class="hid">conv</span>.<span class="hid">backward</span>(<span class="hid">hgy</span>);
+<span class="br">83 </span><span class="hid">gradCheck</span>(<span class="hid">conv</span>, <span class="hid">tuple</span>(<span class="hid">hx</span>, <span class="hid">hw</span>), <span class="hid">hgy</span>, <span class="num">1e-3</span>, <span class="num">1e-3</span>, <span class="num">1e-2</span>);
+<span class="br">84 </span>
+<span class="br">85 </span><span class="kwrd">version</span> (<span class="hid">grain_cuda</span>) {
+<span class="br">86 </span>    <span class="kwrd">auto</span> <span class="hid">dy</span> = <span class="hid">conv</span>.<span class="hid">forward</span>(<span class="hid">hx</span>.<span class="hid">to</span>!<span class="hid">DeviceStorage</span>, <span class="hid">hw</span>.<span class="hid">to</span>!<span class="hid">DeviceStorage</span>);
+<span class="br">87 </span>    <span class="kwrd">auto</span> <span class="hid">dgx</span> = <span class="hid">conv</span>.<span class="hid">backward</span>(<span class="hid">hgy</span>.<span class="hid">to</span>!<span class="hid">DeviceStorage</span>);
+<span class="br">88 </span>    <span class="kwrd">assert</span>(<span class="hid">approxEqual</span>(<span class="hid">dy</span>.<span class="hid">to</span>!<span class="hid">HostStorage</span>.<span class="hid">sliced</span>, <span class="hid">hy</span>.<span class="hid">sliced</span>));
+<span class="br">89 </span>    <span class="kwrd">assert</span>(<span class="hid">approxEqual</span>(<span class="hid">dgx</span>[<span class="num">0</span>].<span class="hid">to</span>!<span class="hid">HostStorage</span>.<span class="hid">sliced</span>, <span class="hid">hgx</span>[<span class="num">0</span>].<span class="hid">sliced</span>));
+<span class="br">90 </span>    <span class="kwrd">assert</span>(<span class="hid">approxEqual</span>(<span class="hid">dgx</span>[<span class="num">1</span>].<span class="hid">to</span>!<span class="hid">HostStorage</span>.<span class="hid">sliced</span>, <span class="hid">hgx</span>[<span class="num">1</span>].<span class="hid">sliced</span>));
+<span class="br">91 </span>}</pre></div><h2 id="meta"><a href="#meta" class="header-anchor">Meta</a></h2><div class="documentation-comment source-section other-section"><h3 id="source"><a href="#source" class="header-anchor">Source</a></h3><div><p><a href="source/grain.functions.binary.d.html#L890">See Implementation</a><br /></p></div></div></div></div>
+        <div id="page-nav"><a href="grain.html" class="parent">grain</a><a href="grain.functions.html" class="parent">functions</a><a href="grain.functions.binary.html" class="parent">binary</a>
+        <span class="type-separator">functions</span><ul><li><a href="grain.functions.binary.lin2dim.html" class="function">lin2dim</a></li></ul><span class="type-separator">structs</span><ul><li><a href="grain.functions.binary.AddBias.html" class="struct">AddBias</a></li><li><a href="grain.functions.binary.Convolution.html" class="struct current">Convolution</a></li><li><a href="grain.functions.binary.ConvolutionRefImpl.html" class="struct">ConvolutionRefImpl</a></li><li><a href="grain.functions.binary.Embedding.html" class="struct">Embedding</a></li><li><a href="grain.functions.binary.MatMul.html" class="struct">MatMul</a></li><li><a href="grain.functions.binary.OpBinary.html" class="struct">OpBinary</a></li></ul></div>
+    </div>
+    <div id="page-footer">
+        Distributed under <a href="https://www.boost.org/users/license.html">BSL-1.0</a>.
+        Copyright <a href="https://shigekikarita.github.io">Shigeki Karita</a> 2018.
+        Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a>
+    </div>
+</body>
+</html>

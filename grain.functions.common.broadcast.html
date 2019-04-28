@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>broadcast (grain.functions.common.broadcast)</title>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+        <link rel="stylesheet" href="style.css" />
+        <script type="text/javascript" src="script.js"></script>
+
+    
+    <link rel="prefetch" href="search-results.html" />
+</head>
+<body>
+    <div id="page-header">
+        <div id="logotype">
+        <span>Documentation</span>
+        <nav>
+            <a href="https://github.com/ShigekiKarita/grain">GitHub</a>
+            <a href="https://github.com/ShigekiKarita/grain/tree/master/example">Example</a>
+            <a href="http://dlang.org/">Dlang.org</a>
+        </nav>
+        </div>
+
+        <form action="search-docs.html" id="search">
+            <input type="search" placeholder="Find a symbol name..." name="searchTerm" />
+            <input type="submit" value="Go" />
+        </form>
+    </div>
+    <div id="page-body">
+        <div id="page-content">
+        <h1>broadcast</h1><div class="breadcrumbs"><a href="grain.html" class="breadcrumb">grain</a><a href="grain.functions.html" class="breadcrumb">functions</a><a href="grain.functions.common.html" class="breadcrumb">common</a></div><div><div class="documentation-comment synopsis"><div></div></div></div><div class="annotated-prototype"><div class="function-prototype"><div class="attributes"></div><div class="return-type"><a href="http://dpldocs.info/auto-function-return-prototype" class="lang-feature">auto</a> </div><div class="function-name">broadcast</div><div class="template-parameters">(<div class="parameters-list toplevel"><div class="template-parameter-item parameter-item">	<span><span data-ident="S1" class="name">S1</span></span></div><div class="template-parameter-item parameter-item">	<span><span data-ident="S2" class="name">S2</span></span></div></div>)</div><div class="runtime-parameters">(<div class="parameters-list toplevel"><div class="runtime-parameter-item parameter-item"><span class="parameter-type-holder"><span class="parameter-type"><span data-ident="S1" class="name">S1</span></span></span> <span data-ident="a0" class="parameter-name name"><a href="#param-a0">a0</a></span></div><span class="comma">,</span><div class="runtime-parameter-item parameter-item"><span class="parameter-type-holder"><span class="parameter-type"><span data-ident="S2" class="name">S2</span></span></span> <span data-ident="b0" class="parameter-name name"><a href="#param-b0">b0</a></span></div></div>)</div><div class="template-constraint"> <a href="http://dpldocs.info/template-constraints" class="lang-feature">if</a> (<div class="template-constraint-expression"><div class="andand-left"><span data-ident="isSlice" class="name">isSlice</span>!<span data-ident="S1" class="name">S1</span> &amp;&amp; </div><div class="andand-right"><span data-ident="isSlice" class="name">isSlice</span>!<span data-ident="S2" class="name">S2</span></div></div>)</div><div class="function-contracts"></div></div></div><div><h2 id="returns"><a href="#returns" class="header-anchor">Return Value</a></h2><div><div class="return-type-holder">Type: <span class="return-type"><a href="http://dpldocs.info/auto-function-return-prototype" class="lang-feature">auto</a> </span></div><div class="documentation-comment returns-description"><div><p>broadcasted slice.
+      For example, when a has its shape [a, 1] and b has [1, b],
+      this function returns expanded a and b with a broadcasted shape [a, b].</p></div></div></div><h2 id="examples"><a href="#examples" class="header-anchor">Examples</a></h2><div class="documentation-comment"><div></div></div><div class="unittest-example-holder"><div class="documentation-comment"></div><pre class="d_code highlighted with-line-wrappers"><span class="br">1 </span><span class="kwrd">import</span> <span class="hid">mir</span>.<span class="hid">ndslice</span>;
+<span class="br">2 </span><span class="kwrd">auto</span> <span class="hid">a</span> = <span class="hid">iota</span>(<span class="num">1</span>, <span class="num">3</span>, <span class="num">1</span>);
+<span class="br">3 </span><span class="kwrd">auto</span> <span class="hid">b</span> = <span class="hid">iota</span>(<span class="num">1</span>, <span class="num">1</span>, <span class="num">2</span>);
+<span class="br">4 </span><span class="kwrd">auto</span> <span class="hid">x</span> = <span class="hid">broadcast</span>(<span class="hid">a</span>, <span class="hid">b</span>);
+<span class="br">5 </span><span class="kwrd">assert</span>(<span class="hid">broadcast</span>(<span class="hid">a</span>, <span class="hid">b</span>)[<span class="num">0</span>] == <span class="hid">a</span>.<span class="hid">expand</span>!<span class="num">2</span>(<span class="num">2</span>));
+<span class="br">6 </span><span class="kwrd">assert</span>(<span class="hid">broadcast</span>(<span class="hid">a</span>, <span class="hid">b</span>)[<span class="num">1</span>] == <span class="hid">b</span>.<span class="hid">expand</span>!<span class="num">1</span>(<span class="num">3</span>));</pre></div><h2 id="see-also"><a href="#see-also" class="header-anchor">See Also</a></h2><div class="documentation-comment see-also-section"><div><p><a href="https://docs.scipy.org/doc/numpy-1.13.0/user/basics.broadcasting.html">https://docs.scipy.org/doc/numpy-1.13.0/user/basics.broadcasting.html</a></p></div></div><h2 id="meta"><a href="#meta" class="header-anchor">Meta</a></h2><div class="documentation-comment source-section other-section"><h3 id="source"><a href="#source" class="header-anchor">Source</a></h3><div><p><a href="source/grain.functions.common.d.html#L244">See Implementation</a><br /></p></div></div></div></div>
+        <div id="page-nav"><a href="grain.html" class="parent">grain</a><a href="grain.functions.html" class="parent">functions</a><a href="grain.functions.common.html" class="parent">common</a>
+        <span class="type-separator">functions</span><ul><li><a href="grain.functions.common.broadcast.html" class="function current">broadcast</a></li><li><a href="grain.functions.common.broadcastable.html" class="function">broadcastable</a></li><li><a href="grain.functions.common.expand.html" class="function">expand</a></li><li><a href="grain.functions.common.maybeExpand.html" class="function">maybeExpand</a></li><li><a href="grain.functions.common.reduceShape.html" class="function">reduceShape</a></li></ul><span class="type-separator">mixin templates</span><ul><li><a href="grain.functions.common.FunctionCommon.html" class="mixin-template">FunctionCommon</a></li><li><a href="grain.functions.common.TypeChecker.html" class="mixin-template">TypeChecker</a></li></ul><span class="type-separator">variables</span><ul><li><a href="grain.functions.common.isFunction.html" class="variable">isFunction</a></li></ul></div>
+    </div>
+    <div id="page-footer">
+        Distributed under <a href="https://www.boost.org/users/license.html">BSL-1.0</a>.
+        Copyright <a href="https://shigekikarita.github.io">Shigeki Karita</a> 2018.
+        Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a>
+    </div>
+</body>
+</html>

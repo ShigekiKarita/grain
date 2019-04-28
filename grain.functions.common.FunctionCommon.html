@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FunctionCommon (grain.functions.common.FunctionCommon)</title>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+        <link rel="stylesheet" href="style.css" />
+        <script type="text/javascript" src="script.js"></script>
+
+    
+    <link rel="prefetch" href="search-results.html" />
+</head>
+<body>
+    <div id="page-header">
+        <div id="logotype">
+        <span>Documentation</span>
+        <nav>
+            <a href="https://github.com/ShigekiKarita/grain">GitHub</a>
+            <a href="https://github.com/ShigekiKarita/grain/tree/master/example">Example</a>
+            <a href="http://dlang.org/">Dlang.org</a>
+        </nav>
+        </div>
+
+        <form action="search-docs.html" id="search">
+            <input type="search" placeholder="Find a symbol name..." name="searchTerm" />
+            <input type="submit" value="Go" />
+        </form>
+    </div>
+    <div id="page-body">
+        <div id="page-content">
+        <h1>FunctionCommon</h1><div class="breadcrumbs"><a href="grain.html" class="breadcrumb">grain</a><a href="grain.functions.html" class="breadcrumb">functions</a><a href="grain.functions.common.html" class="breadcrumb">common</a></div><div><div class="documentation-comment synopsis"><div><p>common components (typecheck and backprop wrappers) for autograd functions</p></div></div></div><div class="annotated-prototype"><div class="aggregate-prototype"><div class="attributes"></div><span class="builtin-type">mixin template</span> FunctionCommon () {<div class="aggregate-member"><tt class="highlighted"><span class="hid">DeviceArgs</span></tt> <span class="name">_mixin_dargs</span>;</div><div class="aggregate-member"><tt class="highlighted"><span class="hid">HostArgs</span></tt> <span class="name">_mixin_hargs</span>;</div><div class="aggregate-member"><a href="grain.functions.common.FunctionCommon.applyForward.html"><span class="lang-feature">auto</span>  <span class="name">applyForward</span><tt class="highlighted">(<span class="hid">Args</span> <span class="hid">args</span>)</tt>;</a></div><div class="aggregate-member"><a href="grain.functions.common.FunctionCommon.applyBackward.html"><tt class="highlighted"><span class="type">void</span></tt> <span class="name">applyBackward</span><tt class="highlighted">(<span class="hid">UntypedVariable</span>[] <span class="hid">ugradOutputs</span>)</tt>;</a></div>}</div></div><h2 id="postblit"><a href="#postblit" class="header-anchor">Postblit</a></h2><dl class="member-list"></dl><p>Copying this object is disabled.</p><p>A postblit is present on this object, but not explicitly documented in the source.</p><h2 id="members"><a href="#members" class="header-anchor">Members</a></h2><h3 id="function" class="member-list-header hide-from-toc"><a href="#function" class="header-anchor">Functions</a></h3><dl class="member-list native"><dt><a href="grain.functions.common.FunctionCommon.applyBackward.html">applyBackward</a><div style="max-width: 55ch;" class="simplified-prototype"><tt class="highlighted"><span class="type">void</span></tt> <span class="name">applyBackward</span><tt class="highlighted">(<span class="hid">UntypedVariable</span>[] <span class="hid">ugradOutputs</span>)</tt></div></dt><dd><div><p>type-erased version of backward function used in grain.autograd.BackProp object</p></div></dd><dt><a href="grain.functions.common.FunctionCommon.applyForward.html">applyForward</a><div style="max-width: 31ch;" class="simplified-prototype"><span class="lang-feature">auto</span>  <span class="name">applyForward</span><tt class="highlighted">(<span class="hid">Args</span> <span class="hid">args</span>)</tt></div></dt><dd><div><p>store grain.autograd.BackProp object in returned variables from forward function</p></div></dd></dl><div><h2 id="examples"><a href="#examples" class="header-anchor">Examples</a></h2><div class="documentation-comment"><div></div></div><div class="unittest-example-holder"><div class="documentation-comment"><p>test NG functions</p></div><pre class="d_code highlighted with-line-wrappers"><span class="br">1 </span><span class="kwrd">alias</span> <span class="hid">F1H</span> = <span class="hid">Variable</span>!(<span class="type">float</span>, <span class="num">1</span>, <span class="hid">HostStorage</span>);
+<span class="br">2 </span><span class="kwrd">version</span> (<span class="hid">grain_cuda</span>) <span class="kwrd">alias</span> <span class="hid">F1D</span> = <span class="hid">Variable</span>!(<span class="type">float</span>, <span class="num">1</span>, <span class="hid">HostStorage</span>);
+<span class="br">3 </span><span class="kwrd">struct</span> <span class="hid">A</span>(<span class="hid">DelayInstantiation</span>) {
+<span class="br">4 </span>    <span class="kwrd">mixin</span> <span class="hid">FunctionCommon</span>;
+<span class="br">5 </span>    <span class="com">// mismatch of args</span>
+<span class="br">6 </span>    <span class="hid">F1H</span> <span class="hid">forward</span>(<span class="hid">F1H</span> <span class="hid">x</span>) { <span class="kwrd">return</span> <span class="hid">x</span>; };
+<span class="br">7 </span>    <span class="hid">F1H</span> <span class="hid">backward</span>(<span class="hid">F1H</span> <span class="hid">x</span>, <span class="hid">F1H</span> <span class="hid">y</span>) { <span class="kwrd">return</span> <span class="hid">x</span>; };
+<span class="br">8 </span>}
+<span class="br">9 </span><span class="kwrd">static</span> <span class="kwrd">assert</span>(!<span class="kwrd">__traits</span>(<span class="hid">compiles</span>, <span class="hid">A</span>!<span class="type">void</span>));
+<span class="br">10 </span>
+<span class="br">11 </span><span class="kwrd">version</span> (<span class="hid">grain_cuda</span>) {
+<span class="br">12 </span>    <span class="kwrd">struct</span> <span class="hid">B</span>(<span class="hid">DelayInstantiation</span>) {
+<span class="br">13 </span>        <span class="kwrd">mixin</span> <span class="hid">FunctionCommon</span>;
+<span class="br">14 </span>        <span class="hid">F1H</span> <span class="hid">forward</span>(<span class="hid">F1H</span> <span class="hid">x</span>) { <span class="kwrd">return</span> <span class="hid">x</span>; };
+<span class="br">15 </span>        <span class="hid">F1H</span> <span class="hid">backward</span>(<span class="hid">F1H</span> <span class="hid">x</span>) { <span class="kwrd">return</span> <span class="hid">x</span>; };
+<span class="br">16 </span>        <span class="com">// mismatch of args in device</span>
+<span class="br">17 </span>        <span class="kwrd">version</span> (<span class="hid">grain_cuda</span>) {
+<span class="br">18 </span>            <span class="hid">F1D</span> <span class="hid">forward</span>(<span class="hid">F1D</span> <span class="hid">x</span>) { <span class="kwrd">return</span> <span class="hid">x</span>; };
+<span class="br">19 </span>            <span class="hid">F1D</span> <span class="hid">backward</span>(<span class="hid">F1D</span> <span class="hid">x</span>, <span class="hid">F1D</span> <span class="hid">y</span>) { <span class="kwrd">return</span> <span class="hid">x</span>; };
+<span class="br">20 </span>        }
+<span class="br">21 </span>    }
+<span class="br">22 </span>    <span class="kwrd">static</span> <span class="kwrd">assert</span>(!<span class="kwrd">__traits</span>(<span class="hid">compiles</span>, <span class="hid">B</span>!<span class="type">void</span>));
+<span class="br">23 </span>}</pre></div><h2 id="meta"><a href="#meta" class="header-anchor">Meta</a></h2><div class="documentation-comment source-section other-section"><h3 id="source"><a href="#source" class="header-anchor">Source</a></h3><div><p><a href="source/grain.functions.common.d.html#L43">See Implementation</a><br /></p></div></div></div></div>
+        <div id="page-nav"><a href="grain.html" class="parent">grain</a><a href="grain.functions.html" class="parent">functions</a><a href="grain.functions.common.html" class="parent">common</a>
+        <span class="type-separator">functions</span><ul><li><a href="grain.functions.common.broadcast.html" class="function">broadcast</a></li><li><a href="grain.functions.common.broadcastable.html" class="function">broadcastable</a></li><li><a href="grain.functions.common.expand.html" class="function">expand</a></li><li><a href="grain.functions.common.maybeExpand.html" class="function">maybeExpand</a></li><li><a href="grain.functions.common.reduceShape.html" class="function">reduceShape</a></li></ul><span class="type-separator">mixin templates</span><ul><li><a href="grain.functions.common.FunctionCommon.html" class="mixin-template current">FunctionCommon</a></li><li><a href="grain.functions.common.TypeChecker.html" class="mixin-template">TypeChecker</a></li></ul><span class="type-separator">variables</span><ul><li><a href="grain.functions.common.isFunction.html" class="variable">isFunction</a></li></ul></div>
+    </div>
+    <div id="page-footer">
+        Distributed under <a href="https://www.boost.org/users/license.html">BSL-1.0</a>.
+        Copyright <a href="https://shigekikarita.github.io">Shigeki Karita</a> 2018.
+        Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a>
+    </div>
+</body>
+</html>

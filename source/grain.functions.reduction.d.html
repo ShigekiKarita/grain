@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>grain.functions.reduction source code</title>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+        <link rel="stylesheet" href="../style.css" />
+        <script type="text/javascript" src="../script.js"></script>
+
+    
+    <link rel="prefetch" href="../search-results.html" />
+</head>
+<body>
+    <div id="page-header">
+        <div id="logotype">
+        <span>Documentation</span>
+        <nav>
+            <a href="https://github.com/ShigekiKarita/grain">GitHub</a>
+            <a href="https://github.com/ShigekiKarita/grain/tree/master/example">Example</a>
+            <a href="http://dlang.org/">Dlang.org</a>
+        </nav>
+        </div>
+
+        <form action="search-docs.html" id="search">
+            <input type="search" placeholder="Find a symbol name..." name="searchTerm" />
+            <input type="submit" value="Go" />
+        </form>
+    </div>
+    <div id="page-body">
+        <div id="page-content">
+        <pre class="d_code highlighted with-line-wrappers"><a id="L1" href="#L1" class="br">1 </a><span class="kwrd">module</span> <span class="hid">grain.functions.reduction</span>;
+<a id="L2" href="#L2" class="br">2 </a>
+<a id="L3" href="#L3" class="br">3 </a><span class="kwrd">import</span> <span class="hid">grain.autograd</span>;
+<a id="L4" href="#L4" class="br">4 </a><span class="kwrd">import</span> <span class="hid">grain.cuda</span>;
+<a id="L5" href="#L5" class="br">5 </a><span class="kwrd">import</span> <span class="hid">grain.functions.common</span>;
+<a id="L6" href="#L6" class="br">6 </a><span class="kwrd">import</span> <span class="hid">grain.utility</span> : <span class="hid">toTuple</span>, <span class="hid">fromTuple</span>, <span class="hid">castArray</span>;
+<a id="L7" href="#L7" class="br">7 </a>
+<a id="L8" href="#L8" class="br">8 </a><span class="kwrd">struct</span> <a href="grain.functions.reduction.d.html#L8" title="grain.functions.reduction.Sum" class="hid">Sum</a>(<span class="type">string</span> <span class="hid">mode</span> = <span class="str">&quot;fast&quot;</span>, <span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>) {
+<a id="L9" href="#L9" class="br">9 </a>    <span class="kwrd">import</span> <span class="hid">std.traits</span> : <span class="hid">isFloatingPoint</span>;
+<a id="L10" href="#L10" class="br">10 </a>    <span class="kwrd">static</span> <span class="kwrd">assert</span>(<span class="hid">isFloatingPoint</span>!<span class="hid">T</span>, <span class="str">&quot;currently only float point is supported.&quot;</span>);
+<a id="L11" href="#L11" class="br">11 </a>
+<a id="L12" href="#L12" class="br">12 </a>    <span class="type">uint</span>[<span class="hid">dim</span>] <span class="hid">shape</span>;
+<a id="L13" href="#L13" class="br">13 </a>
+<a id="L14" href="#L14" class="br">14 </a>    <span class="kwrd">auto</span> <span class="hid">forward</span>(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">HostStorage</span>) <span class="hid">x</span>) {
+<a id="L15" href="#L15" class="br">15 </a>        <span class="kwrd">import</span> <span class="hid">mir.math</span> : <span class="hid">sum</span>;
+<a id="L16" href="#L16" class="br">16 </a>
+<a id="L17" href="#L17" class="br">17 </a>        <span class="com">// TODO if train</span>
+<a id="L18" href="#L18" class="br">18 </a>        <span class="kwrd">this</span>.<span class="hid">shape</span> = <span class="hid">x.shape</span>;
+<a id="L19" href="#L19" class="br">19 </a>        <span class="kwrd">auto</span> <span class="hid">result</span> = <span class="hid">x.sliced.sum</span>!<span class="hid">mode</span>;
+<a id="L20" href="#L20" class="br">20 </a>        <span class="kwrd">return</span> <span class="hid">result.variable</span>;
+<a id="L21" href="#L21" class="br">21 </a>    }
+<a id="L22" href="#L22" class="br">22 </a>
+<a id="L23" href="#L23" class="br">23 </a>    <span class="kwrd">auto</span> <span class="hid">backward</span>(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="num">0</span>, <span class="hid">HostStorage</span>) <span class="hid">y</span>) {
+<a id="L24" href="#L24" class="br">24 </a>        <span class="kwrd">auto</span> <span class="hid">gx</span> = <span class="hid">uninitVariable</span>!<span class="hid">T</span>(<span class="kwrd">this</span>.<span class="hid">shape</span>, <span class="hid">y.requiresGrad</span>);
+<a id="L25" href="#L25" class="br">25 </a>        <span class="kwrd">import</span> <span class="hid">std.algorithm</span> : <span class="hid">fill</span>;
+<a id="L26" href="#L26" class="br">26 </a>        <span class="hid">fill</span>(<span class="hid">gx.data</span>, <span class="hid">y.data</span>[<span class="num">0</span>]);
+<a id="L27" href="#L27" class="br">27 </a>        <span class="kwrd">return</span> <span class="hid">gx</span>;
+<a id="L28" href="#L28" class="br">28 </a>    }
+<a id="L29" href="#L29" class="br">29 </a>
+<a id="L30" href="#L30" class="br">30 </a>    <span class="kwrd">version</span> (<span class="hid">grain_cuda</span>) {
+<a id="L31" href="#L31" class="br">31 </a>        <span class="kwrd">auto</span> <span class="hid">forward</span>(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">DeviceStorage</span>) <span class="hid">x</span>) {
+<a id="L32" href="#L32" class="br">32 </a>            <span class="kwrd">import</span> <span class="hid">std.algorithm</span> : <span class="hid">reduce</span>;
+<a id="L33" href="#L33" class="br">33 </a>            <span class="kwrd">import</span> <span class="hid">grain.cuda</span> : <span class="hid">sum</span>, <span class="hid">sumNaive</span>;
+<a id="L34" href="#L34" class="br">34 </a>
+<a id="L35" href="#L35" class="br">35 </a>            <span class="kwrd">this</span>.<span class="hid">shape</span> = <span class="hid">x.shape</span>;
+<a id="L36" href="#L36" class="br">36 </a>            <span class="com">// auto y = CuPtr!float([0]);</span>
+<a id="L37" href="#L37" class="br">37 </a>            <span class="com">// Global.kernel!sum.call(x.data.ptr, y.ptr, cast(int) x.data.length)</span>
+<a id="L38" href="#L38" class="br">38 </a>            <span class="com">//     .launch(cast(uint[3]) [1U,1,1], cast(uint[3]) [1U,1,1], 0U);</span>
+<a id="L39" href="#L39" class="br">39 </a>            <span class="com">// checkCudaErrors(cuCtxSynchronize());</span>
+<a id="L40" href="#L40" class="br">40 </a>            <span class="kwrd">return</span> <span class="hid">x.data.sumNaive.variable.to</span>!<span class="hid">DeviceStorage</span>;
+<a id="L41" href="#L41" class="br">41 </a>        }
+<a id="L42" href="#L42" class="br">42 </a>
+<a id="L43" href="#L43" class="br">43 </a>        <span class="kwrd">auto</span> <span class="hid">backward</span>(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="num">0</span>, <span class="hid">DeviceStorage</span>) <span class="hid">y</span>) {
+<a id="L44" href="#L44" class="br">44 </a>            <span class="kwrd">auto</span> <span class="hid">gx</span> = <span class="hid">uninitVariable</span>!(<span class="hid">T</span>, <span class="hid">DeviceStorage</span>)(<span class="kwrd">this</span>.<span class="hid">shape</span>, <span class="hid">y.requiresGrad</span>);
+<a id="L45" href="#L45" class="br">45 </a>            <span class="hid">gx.data.fill_</span>(<span class="hid">y.data.toHost</span>[<span class="num">0</span>]);
+<a id="L46" href="#L46" class="br">46 </a>            <span class="kwrd">return</span> <span class="hid">gx</span>;
+<a id="L47" href="#L47" class="br">47 </a>        }
+<a id="L48" href="#L48" class="br">48 </a>    }
+<a id="L49" href="#L49" class="br">49 </a>
+<a id="L50" href="#L50" class="br">50 </a>    <span class="kwrd">mixin</span> <span class="hid">FunctionCommon</span>;
+<a id="L51" href="#L51" class="br">51 </a>}
+<a id="L52" href="#L52" class="br">52 </a>
+<a id="L53" href="#L53" class="br">53 </a>
+<a id="L54" href="#L54" class="br">54 </a><span class="kwrd">unittest</span> {
+<a id="L55" href="#L55" class="br">55 </a>    <span class="kwrd">import</span> <span class="hid">mir.ndslice</span>;
+<a id="L56" href="#L56" class="br">56 </a>    <span class="kwrd">import</span> <span class="hid">mir.math</span>;
+<a id="L57" href="#L57" class="br">57 </a>    <span class="kwrd">auto</span> <span class="hid">x</span> = [<span class="num">1f</span>, <span class="num">2f</span>, <span class="num">3f</span>, <span class="num">4f</span>].<span class="hid">sliced</span>(<span class="num">2</span>, <span class="num">2</span>).<span class="hid">variable</span>;
+<a id="L58" href="#L58" class="br">58 </a>    <a href="grain.functions.reduction.d.html#L8" title="grain.functions.reduction.Sum" class="hid">Sum</a>!(<span class="str">&quot;fast&quot;</span>, <span class="type">float</span>, <span class="num">2</span>) <span class="hid">func</span>;
+<a id="L59" href="#L59" class="br">59 </a>    <span class="kwrd">auto</span> <span class="hid">y</span> = <span class="hid">func.forward</span>(<span class="hid">x</span>);
+<a id="L60" href="#L60" class="br">60 </a>    <span class="kwrd">assert</span>(<span class="hid">y</span> == <span class="num">10f</span>.<span class="hid">variable</span>);
+<a id="L61" href="#L61" class="br">61 </a>    <span class="kwrd">assert</span>(<span class="hid">func.backward</span>(<span class="num">1.2f</span>.<span class="hid">variable</span>) == [<span class="num">1.2f</span>, <span class="num">1.2f</span>, <span class="num">1.2f</span>, <span class="num">1.2f</span>].<span class="hid">sliced</span>(<span class="num">2</span>, <span class="num">2</span>).<span class="hid">variable</span>);
+<a id="L62" href="#L62" class="br">62 </a>
+<a id="L63" href="#L63" class="br">63 </a>    <span class="kwrd">version</span> (<span class="hid">grain_cuda</span>) {
+<a id="L64" href="#L64" class="br">64 </a>        <span class="kwrd">auto</span> <span class="hid">cx</span> = <span class="hid">x.to</span>!<span class="hid">DeviceStorage</span>;
+<a id="L65" href="#L65" class="br">65 </a>        <span class="kwrd">auto</span> <span class="hid">cy</span> = <span class="hid">func.forward</span>(<span class="hid">cx</span>).<span class="hid">to</span>!<span class="hid">HostStorage</span>;
+<a id="L66" href="#L66" class="br">66 </a>        <span class="kwrd">assert</span>(<span class="hid">cy</span> == <span class="num">10f</span>.<span class="hid">variable</span>);
+<a id="L67" href="#L67" class="br">67 </a>        <span class="kwrd">auto</span> <span class="hid">cgx</span> = <span class="hid">func.backward</span>(<span class="num">1.2f</span>.<span class="hid">variable.to</span>!<span class="hid">DeviceStorage</span>).<span class="hid">to</span>!<span class="hid">HostStorage</span>;
+<a id="L68" href="#L68" class="br">68 </a>        <span class="kwrd">assert</span>(<span class="hid">cgx.sliced</span> == [<span class="num">1.2f</span>, <span class="num">1.2f</span>, <span class="num">1.2f</span>, <span class="num">1.2f</span>].<span class="hid">sliced</span>(<span class="num">2</span>, <span class="num">2</span>));
+<a id="L69" href="#L69" class="br">69 </a>    }
+<a id="L70" href="#L70" class="br">70 </a>}</pre></div>
+        <div id="page-nav">
+        <div id="source-navigation"><div class="list-holder"><ul><li><a href="#L1">grain.functions.reduction</a><ul><li><a href="#L3">grain.autograd</a></li><li><a href="#L4">grain.cuda</a></li><li><a href="#L5">grain.functions.common</a></li><li><a href="#L6">grain.utility</a></li><li><a href="#L8">Sum</a><ul><li><a href="#L9">std.traits</a></li><li><a href="#L12">shape</a></li><li><a href="#L14">forward</a></li><li><a href="#L23">backward</a></li><li><a href="#L31">forward</a></li><li><a href="#L43">backward</a></li><li><a href="#L50">__anonymous</a></li></ul></li></ul></li></ul></div></div></div>
+    </div>
+    <div id="page-footer">
+        Distributed under <a href="https://www.boost.org/users/license.html">BSL-1.0</a>.
+        Copyright <a href="https://shigekikarita.github.io">Shigeki Karita</a> 2018.
+        Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a>
+    </div>
+</body>
+</html>

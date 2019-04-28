@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>grain.metric source code</title>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+        <link rel="stylesheet" href="../style.css" />
+        <script type="text/javascript" src="../script.js"></script>
+
+    
+    <link rel="prefetch" href="../search-results.html" />
+</head>
+<body>
+    <div id="page-header">
+        <div id="logotype">
+        <span>Documentation</span>
+        <nav>
+            <a href="https://github.com/ShigekiKarita/grain">GitHub</a>
+            <a href="https://github.com/ShigekiKarita/grain/tree/master/example">Example</a>
+            <a href="http://dlang.org/">Dlang.org</a>
+        </nav>
+        </div>
+
+        <form action="search-docs.html" id="search">
+            <input type="search" placeholder="Find a symbol name..." name="searchTerm" />
+            <input type="submit" value="Go" />
+        </form>
+    </div>
+    <div id="page-body">
+        <div id="page-content">
+        <pre class="d_code highlighted with-line-wrappers"><a id="L1" href="#L1" class="br">1 </a><span class="com">/**
+<a id="L2" href="#L2" class="br">2 </a>Metric (e.g., accuracy)
+<a id="L3" href="#L3" class="br">3 </a>
+<a id="L4" href="#L4" class="br">4 </a>TODO: perplexity, AUC, F1, BLEU, edit distance
+<a id="L5" href="#L5" class="br">5 </a>*/</span>
+<a id="L6" href="#L6" class="br">6 </a><span class="kwrd">module</span> <span class="hid">grain.metric</span>;
+<a id="L7" href="#L7" class="br">7 </a>
+<a id="L8" href="#L8" class="br">8 </a><span class="kwrd">import</span> <span class="hid">grain.autograd</span> : <span class="hid">isVariable</span>;
+<a id="L9" href="#L9" class="br">9 </a>
+<a id="L10" href="#L10" class="br">10 </a>
+<a id="L11" href="#L11" class="br">11 </a><span class="com">/// compute accuracy comparing prediction y (histgram) to target t (id)</span>
+<a id="L12" href="#L12" class="br">12 </a><span class="kwrd">auto</span> <a href="grain.metric.d.html#L12" title="grain.metric.accuracy" class="hid">accuracy</a>(<span class="hid">Vy</span>, <span class="hid">Vt</span>)(<span class="hid">Vy</span> <span class="hid">y</span>, <span class="hid">Vt</span> <span class="hid">t</span>) <span class="kwrd">if</span> (<span class="hid">isVariable</span>!<span class="hid">Vy</span> &amp;&amp; <span class="hid">isVariable</span>!<span class="hid">Vt</span>) {
+<a id="L13" href="#L13" class="br">13 </a>    <span class="kwrd">import</span> <span class="hid">mir.ndslice</span> : <span class="hid">maxIndex</span>;
+<a id="L14" href="#L14" class="br">14 </a>    <span class="kwrd">import</span> <span class="hid">grain.autograd</span> : <span class="hid">to</span>, <span class="hid">HostStorage</span>;
+<a id="L15" href="#L15" class="br">15 </a>
+<a id="L16" href="#L16" class="br">16 </a>    <span class="kwrd">auto</span> <span class="hid">nbatch</span> = <span class="hid">t.shape</span>[<span class="num">0</span>];
+<a id="L17" href="#L17" class="br">17 </a>    <span class="kwrd">auto</span> <span class="hid">hy</span> = <span class="hid">y.to</span>!<span class="hid">HostStorage.sliced</span>;
+<a id="L18" href="#L18" class="br">18 </a>    <span class="kwrd">auto</span> <span class="hid">ht</span> = <span class="hid">t.to</span>!<span class="hid">HostStorage.sliced</span>;
+<a id="L19" href="#L19" class="br">19 </a>    <span class="type">double</span> <span class="hid">acc</span> = <span class="num">0.0</span>;
+<a id="L20" href="#L20" class="br">20 </a>    <span class="kwrd">foreach</span> (<span class="hid">i</span>; <span class="num">0</span> .. <span class="hid">nbatch</span>) {
+<a id="L21" href="#L21" class="br">21 </a>        <span class="kwrd">auto</span> <span class="hid">maxid</span> = <span class="hid">hy</span>[<span class="hid">i</span>].<span class="hid">maxIndex</span>[<span class="num">0</span>];
+<a id="L22" href="#L22" class="br">22 </a>        <span class="kwrd">if</span> (<span class="hid">maxid</span> == <span class="hid">ht</span>[<span class="hid">i</span>]) {
+<a id="L23" href="#L23" class="br">23 </a>            ++<span class="hid">acc</span>;
+<a id="L24" href="#L24" class="br">24 </a>        }
+<a id="L25" href="#L25" class="br">25 </a>    }
+<a id="L26" href="#L26" class="br">26 </a>    <span class="kwrd">return</span> <span class="hid">acc</span> / <span class="hid">nbatch</span>;
+<a id="L27" href="#L27" class="br">27 </a>}</pre></div>
+        <div id="page-nav">
+        <div id="source-navigation"><div class="list-holder"><ul><li><a href="../grain.metric.html" class="docs">[Docs] </a><a href="#L1">grain.metric</a><ul><li><a href="#L8">grain.autograd</a></li><li><a href="../grain.metric.accuracy.html" class="docs">[Docs] </a><a href="#L12">accuracy</a></li></ul></li></ul></div></div></div>
+    </div>
+    <div id="page-footer">
+        Distributed under <a href="https://www.boost.org/users/license.html">BSL-1.0</a>.
+        Copyright <a href="https://shigekikarita.github.io">Shigeki Karita</a> 2018.
+        Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>grain.functions (grain.functions)</title>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+        <link rel="stylesheet" href="style.css" />
+        <script type="text/javascript" src="script.js"></script>
+
+    
+    <link rel="prefetch" href="search-results.html" />
+</head>
+<body>
+    <div id="page-header">
+        <div id="logotype">
+        <span>Documentation</span>
+        <nav>
+            <a href="https://github.com/ShigekiKarita/grain">GitHub</a>
+            <a href="https://github.com/ShigekiKarita/grain/tree/master/example">Example</a>
+            <a href="http://dlang.org/">Dlang.org</a>
+        </nav>
+        </div>
+
+        <form action="search-docs.html" id="search">
+            <input type="search" placeholder="Find a symbol name..." name="searchTerm" />
+            <input type="submit" value="Go" />
+        </form>
+    </div>
+    <div id="page-body">
+        <div id="page-content">
+        <h1>grain.functions</h1><div class="breadcrumbs"><a href="grain.html" class="breadcrumb">grain</a></div><div><div class="documentation-comment synopsis"><div><p>A type defined in grain.functions is equivalent to chainer.Function or torch.autograd.Function.
+   Function is a set of core autograd algorithms for grain.chain that compose some functions in computation graph.</p></div></div></div><div class="annotated-prototype"></div><h2 id="modules"><a href="#modules" class="header-anchor">Modules</a></h2><dl class="member-list native"><dt><a href="grain.functions.binary.html">binary</a><div style="max-width: 31ch;" class="simplified-prototype"><span class="builtin-type">module</span> <span class="name">grain.functions.binary</span></div></dt><dd><div><p>A module for binary autograd functions.</p></div></dd><dt><a href="grain.functions.common.html">common</a><div style="max-width: 31ch;" class="simplified-prototype"><span class="builtin-type">module</span> <span class="name">grain.functions.common</span></div></dt><dd><div><p>Common components for autograd function object</p></div></dd><dt><a href="grain.functions.loss.html">loss</a><div style="max-width: 29ch;" class="simplified-prototype"><span class="builtin-type">module</span> <span class="name">grain.functions.loss</span></div></dt><dd><div><p>A module for loss functions that always output scalar values to be minimized.
+   Loss function is the end of forwardprop and also is the start point of backprop.</p></div></dd><dt><a href="grain.functions.random.html">random</a><div style="max-width: 31ch;" class="simplified-prototype"><span class="builtin-type">module</span> <span class="name">grain.functions.random</span></div></dt><dd><div></div></dd><dt><a href="grain.functions.unary.html">unary</a><div style="max-width: 30ch;" class="simplified-prototype"><span class="builtin-type">module</span> <span class="name">grain.functions.unary</span></div></dt><dd><div><p>A module for unary functions</p></div></dd></dl><h2 id="public-imports"><a href="#public-imports" class="header-anchor">Public Imports</a></h2><div></div><dl class="member-list native"><dt><a href="grain.functions.common.html">grain.functions.common</a><div style="max-width: 41ch;" class="simplified-prototype"><span class="builtin-type">public</span> <tt class="highlighted">
+<span class="kwrd">import</span> <span class="hid">grain</span>.<span class="hid">functions</span>.<span class="hid">common</span>;</tt></div></dt><dd><div></div></dd></dl><dl class="member-list native"><dt><a href="grain.functions.unary.html">grain.functions.unary</a><div style="max-width: 40ch;" class="simplified-prototype"><span class="builtin-type">public</span> <tt class="highlighted">
+<span class="kwrd">import</span> <span class="hid">grain</span>.<span class="hid">functions</span>.<span class="hid">unary</span>;</tt></div></dt><dd><div></div></dd></dl><dl class="member-list native"><dt><a href="grain.functions.binary.html">grain.functions.binary</a><div style="max-width: 41ch;" class="simplified-prototype"><span class="builtin-type">public</span> <tt class="highlighted">
+<span class="kwrd">import</span> <span class="hid">grain</span>.<span class="hid">functions</span>.<span class="hid">binary</span>;</tt></div></dt><dd><div></div></dd></dl><dl class="member-list native"><dt><a href="grain.functions.loss.html">grain.functions.loss</a><div style="max-width: 39ch;" class="simplified-prototype"><span class="builtin-type">public</span> <tt class="highlighted">
+<span class="kwrd">import</span> <span class="hid">grain</span>.<span class="hid">functions</span>.<span class="hid">loss</span>;</tt></div></dt><dd><div></div></dd></dl><dl class="member-list native"><dt><a href="grain.functions.reduction.html">grain.functions.reduction</a><div style="max-width: 45ch;" class="simplified-prototype"><span class="builtin-type">public</span> <tt class="highlighted">
+<span class="kwrd">import</span> <span class="hid">grain</span>.<span class="hid">functions</span>.<span class="hid">reduction</span>;</tt></div></dt><dd><div></div></dd></dl><dl class="member-list native"><dt><a href="grain.functions.topology.html">grain.functions.topology</a><div style="max-width: 44ch;" class="simplified-prototype"><span class="builtin-type">public</span> <tt class="highlighted">
+<span class="kwrd">import</span> <span class="hid">grain</span>.<span class="hid">functions</span>.<span class="hid">topology</span>;</tt></div></dt><dd><div></div></dd></dl><div><h2 id="meta"><a href="#meta" class="header-anchor">Meta</a></h2><div class="documentation-comment source-section other-section"><h3 id="source"><a href="#source" class="header-anchor">Source</a></h3><div><p><a href="source/grain.functions.d.html">See Source File</a><br /></p></div></div></div></div>
+        <div id="page-nav"><a href="grain.html" class="parent">grain</a>
+        <span class="type-separator">modules</span><ul><li><a href="grain.autograd.html" class="module">autograd</a></li><li><a href="grain.chain.html" class="module">chain</a></li><li><a href="grain.config.backprop.html" class="module">config</a></li><li><a href="grain.cublas.html" class="module">cublas</a></li><li><a href="grain.cuda.html" class="module">cuda</a></li><li><a href="grain.cudnn.html" class="module">cudnn</a></li><li><a href="grain.dataset.html" class="module">dataset</a></li><li><a href="grain.functions.html" class="module current">functions</a></li><li><a href="grain.hdf5.html" class="module">hdf5</a></li><li><a href="grain.metric.html" class="module">metric</a></li><li><a href="grain.optim.html" class="module">optim</a></li><li><a href="grain.serializer.html" class="module">serializer</a></li><li><a href="grain.testing.html" class="module">testing</a></li><li><a href="grain.utility.html" class="module">utility</a></li><li><a href="grain.warpctc.html" class="module">warpctc</a></li></ul></div>
+    </div>
+    <div id="page-footer">
+        Distributed under <a href="https://www.boost.org/users/license.html">BSL-1.0</a>.
+        Copyright <a href="https://shigekikarita.github.io">Shigeki Karita</a> 2018.
+        Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a>
+    </div>
+</body>
+</html>

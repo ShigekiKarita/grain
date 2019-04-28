@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>BackProp (grain.autograd.BackProp)</title>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+        <link rel="stylesheet" href="style.css" />
+        <script type="text/javascript" src="script.js"></script>
+
+    
+    <link rel="prefetch" href="search-results.html" />
+</head>
+<body>
+    <div id="page-header">
+        <div id="logotype">
+        <span>Documentation</span>
+        <nav>
+            <a href="https://github.com/ShigekiKarita/grain">GitHub</a>
+            <a href="https://github.com/ShigekiKarita/grain/tree/master/example">Example</a>
+            <a href="http://dlang.org/">Dlang.org</a>
+        </nav>
+        </div>
+
+        <form action="search-docs.html" id="search">
+            <input type="search" placeholder="Find a symbol name..." name="searchTerm" />
+            <input type="submit" value="Go" />
+        </form>
+    </div>
+    <div id="page-body">
+        <div id="page-content">
+        <h1>BackProp</h1><div class="breadcrumbs"><a href="grain.html" class="breadcrumb">grain</a><a href="grain.autograd.html" class="breadcrumb">autograd</a></div><div><div class="documentation-comment synopsis"><div><p>stores information for backpropagation</p></div></div></div><div class="annotated-prototype"><div class="aggregate-prototype"><div class="attributes"></div><span class="builtin-type">struct</span> BackProp  {<div class="aggregate-member"><tt class="highlighted"><span class="hid">Proc</span></tt> <span class="name">proc</span>;</div><div class="aggregate-member"><tt class="highlighted"><span class="hid">UntypedVariable</span>[]</tt> <span class="name">gradOutputs</span>;</div><div class="aggregate-member"><tt class="highlighted"><span class="hid">size_t</span></tt> <span class="name">nGrad</span>;</div><div class="aggregate-member"><a href="grain.autograd.BackProp.backward.html"><tt class="highlighted"><span class="type">void</span></tt> <span class="name">backward</span><tt class="highlighted">(<span class="hid">UntypedVariable</span>* <span class="hid">grad</span> = <span class="kwrd">null</span>, <span class="hid">size_t</span> <span class="hid">pos</span> = <span class="num">0</span>)</tt>;</a></div>}</div></div><h2 id="members"><a href="#members" class="header-anchor">Members</a></h2><h3 id="function" class="member-list-header hide-from-toc"><a href="#function" class="header-anchor">Functions</a></h3><dl class="member-list native"><dt><a href="grain.autograd.BackProp.backward.html">backward</a><div style="max-width: 64ch;" class="simplified-prototype"><tt class="highlighted"><span class="type">void</span></tt> <span class="name">backward</span><tt class="highlighted">(<span class="hid">UntypedVariable</span>* <span class="hid">grad</span> = <span class="kwrd">null</span>, <span class="hid">size_t</span> <span class="hid">pos</span> = <span class="num">0</span>)</tt></div></dt><dd><div><p>error backward propagation</p></div></dd></dl><div><h2 id="examples"><a href="#examples" class="header-anchor">Examples</a></h2><div class="documentation-comment"><div></div></div><div class="unittest-example-holder"><div class="documentation-comment"></div><pre class="d_code highlighted with-line-wrappers"><span class="br">1 </span><span class="kwrd">import</span> <span class="hid">std</span>.<span class="hid">stdio</span>;
+<span class="br">2 </span>
+<span class="br">3 </span><span class="hid">UntypedVariable</span> <span class="hid">u</span>;
+<span class="br">4 </span>{
+<span class="br">5 </span>    <span class="kwrd">auto</span> <span class="hid">v</span> = [[<span class="num">0f</span>, <span class="num">1f</span>], [<span class="num">2f</span>, <span class="num">3f</span>]].<span class="hid">variable</span>;
+<span class="br">6 </span>    <span class="hid">u</span> = <span class="hid">UntypedVariable</span>(<span class="hid">v</span>);
+<span class="br">7 </span>}
+<span class="br">8 </span><span class="kwrd">assert</span>(<span class="hid">u</span>.<span class="hid">get</span>!(<span class="hid">HostStorage</span>!<span class="type">float</span>) == [<span class="num">0</span>, <span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>]);</pre></div><h2 id="meta"><a href="#meta" class="header-anchor">Meta</a></h2><div class="documentation-comment source-section other-section"><h3 id="source"><a href="#source" class="header-anchor">Source</a></h3><div><p><a href="source/grain.autograd.d.html#L192">See Implementation</a><br /></p></div></div></div></div>
+        <div id="page-nav"><a href="grain.html" class="parent">grain</a><a href="grain.autograd.html" class="parent">autograd</a>
+        <span class="type-separator">aliases</span><ul><li><a href="grain.autograd.ElementType.html" class="alias">ElementType</a></li><li><a href="grain.autograd.HostStorage.html" class="alias">HostStorage</a></li></ul><span class="type-separator">functions</span><ul><li><a href="grain.autograd.gradSlice.html" class="function">gradSlice</a></li><li><a href="grain.autograd.iterVariables.html" class="function">iterVariables</a></li><li><a href="grain.autograd.length.html" class="function">length</a></li><li><a href="grain.autograd.refIterVariables.html" class="function">refIterVariables</a></li><li><a href="grain.autograd.to.1.html" class="function">to</a></li><li><a href="grain.autograd.uninit.1.html" class="function">uninit</a></li><li><a href="grain.autograd.uninitVariable.html" class="function">uninitVariable</a></li><li><a href="grain.autograd.variable.1.html" class="function">variable</a></li><li><a href="grain.autograd.zero_.html" class="function">zero_</a></li><li><a href="grain.autograd.zeros.html" class="function">zeros</a></li></ul><span class="type-separator">structs</span><ul><li><a href="grain.autograd.BackProp.html" class="struct current">BackProp</a></li><li><a href="grain.autograd.UntypedVariable.html" class="struct">UntypedVariable</a></li><li><a href="grain.autograd.Variable.html" class="struct">Variable</a></li></ul><span class="type-separator">variables</span><ul><li><a href="grain.autograd.DimensionCount.html" class="variable">DimensionCount</a></li><li><a href="grain.autograd.isHost.html" class="variable">isHost</a></li><li><a href="grain.autograd.isVariable.html" class="variable">isVariable</a></li></ul></div>
+    </div>
+    <div id="page-footer">
+        Distributed under <a href="https://www.boost.org/users/license.html">BSL-1.0</a>.
+        Copyright <a href="https://shigekikarita.github.io">Shigeki Karita</a> 2018.
+        Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a>
+    </div>
+</body>
+</html>

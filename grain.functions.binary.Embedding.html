@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Embedding (grain.functions.binary.Embedding)</title>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+        <link rel="stylesheet" href="style.css" />
+        <script type="text/javascript" src="script.js"></script>
+
+    
+    <link rel="prefetch" href="search-results.html" />
+</head>
+<body>
+    <div id="page-header">
+        <div id="logotype">
+        <span>Documentation</span>
+        <nav>
+            <a href="https://github.com/ShigekiKarita/grain">GitHub</a>
+            <a href="https://github.com/ShigekiKarita/grain/tree/master/example">Example</a>
+            <a href="http://dlang.org/">Dlang.org</a>
+        </nav>
+        </div>
+
+        <form action="search-docs.html" id="search">
+            <input type="search" placeholder="Find a symbol name..." name="searchTerm" />
+            <input type="submit" value="Go" />
+        </form>
+    </div>
+    <div id="page-body">
+        <div id="page-content">
+        <h1>Embedding</h1><div class="breadcrumbs"><a href="grain.html" class="breadcrumb">grain</a><a href="grain.functions.html" class="breadcrumb">functions</a><a href="grain.functions.binary.html" class="breadcrumb">binary</a></div><div><div class="documentation-comment synopsis"><div><p>Emebedding ID into vector. TODO: support N-dim input. support sparse weight matrix</p></div></div></div><div class="annotated-prototype"><div class="aggregate-prototype"><div class="attributes"></div><span class="builtin-type">struct</span> Embedding (<div class="parameters-list toplevel"><div class="template-parameter-item parameter-item">	<span><span data-ident="T" class="name">T</span></span></div></div>) {<div class="aggregate-member"><tt class="highlighted"><span class="hid">Variable</span>!(<span class="type">int</span>, <span class="num">1</span>, <span class="hid">HostStorage</span>)</tt> <span class="name">hx</span>;</div><div class="aggregate-member"><tt class="highlighted"><span class="type">uint</span>[<span class="num">2</span>]</tt> <span class="name">wshape</span>;</div><div class="aggregate-member"><tt class="highlighted"><span class="hid">Variable</span>!(<span class="type">int</span>, <span class="num">1</span>, <span class="hid">DeviceStorage</span>)</tt> <span class="name">dx</span>;</div>}</div></div><div><h2 id="examples"><a href="#examples" class="header-anchor">Examples</a></h2><div class="documentation-comment"><div></div></div><div class="unittest-example-holder"><div class="documentation-comment"></div><pre class="d_code highlighted with-line-wrappers"><span class="br">1 </span><span class="kwrd">import</span> <span class="hid">numir</span>;
+<span class="br">2 </span>
+<span class="br">3 </span><span class="hid">Embedding</span>!<span class="type">float</span> <span class="hid">embed</span>;
+<span class="br">4 </span><span class="kwrd">auto</span> <span class="hid">w</span> = [[<span class="num">1.0f</span>, <span class="num">2.0f</span>], [<span class="num">3.0f</span>, <span class="num">4.0f</span>]].<span class="hid">nparray</span>.<span class="hid">variable</span>;
+<span class="br">5 </span><span class="kwrd">auto</span> <span class="hid">x</span> = [<span class="num">0</span>, <span class="num">1</span>, <span class="num">0</span>].<span class="hid">variable</span>;
+<span class="br">6 </span><span class="kwrd">auto</span> <span class="hid">y</span> = <span class="hid">embed</span>.<span class="hid">forward</span>(<span class="hid">w</span>, <span class="hid">x</span>);
+<span class="br">7 </span><span class="kwrd">assert</span>(<span class="hid">y</span>.<span class="hid">sliced</span> == [[<span class="num">1</span>,<span class="num">2</span>],[<span class="num">3</span>,<span class="num">4</span>],[<span class="num">1</span>,<span class="num">2</span>]]);
+<span class="br">8 </span>
+<span class="br">9 </span><span class="kwrd">auto</span> <span class="hid">gy</span> = [[<span class="num">1f</span>, <span class="num">2f</span>], [-<span class="num">1f</span>, -<span class="num">2f</span>], [<span class="num">1f</span>, <span class="num">0f</span>]].<span class="hid">nparray</span>.<span class="hid">variable</span>;
+<span class="br">10 </span><span class="kwrd">auto</span> <span class="hid">gw</span> = <span class="hid">embed</span>.<span class="hid">backward</span>(<span class="hid">gy</span>)[<span class="num">0</span>];
+<span class="br">11 </span><span class="kwrd">assert</span>(<span class="hid">gw</span>.<span class="hid">sliced</span> == [[<span class="num">2f</span>, <span class="num">2f</span>], [-<span class="num">1f</span>, -<span class="num">2f</span>]]);
+<span class="br">12 </span>
+<span class="br">13 </span><span class="kwrd">version</span> (<span class="hid">grain_cuda</span>) {
+<span class="br">14 </span>    <span class="hid">Embedding</span>!<span class="type">float</span> <span class="hid">dembed</span>;
+<span class="br">15 </span>    <span class="kwrd">auto</span> <span class="hid">dy</span> = <span class="hid">dembed</span>.<span class="hid">forward</span>(<span class="hid">w</span>.<span class="hid">to</span>!<span class="hid">DeviceStorage</span>, <span class="hid">x</span>.<span class="hid">to</span>!<span class="hid">DeviceStorage</span>);
+<span class="br">16 </span>    <span class="kwrd">assert</span>(<span class="hid">dy</span>.<span class="hid">to</span>!<span class="hid">HostStorage</span>.<span class="hid">sliced</span> == <span class="hid">y</span>.<span class="hid">sliced</span>);
+<span class="br">17 </span>    <span class="kwrd">auto</span> <span class="hid">dgw</span> = <span class="hid">dembed</span>.<span class="hid">backward</span>(<span class="hid">gy</span>.<span class="hid">to</span>!<span class="hid">DeviceStorage</span>)[<span class="num">0</span>];
+<span class="br">18 </span>    <span class="kwrd">assert</span>(<span class="hid">dgw</span>.<span class="hid">to</span>!<span class="hid">HostStorage</span>.<span class="hid">sliced</span> == <span class="hid">gw</span>.<span class="hid">sliced</span>);
+<span class="br">19 </span>}</pre></div><h2 id="meta"><a href="#meta" class="header-anchor">Meta</a></h2><div class="documentation-comment source-section other-section"><h3 id="source"><a href="#source" class="header-anchor">Source</a></h3><div><p><a href="source/grain.functions.binary.d.html#L512">See Implementation</a><br /></p></div></div></div></div>
+        <div id="page-nav"><a href="grain.html" class="parent">grain</a><a href="grain.functions.html" class="parent">functions</a><a href="grain.functions.binary.html" class="parent">binary</a>
+        <span class="type-separator">functions</span><ul><li><a href="grain.functions.binary.lin2dim.html" class="function">lin2dim</a></li></ul><span class="type-separator">structs</span><ul><li><a href="grain.functions.binary.AddBias.html" class="struct">AddBias</a></li><li><a href="grain.functions.binary.Convolution.html" class="struct">Convolution</a></li><li><a href="grain.functions.binary.ConvolutionRefImpl.html" class="struct">ConvolutionRefImpl</a></li><li><a href="grain.functions.binary.Embedding.html" class="struct current">Embedding</a></li><li><a href="grain.functions.binary.MatMul.html" class="struct">MatMul</a></li><li><a href="grain.functions.binary.OpBinary.html" class="struct">OpBinary</a></li></ul></div>
+    </div>
+    <div id="page-footer">
+        Distributed under <a href="https://www.boost.org/users/license.html">BSL-1.0</a>.
+        Copyright <a href="https://shigekikarita.github.io">Shigeki Karita</a> 2018.
+        Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a>
+    </div>
+</body>
+</html>

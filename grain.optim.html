@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>grain.optim (grain.optim)</title>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+        <link rel="stylesheet" href="style.css" />
+        <script type="text/javascript" src="script.js"></script>
+
+    
+    <link rel="prefetch" href="search-results.html" />
+</head>
+<body>
+    <div id="page-header">
+        <div id="logotype">
+        <span>Documentation</span>
+        <nav>
+            <a href="https://github.com/ShigekiKarita/grain">GitHub</a>
+            <a href="https://github.com/ShigekiKarita/grain/tree/master/example">Example</a>
+            <a href="http://dlang.org/">Dlang.org</a>
+        </nav>
+        </div>
+
+        <form action="search-docs.html" id="search">
+            <input type="search" placeholder="Find a symbol name..." name="searchTerm" />
+            <input type="submit" value="Go" />
+        </form>
+    </div>
+    <div id="page-body">
+        <div id="page-content">
+        <h1>grain.optim</h1><div class="breadcrumbs"><a href="grain.html" class="breadcrumb">grain</a></div><div><div class="documentation-comment synopsis"><div><p>A module for gradient descent optimizer</p></div></div></div><div class="annotated-prototype"></div><h2 id="members"><a href="#members" class="header-anchor">Members</a></h2><h3 id="alias" class="member-list-header hide-from-toc"><a href="#alias" class="header-anchor">Aliases</a></h3><dl class="member-list native"><dt><a href="grain.optim.StateDict.html">StateDict</a><div style="max-width: 45ch;" class="simplified-prototype"><span class="builtin-type">alias</span> <span class="name">StateDict</span> = <tt class="highlighted"><span class="hid">UntypedVariable</span>[<span class="type">string</span>]</tt></div></dt><dd><div><p>structure to memorize the stats e.g., momentum</p></div></dd></dl><h3 id="function" class="member-list-header hide-from-toc"><a href="#function" class="header-anchor">Functions</a></h3><dl class="member-list native"><dt><a href="grain.optim.transform.html">transform</a><div style="max-width: 126ch;" class="simplified-prototype"><tt class="highlighted"><span class="type">void</span></tt> <span class="name">transform</span><tt class="highlighted">(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">HostStorage</span>) <span class="hid">src</span>, <span class="kwrd">ref</span> <span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">HostStorage</span>) <span class="hid">dst</span>, <span class="hid">T</span> <span class="hid">alpha</span> = <span class="num">1</span>, <span class="hid">T</span> <span class="hid">beta</span> = <span class="num">0</span>)</tt></div></dt><dd><div><p>CPU version of cudnn.transform</p></div></dd><dt><a href="grain.optim.update.html">update</a><div style="max-width: 30ch;" class="simplified-prototype"><tt class="highlighted"><span class="type">void</span></tt> <span class="name">update</span><tt class="highlighted">(<span class="kwrd">ref</span> <span class="hid">O</span> <span class="hid">optimizer</span>)</tt></div></dt><dd><div><p>public api to update a target model</p></div></dd><dt><a href="grain.optim.zeroGrad.html">zeroGrad</a><div style="max-width: 28ch;" class="simplified-prototype"><tt class="highlighted"><span class="type">void</span></tt> <span class="name">zeroGrad</span><tt class="highlighted">(<span class="kwrd">ref</span> <span class="hid">C</span> <span class="hid">chain</span>)</tt></div></dt><dd><div><p>fill gradient arrays with zero</p></div></dd></dl><h3 id="struct" class="member-list-header hide-from-toc"><a href="#struct" class="header-anchor">Structs</a></h3><dl class="member-list native"><dt><a href="grain.optim.AdaDelta.html">AdaDelta</a><div style="max-width: 24ch;" class="simplified-prototype"><span class="builtin-type">struct</span> <span class="name">AdaDelta</span><span class="template-params">(Chain)</span></div></dt><dd><div><p><a href="http://www.matthewzeiler.com/pubs/googleTR2012/googleTR2012.pdf">http://www.matthewzeiler.com/pubs/googleTR2012/googleTR2012.pdf</a></p></div></dd><dt><a href="grain.optim.AdaGrad.html">AdaGrad</a><div style="max-width: 23ch;" class="simplified-prototype"><span class="builtin-type">struct</span> <span class="name">AdaGrad</span><span class="template-params">(Chain)</span></div></dt><dd><div><p><a href="http://jmlr.org/papers/v12/duchi11a.html">http://jmlr.org/papers/v12/duchi11a.html</a></p></div></dd><dt><a href="grain.optim.Adam.html">Adam</a><div style="max-width: 19ch;" class="simplified-prototype"><span class="builtin-type">struct</span> <span class="name">Adam</span><span class="template-params">(Chain)</span></div></dt><dd><div><p><a href="https://arxiv.org/pdf/1412.6980v8.pdf">https://arxiv.org/pdf/1412.6980v8.pdf</a></p></div></dd><dt><a href="grain.optim.SGD.html">SGD</a><div style="max-width: 18ch;" class="simplified-prototype"><span class="builtin-type">struct</span> <span class="name">SGD</span><span class="template-params">(Chain)</span></div></dt><dd><div><p>stochastic gradient descent optimizer</p></div></dd></dl><h3 id="variable" class="member-list-header hide-from-toc"><a href="#variable" class="header-anchor">Variables</a></h3><dl class="member-list native"><dt><a href="grain.optim.isOptimizer.html">isOptimizer</a><div style="max-width: 27ch;" class="simplified-prototype"><tt class="highlighted"><span class="kwrd">enum</span></tt> <tt class="highlighted"><span class="type">bool</span></tt> <span class="name">isOptimizer</span><tt class="highlighted">(<span class="hid">T</span>)</tt>;</div></dt><dd><div><p>trait to identify optimizer</p></div></dd></dl><div><h2 id="meta"><a href="#meta" class="header-anchor">Meta</a></h2><div class="documentation-comment source-section other-section"><h3 id="source"><a href="#source" class="header-anchor">Source</a></h3><div><p><a href="source/grain.optim.d.html">See Source File</a><br /></p></div></div></div></div>
+        <div id="page-nav"><a href="grain.html" class="parent">grain</a>
+        <span class="type-separator">modules</span><ul><li><a href="grain.autograd.html" class="module">autograd</a></li><li><a href="grain.chain.html" class="module">chain</a></li><li><a href="grain.config.backprop.html" class="module">config</a></li><li><a href="grain.cublas.html" class="module">cublas</a></li><li><a href="grain.cuda.html" class="module">cuda</a></li><li><a href="grain.cudnn.html" class="module">cudnn</a></li><li><a href="grain.dataset.html" class="module">dataset</a></li><li><a href="grain.functions.html" class="module">functions</a></li><li><a href="grain.hdf5.html" class="module">hdf5</a></li><li><a href="grain.metric.html" class="module">metric</a></li><li><a href="grain.optim.html" class="module current">optim</a></li><li><a href="grain.serializer.html" class="module">serializer</a></li><li><a href="grain.testing.html" class="module">testing</a></li><li><a href="grain.utility.html" class="module">utility</a></li><li><a href="grain.warpctc.html" class="module">warpctc</a></li></ul></div>
+    </div>
+    <div id="page-footer">
+        Distributed under <a href="https://www.boost.org/users/license.html">BSL-1.0</a>.
+        Copyright <a href="https://shigekikarita.github.io">Shigeki Karita</a> 2018.
+        Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a>
+    </div>
+</body>
+</html>

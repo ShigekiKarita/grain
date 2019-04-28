@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>grain.dataset.mnist source code</title>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+        <link rel="stylesheet" href="../style.css" />
+        <script type="text/javascript" src="../script.js"></script>
+
+    
+    <link rel="prefetch" href="../search-results.html" />
+</head>
+<body>
+    <div id="page-header">
+        <div id="logotype">
+        <span>Documentation</span>
+        <nav>
+            <a href="https://github.com/ShigekiKarita/grain">GitHub</a>
+            <a href="https://github.com/ShigekiKarita/grain/tree/master/example">Example</a>
+            <a href="http://dlang.org/">Dlang.org</a>
+        </nav>
+        </div>
+
+        <form action="search-docs.html" id="search">
+            <input type="search" placeholder="Find a symbol name..." name="searchTerm" />
+            <input type="submit" value="Go" />
+        </form>
+    </div>
+    <div id="page-body">
+        <div id="page-content">
+        <pre class="d_code highlighted with-line-wrappers"><a id="L1" href="#L1" class="br">1 </a><span class="com">/// MNIST hand-written digit recognition dataset</span>
+<a id="L2" href="#L2" class="br">2 </a><span class="kwrd">module</span> <span class="hid">grain.dataset.mnist</span>;
+<a id="L3" href="#L3" class="br">3 </a>
+<a id="L4" href="#L4" class="br">4 </a><span class="kwrd">import</span> <span class="hid">std.typecons</span> : <span class="hid">tuple</span>;
+<a id="L5" href="#L5" class="br">5 </a><span class="kwrd">import</span> <span class="hid">mir.ndslice</span>;
+<a id="L6" href="#L6" class="br">6 </a>
+<a id="L7" href="#L7" class="br">7 </a><span class="com">///</span>
+<a id="L8" href="#L8" class="br">8 </a><span class="kwrd">enum</span> <a href="grain.dataset.mnist.d.html#L0" title="grain.dataset.mnist.files" class="hid">files</a> = [
+<a id="L9" href="#L9" class="br">9 </a>    <span class="str">&quot;train-images-idx3-ubyte&quot;</span>,
+<a id="L10" href="#L10" class="br">10 </a>    <span class="str">&quot;train-labels-idx1-ubyte&quot;</span>,
+<a id="L11" href="#L11" class="br">11 </a>    <span class="str">&quot;t10k-images-idx3-ubyte&quot;</span>,
+<a id="L12" href="#L12" class="br">12 </a>    <span class="str">&quot;t10k-labels-idx1-ubyte&quot;</span>
+<a id="L13" href="#L13" class="br">13 </a>    ];
+<a id="L14" href="#L14" class="br">14 </a>
+<a id="L15" href="#L15" class="br">15 </a><span class="com">///</span>
+<a id="L16" href="#L16" class="br">16 </a><span class="kwrd">struct</span> <a href="grain.dataset.mnist.d.html#L16" title="grain.dataset.mnist.Dataset" class="hid">Dataset</a> {
+<a id="L17" href="#L17" class="br">17 </a>    <span class="hid">Slice</span>!(<span class="type">float</span>*, <span class="num">3</span>) <span class="hid">inputs</span>;
+<a id="L18" href="#L18" class="br">18 </a>    <span class="hid">Slice</span>!(<span class="type">int</span>*, <span class="num">1</span>) <span class="hid">targets</span>;
+<a id="L19" href="#L19" class="br">19 </a>}
+<a id="L20" href="#L20" class="br">20 </a>
+<a id="L21" href="#L21" class="br">21 </a><span class="com">///</span>
+<a id="L22" href="#L22" class="br">22 </a><span class="kwrd">auto</span> <a href="grain.dataset.mnist.d.html#L22" title="grain.dataset.mnist.prepareDataset" class="hid">prepareDataset</a>() {
+<a id="L23" href="#L23" class="br">23 </a>    <span class="kwrd">import</span> <span class="hid">std.stdio</span> : <span class="hid">writeln</span>;
+<a id="L24" href="#L24" class="br">24 </a>    <span class="kwrd">import</span> <span class="hid">std.file</span> : <span class="hid">exists</span>, <span class="hid">read</span>, <span class="hid">mkdir</span>;
+<a id="L25" href="#L25" class="br">25 </a>    <span class="kwrd">import</span> <span class="hid">std.algorithm</span> : <span class="hid">canFind</span>;
+<a id="L26" href="#L26" class="br">26 </a>    <span class="kwrd">import</span> <span class="hid">std.zlib</span> : <span class="hid">UnCompress</span>;
+<a id="L27" href="#L27" class="br">27 </a>    <span class="kwrd">import</span> <span class="hid">std.net.curl</span> : <span class="hid">download</span>;
+<a id="L28" href="#L28" class="br">28 </a>
+<a id="L29" href="#L29" class="br">29 </a>    <span class="com">// Dataset train, test;</span>
+<a id="L30" href="#L30" class="br">30 </a>    <span class="kwrd">auto</span> <span class="hid">train</span> = <span class="kwrd">new</span> <a href="grain.dataset.mnist.d.html#L16" title="grain.dataset.mnist.Dataset" class="hid">Dataset</a>;
+<a id="L31" href="#L31" class="br">31 </a>    <span class="kwrd">auto</span> <span class="hid">test</span> = <span class="kwrd">new</span> <a href="grain.dataset.mnist.d.html#L16" title="grain.dataset.mnist.Dataset" class="hid">Dataset</a>;
+<a id="L32" href="#L32" class="br">32 </a>    <span class="kwrd">if</span> (!<span class="hid">exists</span>(<span class="str">&quot;data&quot;</span>)) {
+<a id="L33" href="#L33" class="br">33 </a>        <span class="hid">mkdir</span>(<span class="str">&quot;data&quot;</span>);
+<a id="L34" href="#L34" class="br">34 </a>    }
+<a id="L35" href="#L35" class="br">35 </a>    <span class="kwrd">foreach</span> (<span class="hid">f</span>; <a href="grain.dataset.mnist.d.html#L0" title="grain.dataset.mnist.files" class="hid">files</a>) {
+<a id="L36" href="#L36" class="br">36 </a>        <span class="kwrd">auto</span> <span class="hid">gz</span> = <span class="str">&quot;data/&quot;</span> ~ <span class="hid">f</span> ~ <span class="str">&quot;.gz&quot;</span>;
+<a id="L37" href="#L37" class="br">37 </a>        <span class="hid">writeln</span>(<span class="str">&quot;loading &quot;</span> ~ <span class="hid">gz</span>);
+<a id="L38" href="#L38" class="br">38 </a>        <span class="kwrd">if</span> (!<span class="hid">exists</span>(<span class="hid">gz</span>)) {
+<a id="L39" href="#L39" class="br">39 </a>            <span class="kwrd">auto</span> <span class="hid">url</span> = <span class="str">&quot;http://yann.lecun.com/exdb/mnist/&quot;</span> ~ <span class="hid">f</span> ~ <span class="str">&quot;.gz&quot;</span>;
+<a id="L40" href="#L40" class="br">40 </a>            <span class="hid">download</span>(<span class="hid">url</span>, <span class="hid">gz</span>);
+<a id="L41" href="#L41" class="br">41 </a>        }
+<a id="L42" href="#L42" class="br">42 </a>        <span class="kwrd">auto</span> <span class="hid">unc</span> = <span class="kwrd">new</span> <span class="hid">UnCompress</span>;
+<a id="L43" href="#L43" class="br">43 </a>        <span class="kwrd">auto</span> <span class="hid">decomp</span> = <span class="kwrd">cast</span>(<span class="type">ubyte</span>[]) <span class="hid">unc.uncompress</span>(<span class="hid">gz.read</span>);
+<a id="L44" href="#L44" class="br">44 </a>        <span class="kwrd">auto</span> <span class="hid">dataset</span> = <span class="hid">f.canFind</span>(<span class="str">&quot;train&quot;</span>) ? <span class="hid">train</span> : <span class="hid">test</span>;
+<a id="L45" href="#L45" class="br">45 </a>        <span class="kwrd">if</span> (<span class="hid">f.canFind</span>(<span class="str">&quot;images&quot;</span>)) {
+<a id="L46" href="#L46" class="br">46 </a>            <span class="com">// skip header</span>
+<a id="L47" href="#L47" class="br">47 </a>            <span class="hid">decomp</span> = <span class="hid">decomp</span>[<span class="num">16</span>..$];
+<a id="L48" href="#L48" class="br">48 </a>            <span class="kwrd">auto</span> <span class="hid">ndata</span> = <span class="hid">decomp.length</span> / (<span class="num">28</span> * <span class="num">28</span>);
+<a id="L49" href="#L49" class="br">49 </a>            <span class="kwrd">auto</span> <span class="hid">imgs</span> = <span class="hid">decomp.sliced</span>(<span class="hid">ndata</span>, <span class="num">28</span>, <span class="num">28</span>);
+<a id="L50" href="#L50" class="br">50 </a>            <span class="com">// normalize 0 .. 255 to 0.0 .. 1.0</span>
+<a id="L51" href="#L51" class="br">51 </a>            <span class="hid">dataset.inputs</span> = <span class="hid">imgs.map</span>!(<span class="hid">i</span> =&gt; <span class="num">1.0f</span> * <span class="hid">i</span> / <span class="num">255</span>).<span class="hid">slice</span>;
+<a id="L52" href="#L52" class="br">52 </a>        } <span class="kwrd">else</span> { <span class="com">// labels</span>
+<a id="L53" href="#L53" class="br">53 </a>            <span class="hid">decomp</span> = <span class="hid">decomp</span>[<span class="num">8</span>..$];
+<a id="L54" href="#L54" class="br">54 </a>            <span class="hid">dataset.targets</span> = <span class="hid">decomp.sliced.as</span>!<span class="type">int</span>.<span class="hid">slice</span>;
+<a id="L55" href="#L55" class="br">55 </a>        }
+<a id="L56" href="#L56" class="br">56 </a>    }
+<a id="L57" href="#L57" class="br">57 </a>    <span class="kwrd">return</span> <span class="hid">tuple</span>!(<span class="str">&quot;train&quot;</span>, <span class="str">&quot;test&quot;</span>)(<span class="hid">train</span>, <span class="hid">test</span>);
+<a id="L58" href="#L58" class="br">58 </a>}
+<a id="L59" href="#L59" class="br">59 </a>
+<a id="L60" href="#L60" class="br">60 </a><span class="com">///</span>
+<a id="L61" href="#L61" class="br">61 </a><span class="kwrd">auto</span> <a href="grain.dataset.mnist.d.html#L61" title="grain.dataset.mnist.makeBatch" class="hid">makeBatch</a>(<a href="grain.dataset.mnist.d.html#L16" title="grain.dataset.mnist.Dataset" class="hid">Dataset</a>* <span class="hid">d</span>, <span class="hid">size_t</span> <span class="hid">batchSize</span>) {
+<a id="L62" href="#L62" class="br">62 </a>    <span class="kwrd">import</span> <span class="hid">numir.core</span> : <span class="hid">view</span>;
+<a id="L63" href="#L63" class="br">63 </a>    <span class="kwrd">auto</span> <span class="hid">niter</span> = <span class="hid">d.inputs.shape</span>[<span class="num">0</span>] / <span class="hid">batchSize</span>; <span class="com">// omit last</span>
+<a id="L64" href="#L64" class="br">64 </a>    <span class="kwrd">auto</span> <span class="hid">inSize</span> = <span class="hid">d.inputs</span>[<span class="num">0</span>].<span class="hid">view</span>(-<span class="num">1</span>).<span class="hid">length</span>!<span class="num">0</span>;
+<a id="L65" href="#L65" class="br">65 </a>    <span class="kwrd">return</span> <span class="hid">tuple</span>!(<span class="str">&quot;niter&quot;</span>, <span class="str">&quot;inputs&quot;</span>, <span class="str">&quot;targets&quot;</span>)(
+<a id="L66" href="#L66" class="br">66 </a>        <span class="hid">niter</span>,
+<a id="L67" href="#L67" class="br">67 </a>        <span class="hid">d.inputs.view</span>(-<span class="num">1</span>, <span class="hid">inSize</span>)[<span class="num">0</span>..$ - ($ % <span class="hid">batchSize</span>)].<span class="hid">view</span>(-<span class="num">1</span>, <span class="hid">batchSize</span>, <span class="hid">inSize</span>),
+<a id="L68" href="#L68" class="br">68 </a>        <span class="hid">d.targets</span>[<span class="num">0</span>..$ - ($ % <span class="hid">batchSize</span>)].<span class="hid">view</span>(-<span class="num">1</span>, <span class="hid">batchSize</span>)
+<a id="L69" href="#L69" class="br">69 </a>        );
+<a id="L70" href="#L70" class="br">70 </a>}</pre></div>
+        <div id="page-nav">
+        <div id="source-navigation"><div class="list-holder"><ul><li><a href="../grain.dataset.mnist.html" class="docs">[Docs] </a><a href="#L1">grain.dataset.mnist</a><ul><li><a href="#L4">std.typecons</a></li><li><a href="#L5">mir.ndslice</a></li><li><a href="../grain.dataset.mnist.files.html" class="docs">[Docs] </a><a href="#L1">files</a></li><li><a href="../grain.dataset.mnist.Dataset.html" class="docs">[Docs] </a><a href="#L16">Dataset</a><ul><li><a href="#L17">inputs</a></li><li><a href="#L18">targets</a></li></ul></li><li><a href="../grain.dataset.mnist.prepareDataset.html" class="docs">[Docs] </a><a href="#L22">prepareDataset</a></li><li><a href="../grain.dataset.mnist.makeBatch.html" class="docs">[Docs] </a><a href="#L61">makeBatch</a></li></ul></li></ul></div></div></div>
+    </div>
+    <div id="page-footer">
+        Distributed under <a href="https://www.boost.org/users/license.html">BSL-1.0</a>.
+        Copyright <a href="https://shigekikarita.github.io">Shigeki Karita</a> 2018.
+        Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a>
+    </div>
+</body>
+</html>

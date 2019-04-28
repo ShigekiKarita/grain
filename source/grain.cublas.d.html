@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>grain.cublas source code</title>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+        <link rel="stylesheet" href="../style.css" />
+        <script type="text/javascript" src="../script.js"></script>
+
+    
+    <link rel="prefetch" href="../search-results.html" />
+</head>
+<body>
+    <div id="page-header">
+        <div id="logotype">
+        <span>Documentation</span>
+        <nav>
+            <a href="https://github.com/ShigekiKarita/grain">GitHub</a>
+            <a href="https://github.com/ShigekiKarita/grain/tree/master/example">Example</a>
+            <a href="http://dlang.org/">Dlang.org</a>
+        </nav>
+        </div>
+
+        <form action="search-docs.html" id="search">
+            <input type="search" placeholder="Find a symbol name..." name="searchTerm" />
+            <input type="submit" value="Go" />
+        </form>
+    </div>
+    <div id="page-body">
+        <div id="page-content">
+        <pre class="d_code highlighted with-line-wrappers"><a id="L1" href="#L1" class="br">1 </a><span class="com">/**
+<a id="L2" href="#L2" class="br">2 </a>   cuBLAS wrappers
+<a id="L3" href="#L3" class="br">3 </a> */</span>
+<a id="L4" href="#L4" class="br">4 </a><span class="kwrd">module</span> <span class="hid">grain.cublas</span>;
+<a id="L5" href="#L5" class="br">5 </a><span class="kwrd">version</span> (<span class="hid">grain_cuda</span>)  : <span class="kwrd">import</span> <span class="hid">derelict.cuda</span>;
+<a id="L6" href="#L6" class="br">6 </a>
+<a id="L7" href="#L7" class="br">7 </a><span class="com">/++
+<a id="L8" href="#L8" class="br">8 </a> TODO: make derelict-cublas (already exist?)
+<a id="L9" href="#L9" class="br">9 </a> +/</span>
+<a id="L10" href="#L10" class="br">10 </a>
+<a id="L11" href="#L11" class="br">11 </a><span class="kwrd">extern</span> (<span class="hid">C</span>):
+<a id="L12" href="#L12" class="br">12 </a>
+<a id="L13" href="#L13" class="br">13 </a><span class="kwrd">alias</span> <a href="grain.cublas.d.html#L13" title="grain.cublas.cublasStatus_t" class="hid">cublasStatus_t</a> = <span class="type">int</span>;
+<a id="L14" href="#L14" class="br">14 </a><span class="com">///</span>
+<a id="L15" href="#L15" class="br">15 </a><span class="kwrd">enum</span> : <a href="grain.cublas.d.html#L13" title="grain.cublas.cublasStatus_t" class="hid">cublasStatus_t</a> {
+<a id="L16" href="#L16" class="br">16 </a>    <a href="grain.cublas.d.html#L15" title="grain.cublas.CUBLAS_STATUS_SUCCESS" class="hid">CUBLAS_STATUS_SUCCESS</a> = <span class="num">0</span>,
+<a id="L17" href="#L17" class="br">17 </a>    <span class="hid">CUBLAS_STATUS_NOT_INITIALIZED</span> = <span class="num">1</span>,
+<a id="L18" href="#L18" class="br">18 </a>    <span class="hid">CUBLAS_STATUS_ALLOC_FAILED</span> = <span class="num">3</span>,
+<a id="L19" href="#L19" class="br">19 </a>    <span class="hid">CUBLAS_STATUS_INVALID_VALUE</span> = <span class="num">7</span>,
+<a id="L20" href="#L20" class="br">20 </a>    <span class="hid">CUBLAS_STATUS_ARCH_MISMATCH</span> = <span class="num">8</span>,
+<a id="L21" href="#L21" class="br">21 </a>    <span class="hid">CUBLAS_STATUS_MAPPING_ERROR</span> = <span class="num">11</span>,
+<a id="L22" href="#L22" class="br">22 </a>    <span class="hid">CUBLAS_STATUS_EXECUTION_FAILED</span> = <span class="num">13</span>,
+<a id="L23" href="#L23" class="br">23 </a>    <span class="hid">CUBLAS_STATUS_INTERNAL_ERROR</span> = <span class="num">14</span>,
+<a id="L24" href="#L24" class="br">24 </a>    <span class="hid">CUBLAS_STATUS_NOT_SUPPORTED</span> = <span class="num">15</span>,
+<a id="L25" href="#L25" class="br">25 </a>    <span class="hid">CUBLAS_STATUS_LICENSE_ERROR</span> = <span class="num">16</span>
+<a id="L26" href="#L26" class="br">26 </a>}
+<a id="L27" href="#L27" class="br">27 </a>
+<a id="L28" href="#L28" class="br">28 </a><span class="com">///</span>
+<a id="L29" href="#L29" class="br">29 </a><span class="kwrd">struct</span> <a href="grain.cublas.d.html#L29" title="grain.cublas.cublasContext" class="hid">cublasContext</a>;
+<a id="L30" href="#L30" class="br">30 </a><span class="com">///</span>
+<a id="L31" href="#L31" class="br">31 </a><span class="kwrd">alias</span> <a href="grain.cublas.d.html#L31" title="grain.cublas.cublasHandle_t" class="hid">cublasHandle_t</a> = <a href="grain.cublas.d.html#L29" title="grain.cublas.cublasContext" class="hid">cublasContext</a>*;
+<a id="L32" href="#L32" class="br">32 </a><span class="com">///</span>
+<a id="L33" href="#L33" class="br">33 </a><span class="kwrd">alias</span> <a href="grain.cublas.d.html#L33" title="grain.cublas.cublasOperation_t" class="hid">cublasOperation_t</a> = <span class="type">int</span>;
+<a id="L34" href="#L34" class="br">34 </a><span class="com">///</span>
+<a id="L35" href="#L35" class="br">35 </a><span class="kwrd">enum</span> : <a href="grain.cublas.d.html#L33" title="grain.cublas.cublasOperation_t" class="hid">cublasOperation_t</a> {
+<a id="L36" href="#L36" class="br">36 </a>    <a href="grain.cublas.d.html#L35" title="grain.cublas.CUBLAS_OP_N" class="hid">CUBLAS_OP_N</a>, <span class="com">// the non-transpose operation is selected</span>
+<a id="L37" href="#L37" class="br">37 </a>    <span class="hid">CUBLAS_OP_T</span>, <span class="com">// the transpose operation is selected</span>
+<a id="L38" href="#L38" class="br">38 </a>    <span class="hid">CUBLAS_OP_C</span> <span class="com">// the conjugate transpose operation is selected</span>
+<a id="L39" href="#L39" class="br">39 </a>}
+<a id="L40" href="#L40" class="br">40 </a>
+<a id="L41" href="#L41" class="br">41 </a><span class="com">// TODO: parse and retrieve cublas_api.h</span>
+<a id="L42" href="#L42" class="br">42 </a>
+<a id="L43" href="#L43" class="br">43 </a><span class="com">///</span>
+<a id="L44" href="#L44" class="br">44 </a><a href="grain.cublas.d.html#L13" title="grain.cublas.cublasStatus_t" class="hid">cublasStatus_t</a> <a href="grain.cublas.d.html#L44" title="grain.cublas.cublasCreate_v2" class="hid">cublasCreate_v2</a>(<a href="grain.cublas.d.html#L31" title="grain.cublas.cublasHandle_t" class="hid">cublasHandle_t</a>*);
+<a id="L45" href="#L45" class="br">45 </a><span class="com">///</span>
+<a id="L46" href="#L46" class="br">46 </a><a href="grain.cublas.d.html#L13" title="grain.cublas.cublasStatus_t" class="hid">cublasStatus_t</a> <a href="grain.cublas.d.html#L46" title="grain.cublas.cublasDestroy_v2" class="hid">cublasDestroy_v2</a>(<a href="grain.cublas.d.html#L31" title="grain.cublas.cublasHandle_t" class="hid">cublasHandle_t</a> <span class="hid">handle</span>);
+<a id="L47" href="#L47" class="br">47 </a><span class="com">///</span>
+<a id="L48" href="#L48" class="br">48 </a><a href="grain.cublas.d.html#L13" title="grain.cublas.cublasStatus_t" class="hid">cublasStatus_t</a> <a href="grain.cublas.d.html#L48" title="grain.cublas.cublasSgemm_v2" class="hid">cublasSgemm_v2</a>(<a href="grain.cublas.d.html#L31" title="grain.cublas.cublasHandle_t" class="hid">cublasHandle_t</a> <span class="hid">handle</span>, <a href="grain.cublas.d.html#L33" title="grain.cublas.cublasOperation_t" class="hid">cublasOperation_t</a> <span class="hid">transa</span>,
+<a id="L49" href="#L49" class="br">49 </a>        <a href="grain.cublas.d.html#L33" title="grain.cublas.cublasOperation_t" class="hid">cublasOperation_t</a> <span class="hid">transb</span>,
+<a id="L50" href="#L50" class="br">50 </a>        <span class="type">int</span> <span class="hid">m</span>, <span class="type">int</span> <span class="hid">n</span>, <span class="type">int</span> <span class="hid">k</span>, <span class="kwrd">const</span> <span class="type">float</span>* <span class="hid">alpha</span>, <span class="kwrd">const</span> <span class="type">float</span>* <span class="hid">A</span>, <span class="type">int</span> <span class="hid">lda</span>,
+<a id="L51" href="#L51" class="br">51 </a>        <span class="kwrd">const</span> <span class="type">float</span>* <span class="hid">B</span>, <span class="type">int</span> <span class="hid">ldb</span>, <span class="kwrd">const</span> <span class="type">float</span>* <span class="hid">beta</span>, <span class="type">float</span>* <span class="hid">C</span>, <span class="type">int</span> <span class="hid">ldc</span>);
+<a id="L52" href="#L52" class="br">52 </a>
+<a id="L53" href="#L53" class="br">53 </a><span class="com">/*
+<a id="L54" href="#L54" class="br">54 </a>cublasStatus_t cublasSgemm_v2(cublasHandle_t handle,
+<a id="L55" href="#L55" class="br">55 </a>                           cublasOperation_t transa, cublasOperation_t transb,
+<a id="L56" href="#L56" class="br">56 </a>                           int m, int n, int k,
+<a id="L57" href="#L57" class="br">57 </a>                           const float           *alpha,
+<a id="L58" href="#L58" class="br">58 </a>                           const float           *A, int lda,
+<a id="L59" href="#L59" class="br">59 </a>                           const float           *B, int ldb,
+<a id="L60" href="#L60" class="br">60 </a>                           const float           *beta,
+<a id="L61" href="#L61" class="br">61 </a>                           float           *C, int ldc);
+<a id="L62" href="#L62" class="br">62 </a>*/</span>
+<a id="L63" href="#L63" class="br">63 </a>
+<a id="L64" href="#L64" class="br">64 </a><span class="com">///</span>
+<a id="L65" href="#L65" class="br">65 </a><a href="grain.cublas.d.html#L13" title="grain.cublas.cublasStatus_t" class="hid">cublasStatus_t</a> <a href="grain.cublas.d.html#L65" title="grain.cublas.cublasDgemm_v2" class="hid">cublasDgemm_v2</a>(<a href="grain.cublas.d.html#L31" title="grain.cublas.cublasHandle_t" class="hid">cublasHandle_t</a> <span class="hid">handle</span>, <a href="grain.cublas.d.html#L33" title="grain.cublas.cublasOperation_t" class="hid">cublasOperation_t</a> <span class="hid">transa</span>,
+<a id="L66" href="#L66" class="br">66 </a>        <a href="grain.cublas.d.html#L33" title="grain.cublas.cublasOperation_t" class="hid">cublasOperation_t</a> <span class="hid">transb</span>,
+<a id="L67" href="#L67" class="br">67 </a>        <span class="type">int</span> <span class="hid">m</span>, <span class="type">int</span> <span class="hid">n</span>, <span class="type">int</span> <span class="hid">k</span>, <span class="kwrd">const</span> <span class="type">double</span>* <span class="hid">alpha</span>, <span class="kwrd">const</span> <span class="type">double</span>* <span class="hid">A</span>, <span class="type">int</span> <span class="hid">lda</span>,
+<a id="L68" href="#L68" class="br">68 </a>        <span class="kwrd">const</span> <span class="type">double</span>* <span class="hid">B</span>, <span class="type">int</span> <span class="hid">ldb</span>, <span class="kwrd">const</span> <span class="type">double</span>* <span class="hid">beta</span>, <span class="type">double</span>* <span class="hid">C</span>, <span class="type">int</span> <span class="hid">ldc</span>);
+<a id="L69" href="#L69" class="br">69 </a><span class="com">///</span>
+<a id="L70" href="#L70" class="br">70 </a><a href="grain.cublas.d.html#L13" title="grain.cublas.cublasStatus_t" class="hid">cublasStatus_t</a> <a href="grain.cublas.d.html#L70" title="grain.cublas.cublasSaxpy_v2" class="hid">cublasSaxpy_v2</a>(<a href="grain.cublas.d.html#L31" title="grain.cublas.cublasHandle_t" class="hid">cublasHandle_t</a> <span class="hid">handle</span>, <span class="type">int</span> <span class="hid">n</span>, <span class="kwrd">const</span> <span class="type">float</span>* <span class="hid">alpha</span>,
+<a id="L71" href="#L71" class="br">71 </a>        <span class="kwrd">const</span> <span class="type">float</span>* <span class="hid">x</span>, <span class="type">int</span> <span class="hid">incx</span>, <span class="type">float</span>* <span class="hid">y</span>, <span class="type">int</span> <span class="hid">incy</span>);
+<a id="L72" href="#L72" class="br">72 </a><span class="com">///</span>
+<a id="L73" href="#L73" class="br">73 </a><a href="grain.cublas.d.html#L13" title="grain.cublas.cublasStatus_t" class="hid">cublasStatus_t</a> <a href="grain.cublas.d.html#L73" title="grain.cublas.cublasDaxpy_v2" class="hid">cublasDaxpy_v2</a>(<a href="grain.cublas.d.html#L31" title="grain.cublas.cublasHandle_t" class="hid">cublasHandle_t</a> <span class="hid">handle</span>, <span class="type">int</span> <span class="hid">n</span>, <span class="kwrd">const</span> <span class="type">double</span>* <span class="hid">alpha</span>,
+<a id="L74" href="#L74" class="br">74 </a>        <span class="kwrd">const</span> <span class="type">double</span>* <span class="hid">x</span>, <span class="type">int</span> <span class="hid">incx</span>, <span class="type">double</span>* <span class="hid">y</span>, <span class="type">int</span> <span class="hid">incy</span>);
+<a id="L75" href="#L75" class="br">75 </a>
+<a id="L76" href="#L76" class="br">76 </a><span class="com">/// emit error message string from enum</span>
+<a id="L77" href="#L77" class="br">77 </a><span class="kwrd">auto</span> <a href="grain.cublas.d.html#L77" title="grain.cublas.cublasGetErrorEnum" class="hid">cublasGetErrorEnum</a>(<a href="grain.cublas.d.html#L13" title="grain.cublas.cublasStatus_t" class="hid">cublasStatus_t</a> <span class="hid">error</span>) {
+<a id="L78" href="#L78" class="br">78 </a>    <span class="kwrd">final</span> <span class="kwrd">switch</span> (<span class="hid">error</span>) {
+<a id="L79" href="#L79" class="br">79 </a>    <span class="kwrd">case</span> <a href="grain.cublas.d.html#L15" title="grain.cublas.CUBLAS_STATUS_SUCCESS" class="hid">CUBLAS_STATUS_SUCCESS</a>:
+<a id="L80" href="#L80" class="br">80 </a>        <span class="kwrd">return</span> <span class="str">&quot;CUBLAS_STATUS_SUCCESS&quot;</span>;
+<a id="L81" href="#L81" class="br">81 </a>
+<a id="L82" href="#L82" class="br">82 </a>    <span class="kwrd">case</span> <span class="hid">CUBLAS_STATUS_NOT_INITIALIZED</span>:
+<a id="L83" href="#L83" class="br">83 </a>        <span class="kwrd">return</span> <span class="str">&quot;CUBLAS_STATUS_NOT_INITIALIZED&quot;</span>;
+<a id="L84" href="#L84" class="br">84 </a>
+<a id="L85" href="#L85" class="br">85 </a>    <span class="kwrd">case</span> <span class="hid">CUBLAS_STATUS_ALLOC_FAILED</span>:
+<a id="L86" href="#L86" class="br">86 </a>        <span class="kwrd">return</span> <span class="str">&quot;CUBLAS_STATUS_ALLOC_FAILED&quot;</span>;
+<a id="L87" href="#L87" class="br">87 </a>
+<a id="L88" href="#L88" class="br">88 </a>    <span class="kwrd">case</span> <span class="hid">CUBLAS_STATUS_INVALID_VALUE</span>:
+<a id="L89" href="#L89" class="br">89 </a>        <span class="kwrd">return</span> <span class="str">&quot;CUBLAS_STATUS_INVALID_VALUE&quot;</span>;
+<a id="L90" href="#L90" class="br">90 </a>
+<a id="L91" href="#L91" class="br">91 </a>    <span class="kwrd">case</span> <span class="hid">CUBLAS_STATUS_ARCH_MISMATCH</span>:
+<a id="L92" href="#L92" class="br">92 </a>        <span class="kwrd">return</span> <span class="str">&quot;CUBLAS_STATUS_ARCH_MISMATCH&quot;</span>;
+<a id="L93" href="#L93" class="br">93 </a>
+<a id="L94" href="#L94" class="br">94 </a>    <span class="kwrd">case</span> <span class="hid">CUBLAS_STATUS_MAPPING_ERROR</span>:
+<a id="L95" href="#L95" class="br">95 </a>        <span class="kwrd">return</span> <span class="str">&quot;CUBLAS_STATUS_MAPPING_ERROR&quot;</span>;
+<a id="L96" href="#L96" class="br">96 </a>
+<a id="L97" href="#L97" class="br">97 </a>    <span class="kwrd">case</span> <span class="hid">CUBLAS_STATUS_EXECUTION_FAILED</span>:
+<a id="L98" href="#L98" class="br">98 </a>        <span class="kwrd">return</span> <span class="str">&quot;CUBLAS_STATUS_EXECUTION_FAILED&quot;</span>;
+<a id="L99" href="#L99" class="br">99 </a>
+<a id="L100" href="#L100" class="br">100 </a>    <span class="kwrd">case</span> <span class="hid">CUBLAS_STATUS_INTERNAL_ERROR</span>:
+<a id="L101" href="#L101" class="br">101 </a>        <span class="kwrd">return</span> <span class="str">&quot;CUBLAS_STATUS_INTERNAL_ERROR&quot;</span>;
+<a id="L102" href="#L102" class="br">102 </a>    }
+<a id="L103" href="#L103" class="br">103 </a>}</pre></div>
+        <div id="page-nav">
+        <div id="source-navigation"><div class="list-holder"><ul><li><a href="../grain.cublas.html" class="docs">[Docs] </a><a href="#L1">grain.cublas</a><ul><li><a href="#L5">derelict.cuda</a></li><li><a href="../grain.cublas.cublasStatus_t.html" class="docs">[Docs] </a><a href="#L13">cublasStatus_t</a></li><li><a href="../grain.cublas.CUBLAS_STATUS_SUCCESS.html" class="docs">[Docs] </a><a href="#L15">CUBLAS_STATUS_SUCCESS</a></li><li><a href="../grain.cublas.cublasContext.html" class="docs">[Docs] </a><a href="#L29">cublasContext</a></li><li><a href="../grain.cublas.cublasHandle_t.html" class="docs">[Docs] </a><a href="#L31">cublasHandle_t</a></li><li><a href="../grain.cublas.cublasOperation_t.html" class="docs">[Docs] </a><a href="#L33">cublasOperation_t</a></li><li><a href="../grain.cublas.CUBLAS_OP_N.html" class="docs">[Docs] </a><a href="#L35">CUBLAS_OP_N</a></li><li><a href="../grain.cublas.cublasCreate_v2.html" class="docs">[Docs] </a><a href="#L44">cublasCreate_v2</a></li><li><a href="../grain.cublas.cublasDestroy_v2.html" class="docs">[Docs] </a><a href="#L46">cublasDestroy_v2</a></li><li><a href="../grain.cublas.cublasSgemm_v2.html" class="docs">[Docs] </a><a href="#L48">cublasSgemm_v2</a></li><li><a href="../grain.cublas.cublasDgemm_v2.html" class="docs">[Docs] </a><a href="#L65">cublasDgemm_v2</a></li><li><a href="../grain.cublas.cublasSaxpy_v2.html" class="docs">[Docs] </a><a href="#L70">cublasSaxpy_v2</a></li><li><a href="../grain.cublas.cublasDaxpy_v2.html" class="docs">[Docs] </a><a href="#L73">cublasDaxpy_v2</a></li><li><a href="../grain.cublas.cublasGetErrorEnum.html" class="docs">[Docs] </a><a href="#L77">cublasGetErrorEnum</a></li></ul></li></ul></div></div></div>
+    </div>
+    <div id="page-footer">
+        Distributed under <a href="https://www.boost.org/users/license.html">BSL-1.0</a>.
+        Copyright <a href="https://shigekikarita.github.io">Shigeki Karita</a> 2018.
+        Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a>
+    </div>
+</body>
+</html>

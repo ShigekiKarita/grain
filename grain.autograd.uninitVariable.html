@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>uninitVariable (grain.autograd.uninitVariable)</title>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+        <link rel="stylesheet" href="style.css" />
+        <script type="text/javascript" src="script.js"></script>
+
+    
+    <link rel="prefetch" href="search-results.html" />
+</head>
+<body>
+    <div id="page-header">
+        <div id="logotype">
+        <span>Documentation</span>
+        <nav>
+            <a href="https://github.com/ShigekiKarita/grain">GitHub</a>
+            <a href="https://github.com/ShigekiKarita/grain/tree/master/example">Example</a>
+            <a href="http://dlang.org/">Dlang.org</a>
+        </nav>
+        </div>
+
+        <form action="search-docs.html" id="search">
+            <input type="search" placeholder="Find a symbol name..." name="searchTerm" />
+            <input type="submit" value="Go" />
+        </form>
+    </div>
+    <div id="page-body">
+        <div id="page-content">
+        <h1>uninitVariable</h1><div class="breadcrumbs"><a href="grain.html" class="breadcrumb">grain</a><a href="grain.autograd.html" class="breadcrumb">autograd</a></div><div><div class="documentation-comment synopsis"><div><p>create new variable with uninitialized array of shape on CPU/CUDA</p></div></div></div><div class="annotated-prototype"><div class="function-prototype"><div class="attributes"></div><div class="return-type"><a href="http://dpldocs.info/auto-function-return-prototype" class="lang-feature">auto</a> </div><div class="function-name">uninitVariable</div><div class="template-parameters">(<div class="parameters-list toplevel"><div class="template-parameter-item parameter-item">	<span><span data-ident="T" class="name">T</span></span></div><div class="template-parameter-item parameter-item">	<span><a href="http://dpldocs.info/template-alias-parameter" class="lang-feature">alias</a> <span data-ident="S" class="name">S</span> = <a data-ident="HostStorage" href="grain.autograd.HostStorage.html" title="grain.autograd.HostStorage" class="name">HostStorage</a></span></div><div class="template-parameter-item parameter-item">	<span><span data-ident="size_t" class="name">size_t</span> <span data-ident="dim" class="name">dim</span></span></div></div>)</div><div class="runtime-parameters">(<div class="parameters-list toplevel"><div class="runtime-parameter-item parameter-item"><span class="parameter-type-holder"><span class="parameter-type"><span class="builtin-type">uint</span>[<span data-ident="dim" class="name">dim</span>]</span></span> <span data-ident="shape" class="parameter-name name"><a href="#param-shape">shape</a></span></div><span class="comma">,</span><div class="runtime-parameter-item parameter-item"><span class="parameter-type-holder"><span class="parameter-type"><span class="builtin-type">bool</span></span></span> <span data-ident="requiresGrad" class="parameter-name name"><a href="#param-requiresGrad">requiresGrad</a></span><span class="parameter-default-value">&#160;=&#160;false</span></div></div>)</div><div class="function-contracts"></div></div></div><div><h2 id="examples"><a href="#examples" class="header-anchor">Examples</a></h2><div class="documentation-comment"><div></div></div><div class="unittest-example-holder"><div class="documentation-comment"></div><pre class="d_code highlighted with-line-wrappers"><span class="br">1 </span><span class="kwrd">import</span> <span class="hid">std</span>.<span class="hid">stdio</span>;
+<span class="br">2 </span><span class="kwrd">import</span> <span class="hid">numir</span>;
+<span class="br">3 </span><span class="kwrd">import</span> <span class="hid">mir</span>.<span class="hid">ndslice</span>;
+<span class="br">4 </span>
+<span class="br">5 </span><span class="kwrd">auto</span> <span class="hid">x</span> = <span class="hid">numir</span>.<span class="hid">zeros</span>(<span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>).<span class="hid">universal</span>;
+<span class="br">6 </span><span class="kwrd">auto</span> <span class="hid">y</span> = <span class="hid">uninitVariable</span>!<span class="type">float</span>([<span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>]);
+<span class="br">7 </span><span class="kwrd">assert</span>(<span class="hid">x</span>.<span class="hid">strides</span> == <span class="hid">y</span>.<span class="hid">strides</span>);</pre></div><h2 id="meta"><a href="#meta" class="header-anchor">Meta</a></h2><div class="documentation-comment source-section other-section"><h3 id="source"><a href="#source" class="header-anchor">Source</a></h3><div><p><a href="source/grain.autograd.d.html#L53">See Implementation</a><br /></p></div></div></div></div>
+        <div id="page-nav"><a href="grain.html" class="parent">grain</a><a href="grain.autograd.html" class="parent">autograd</a>
+        <span class="type-separator">aliases</span><ul><li><a href="grain.autograd.ElementType.html" class="alias">ElementType</a></li><li><a href="grain.autograd.HostStorage.html" class="alias">HostStorage</a></li></ul><span class="type-separator">functions</span><ul><li><a href="grain.autograd.gradSlice.html" class="function">gradSlice</a></li><li><a href="grain.autograd.iterVariables.html" class="function">iterVariables</a></li><li><a href="grain.autograd.length.html" class="function">length</a></li><li><a href="grain.autograd.refIterVariables.html" class="function">refIterVariables</a></li><li><a href="grain.autograd.to.1.html" class="function">to</a></li><li><a href="grain.autograd.uninit.1.html" class="function">uninit</a></li><li><a href="grain.autograd.uninitVariable.html" class="function current">uninitVariable</a></li><li><a href="grain.autograd.variable.1.html" class="function">variable</a></li><li><a href="grain.autograd.zero_.html" class="function">zero_</a></li><li><a href="grain.autograd.zeros.html" class="function">zeros</a></li></ul><span class="type-separator">structs</span><ul><li><a href="grain.autograd.BackProp.html" class="struct">BackProp</a></li><li><a href="grain.autograd.UntypedVariable.html" class="struct">UntypedVariable</a></li><li><a href="grain.autograd.Variable.html" class="struct">Variable</a></li></ul><span class="type-separator">variables</span><ul><li><a href="grain.autograd.DimensionCount.html" class="variable">DimensionCount</a></li><li><a href="grain.autograd.isHost.html" class="variable">isHost</a></li><li><a href="grain.autograd.isVariable.html" class="variable">isVariable</a></li></ul></div>
+    </div>
+    <div id="page-footer">
+        Distributed under <a href="https://www.boost.org/users/license.html">BSL-1.0</a>.
+        Copyright <a href="https://shigekikarita.github.io">Shigeki Karita</a> 2018.
+        Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a>
+    </div>
+</body>
+</html>

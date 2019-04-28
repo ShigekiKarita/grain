@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>grain.warpctc source code</title>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+        <link rel="stylesheet" href="../style.css" />
+        <script type="text/javascript" src="../script.js"></script>
+
+    
+    <link rel="prefetch" href="../search-results.html" />
+</head>
+<body>
+    <div id="page-header">
+        <div id="logotype">
+        <span>Documentation</span>
+        <nav>
+            <a href="https://github.com/ShigekiKarita/grain">GitHub</a>
+            <a href="https://github.com/ShigekiKarita/grain/tree/master/example">Example</a>
+            <a href="http://dlang.org/">Dlang.org</a>
+        </nav>
+        </div>
+
+        <form action="search-docs.html" id="search">
+            <input type="search" placeholder="Find a symbol name..." name="searchTerm" />
+            <input type="submit" value="Go" />
+        </form>
+    </div>
+    <div id="page-body">
+        <div id="page-content">
+        <pre class="d_code highlighted with-line-wrappers"><a id="L1" href="#L1" class="br">1 </a><span class="kwrd">module</span> <span class="hid">grain.warpctc</span>;
+<a id="L2" href="#L2" class="br">2 </a>
+<a id="L3" href="#L3" class="br">3 </a><span class="kwrd">extern</span> (<span class="hid">C</span>):
+<a id="L4" href="#L4" class="br">4 </a>
+<a id="L5" href="#L5" class="br">5 </a><span class="com">//forward declare of CUDA typedef to avoid needing to pull in CUDA headers</span>
+<a id="L6" href="#L6" class="br">6 </a><span class="kwrd">struct</span> <a href="grain.warpctc.d.html#L6" title="grain.warpctc.CUstream_st" class="hid">CUstream_st</a>;
+<a id="L7" href="#L7" class="br">7 </a><span class="kwrd">alias</span> <a href="grain.warpctc.d.html#L7" title="grain.warpctc.CUstream" class="hid">CUstream</a> = <a href="grain.warpctc.d.html#L6" title="grain.warpctc.CUstream_st" class="hid">CUstream_st</a>*;
+<a id="L8" href="#L8" class="br">8 </a>
+<a id="L9" href="#L9" class="br">9 </a><span class="kwrd">alias</span> <a href="grain.warpctc.d.html#L9" title="grain.warpctc.ctcStatus_t" class="hid">ctcStatus_t</a> = <span class="type">int</span>;
+<a id="L10" href="#L10" class="br">10 </a><span class="kwrd">enum</span> : <a href="grain.warpctc.d.html#L9" title="grain.warpctc.ctcStatus_t" class="hid">ctcStatus_t</a>
+<a id="L11" href="#L11" class="br">11 </a>{
+<a id="L12" href="#L12" class="br">12 </a>    <a href="grain.warpctc.d.html#L10" title="grain.warpctc.CTC_STATUS_SUCCESS" class="hid">CTC_STATUS_SUCCESS</a> = <span class="num">0</span>,
+<a id="L13" href="#L13" class="br">13 </a>    <span class="hid">CTC_STATUS_MEMOPS_FAILED</span> = <span class="num">1</span>,
+<a id="L14" href="#L14" class="br">14 </a>    <span class="hid">CTC_STATUS_INVALID_VALUE</span> = <span class="num">2</span>,
+<a id="L15" href="#L15" class="br">15 </a>    <span class="hid">CTC_STATUS_EXECUTION_FAILED</span> = <span class="num">3</span>,
+<a id="L16" href="#L16" class="br">16 </a>    <span class="hid">CTC_STATUS_UNKNOWN_ERROR</span> = <span class="num">4</span>
+<a id="L17" href="#L17" class="br">17 </a>}
+<a id="L18" href="#L18" class="br">18 </a>
+<a id="L19" href="#L19" class="br">19 </a><span class="com">/** Returns a single integer which specifies the API version of the warpctc library */</span>
+<a id="L20" href="#L20" class="br">20 </a><span class="type">int</span> <a href="grain.warpctc.d.html#L20" title="grain.warpctc.get_warpctc_version" class="hid">get_warpctc_version</a>();
+<a id="L21" href="#L21" class="br">21 </a>
+<a id="L22" href="#L22" class="br">22 </a><span class="com">/**
+<a id="L23" href="#L23" class="br">23 </a>Returns a string containing a description of status that was passed in
+<a id="L24" href="#L24" class="br">24 </a>
+<a id="L25" href="#L25" class="br">25 </a>Params:
+<a id="L26" href="#L26" class="br">26 </a>    status = identifies which string should be returned
+<a id="L27" href="#L27" class="br">27 </a>
+<a id="L28" href="#L28" class="br">28 </a>Returns: C style string containing the text description
+<a id="L29" href="#L29" class="br">29 </a> */</span>
+<a id="L30" href="#L30" class="br">30 </a><span class="kwrd">const</span>(<span class="type">char</span>)* <a href="grain.warpctc.d.html#L30" title="grain.warpctc.ctcGetStatusString" class="hid">ctcGetStatusString</a>(<a href="grain.warpctc.d.html#L9" title="grain.warpctc.ctcStatus_t" class="hid">ctcStatus_t</a> <span class="hid">status</span>);
+<a id="L31" href="#L31" class="br">31 </a>
+<a id="L32" href="#L32" class="br">32 </a><span class="kwrd">alias</span> <a href="grain.warpctc.d.html#L32" title="grain.warpctc.ctcComputeLocation" class="hid">ctcComputeLocation</a> = <span class="type">int</span>;
+<a id="L33" href="#L33" class="br">33 </a><span class="kwrd">enum</span> : <a href="grain.warpctc.d.html#L32" title="grain.warpctc.ctcComputeLocation" class="hid">ctcComputeLocation</a>
+<a id="L34" href="#L34" class="br">34 </a>{
+<a id="L35" href="#L35" class="br">35 </a>    <a href="grain.warpctc.d.html#L33" title="grain.warpctc.CTC_CPU" class="hid">CTC_CPU</a> = <span class="num">0</span>,
+<a id="L36" href="#L36" class="br">36 </a>    <span class="hid">CTC_GPU</span> = <span class="num">1</span>
+<a id="L37" href="#L37" class="br">37 </a>}
+<a id="L38" href="#L38" class="br">38 </a>
+<a id="L39" href="#L39" class="br">39 </a><span class="com">/**
+<a id="L40" href="#L40" class="br">40 </a>Structure used for options to the CTC compution.
+<a id="L41" href="#L41" class="br">41 </a>
+<a id="L42" href="#L42" class="br">42 </a>Applications should zero out the array using memset and sizeof(struct
+<a id="L43" href="#L43" class="br">43 </a> ctcOptions) in C or default initialization (e.g. 'ctcOptions
+<a id="L44" href="#L44" class="br">44 </a>options{};' or 'auto options = ctcOptions{}') in C++ to ensure
+<a id="L45" href="#L45" class="br">45 </a>forward compatibility with added options. */</span>
+<a id="L46" href="#L46" class="br">46 </a><span class="kwrd">struct</span> <a href="grain.warpctc.d.html#L46" title="grain.warpctc.ctcOptions" class="hid">ctcOptions</a>
+<a id="L47" href="#L47" class="br">47 </a>{
+<a id="L48" href="#L48" class="br">48 </a>    <span class="com">/// indicates where the ctc calculation should take place {CTC_CPU | CTC_GPU}</span>
+<a id="L49" href="#L49" class="br">49 </a>    <a href="grain.warpctc.d.html#L32" title="grain.warpctc.ctcComputeLocation" class="hid">ctcComputeLocation</a> <span class="hid">loc</span>;
+<a id="L50" href="#L50" class="br">50 </a>    <span class="kwrd">union</span>
+<a id="L51" href="#L51" class="br">51 </a>    {
+<a id="L52" href="#L52" class="br">52 </a>        <span class="com">/// used when loc == CTC_CPU, the maximum number of threads that can be used</span>
+<a id="L53" href="#L53" class="br">53 </a>        <span class="type">uint</span> <span class="hid">num_threads</span>;
+<a id="L54" href="#L54" class="br">54 </a>
+<a id="L55" href="#L55" class="br">55 </a>        <span class="com">/// used when loc == CTC_GPU, which stream the kernels should be launched in</span>
+<a id="L56" href="#L56" class="br">56 </a>        <a href="grain.warpctc.d.html#L7" title="grain.warpctc.CUstream" class="hid">CUstream</a> <span class="hid">stream</span>;
+<a id="L57" href="#L57" class="br">57 </a>    };
+<a id="L58" href="#L58" class="br">58 </a>
+<a id="L59" href="#L59" class="br">59 </a>    <span class="com">/// the label value/index that the CTC calculation should use as the blank label</span>
+<a id="L60" href="#L60" class="br">60 </a>    <span class="type">int</span> <span class="hid">blank_label</span>;
+<a id="L61" href="#L61" class="br">61 </a>};
+<a id="L62" href="#L62" class="br">62 </a>
+<a id="L63" href="#L63" class="br">63 </a>
+<a id="L64" href="#L64" class="br">64 </a>
+<a id="L65" href="#L65" class="br">65 </a><span class="com">/** Compute the connectionist temporal classification loss between a sequence
+<a id="L66" href="#L66" class="br">66 </a> *  of probabilities and a ground truth labeling.  Optionally compute the
+<a id="L67" href="#L67" class="br">67 </a> *  gradient with respect to the inputs.
+<a id="L68" href="#L68" class="br">68 </a> * \param [in] activations pointer to the activations in either CPU or GPU
+<a id="L69" href="#L69" class="br">69 </a> *             addressable memory, depending on info.  We assume a fixed
+<a id="L70" href="#L70" class="br">70 </a> *             memory layout for this 3 dimensional tensor, which has dimension
+<a id="L71" href="#L71" class="br">71 </a> *             (t, n, p), where t is the time index, n is the minibatch index,
+<a id="L72" href="#L72" class="br">72 </a> *             and p indexes over probabilities of each symbol in the alphabet.
+<a id="L73" href="#L73" class="br">73 </a> *             The memory layout is (t, n, p) in C order (slowest to fastest changing
+<a id="L74" href="#L74" class="br">74 </a> *             index, aka row-major), or (p, n, t) in Fortran order (fastest to slowest
+<a id="L75" href="#L75" class="br">75 </a> *             changing index, aka column-major). We also assume strides are equal to
+<a id="L76" href="#L76" class="br">76 </a> *             dimensions - there is no padding between dimensions.
+<a id="L77" href="#L77" class="br">77 </a> *             More precisely, element (t, n, p), for a problem with mini_batch examples
+<a id="L78" href="#L78" class="br">78 </a> *             in the mini batch, and alphabet_size symbols in the alphabet, is located at:
+<a id="L79" href="#L79" class="br">79 </a> *             activations[(t * mini_batch + n) * alphabet_size + p]
+<a id="L80" href="#L80" class="br">80 </a> * \param [out] gradients if not NULL, then gradients are computed.  Should be
+<a id="L81" href="#L81" class="br">81 </a> *              allocated in the same memory space as probs and memory
+<a id="L82" href="#L82" class="br">82 </a> *              ordering is identical.
+<a id="L83" href="#L83" class="br">83 </a> * \param [in]  flat_labels Always in CPU memory.  A concatenation
+<a id="L84" href="#L84" class="br">84 </a> *              of all the labels for the minibatch.
+<a id="L85" href="#L85" class="br">85 </a> * \param [in]  label_lengths Always in CPU memory. The length of each label
+<a id="L86" href="#L86" class="br">86 </a> *              for each example in the minibatch.
+<a id="L87" href="#L87" class="br">87 </a> * \param [in]  input_lengths Always in CPU memory.  The number of time steps
+<a id="L88" href="#L88" class="br">88 </a> *              for each sequence in the minibatch.
+<a id="L89" href="#L89" class="br">89 </a> * \param [in]  alphabet_size The number of possible output symbols.  There
+<a id="L90" href="#L90" class="br">90 </a> *              should be this many probabilities for each time step.
+<a id="L91" href="#L91" class="br">91 </a> * \param [in]  mini_batch How many examples in a minibatch.
+<a id="L92" href="#L92" class="br">92 </a> * \param [out] costs Always in CPU memory.  The cost of each example in the
+<a id="L93" href="#L93" class="br">93 </a> *              minibatch.
+<a id="L94" href="#L94" class="br">94 </a> * \param [in,out] workspace In same memory space as probs. Should be of
+<a id="L95" href="#L95" class="br">95 </a> *                 size requested by get_workspace_size.
+<a id="L96" href="#L96" class="br">96 </a> * \param [in]  options see struct ctcOptions
+<a id="L97" href="#L97" class="br">97 </a> *
+<a id="L98" href="#L98" class="br">98 </a> *  \return Status information
+<a id="L99" href="#L99" class="br">99 </a> *
+<a id="L100" href="#L100" class="br">100 </a> * */</span>
+<a id="L101" href="#L101" class="br">101 </a><a href="grain.warpctc.d.html#L9" title="grain.warpctc.ctcStatus_t" class="hid">ctcStatus_t</a> <a href="grain.warpctc.d.html#L101" title="grain.warpctc.compute_ctc_loss" class="hid">compute_ctc_loss</a>(<span class="kwrd">const</span>(<span class="type">float</span>)* <span class="hid">activations</span>,
+<a id="L102" href="#L102" class="br">102 </a>                             <span class="type">float</span>* <span class="hid">gradients</span>,
+<a id="L103" href="#L103" class="br">103 </a>                             <span class="kwrd">const</span>(<span class="type">int</span>)* <span class="hid">flat_labels</span>,
+<a id="L104" href="#L104" class="br">104 </a>                             <span class="kwrd">const</span>(<span class="type">int</span>)* <span class="hid">label_lengths</span>,
+<a id="L105" href="#L105" class="br">105 </a>                             <span class="kwrd">const</span>(<span class="type">int</span>)* <span class="hid">input_lengths</span>,
+<a id="L106" href="#L106" class="br">106 </a>                             <span class="type">int</span> <span class="hid">alphabet_size</span>,
+<a id="L107" href="#L107" class="br">107 </a>                             <span class="type">int</span> <span class="hid">minibatch</span>,
+<a id="L108" href="#L108" class="br">108 </a>                             <span class="type">float</span> *<span class="hid">costs</span>,
+<a id="L109" href="#L109" class="br">109 </a>                             <span class="type">void</span> *<span class="hid">workspace</span>,
+<a id="L110" href="#L110" class="br">110 </a>                             <a href="grain.warpctc.d.html#L46" title="grain.warpctc.ctcOptions" class="hid">ctcOptions</a> <span class="hid">options</span>);
+<a id="L111" href="#L111" class="br">111 </a>
+<a id="L112" href="#L112" class="br">112 </a>
+<a id="L113" href="#L113" class="br">113 </a><span class="com">/** For a given set of labels and minibatch size return the required workspace
+<a id="L114" href="#L114" class="br">114 </a> *  size.  This will need to be allocated in the same memory space as your
+<a id="L115" href="#L115" class="br">115 </a> *  probabilities.
+<a id="L116" href="#L116" class="br">116 </a> * \param [in]  label_lengths Always in CPU memory. The length of each label
+<a id="L117" href="#L117" class="br">117 </a> *              for each example in the minibatch.
+<a id="L118" href="#L118" class="br">118 </a> * \param [in]  input_lengths Always in CPU memory.  The number of time steps
+<a id="L119" href="#L119" class="br">119 </a> *              for each sequence in the minibatch.
+<a id="L120" href="#L120" class="br">120 </a> * \param [in]  alphabet_size How many symbols in the alphabet or, equivalently,
+<a id="L121" href="#L121" class="br">121 </a> *              the number of probabilities at each time step
+<a id="L122" href="#L122" class="br">122 </a> * \param [in]  mini_batch How many examples in a minibatch.
+<a id="L123" href="#L123" class="br">123 </a> * \param [in]  info see struct ctcOptions
+<a id="L124" href="#L124" class="br">124 </a> * \param [out] size_bytes is pointer to a scalar where the memory
+<a id="L125" href="#L125" class="br">125 </a> *              requirement in bytes will be placed. This memory should be allocated
+<a id="L126" href="#L126" class="br">126 </a> *              at the same place, CPU or GPU, that the probs are in
+<a id="L127" href="#L127" class="br">127 </a> *
+<a id="L128" href="#L128" class="br">128 </a> *  \return Status information
+<a id="L129" href="#L129" class="br">129 </a> **/</span>
+<a id="L130" href="#L130" class="br">130 </a><a href="grain.warpctc.d.html#L9" title="grain.warpctc.ctcStatus_t" class="hid">ctcStatus_t</a> <a href="grain.warpctc.d.html#L130" title="grain.warpctc.get_workspace_size" class="hid">get_workspace_size</a>(<span class="kwrd">const</span>(<span class="type">int</span>)* <span class="hid">label_lengths</span>,
+<a id="L131" href="#L131" class="br">131 </a>                               <span class="kwrd">const</span>(<span class="type">int</span>)* <span class="hid">input_lengths</span>,
+<a id="L132" href="#L132" class="br">132 </a>                               <span class="type">int</span> <span class="hid">alphabet_size</span>, <span class="type">int</span> <span class="hid">minibatch</span>,
+<a id="L133" href="#L133" class="br">133 </a>                               <a href="grain.warpctc.d.html#L46" title="grain.warpctc.ctcOptions" class="hid">ctcOptions</a> <span class="hid">info</span>,
+<a id="L134" href="#L134" class="br">134 </a>                               <span class="hid">size_t</span>* <span class="hid">size_bytes</span>);
+<a id="L135" href="#L135" class="br">135 </a>
+<a id="L136" href="#L136" class="br">136 </a>
+<a id="L137" href="#L137" class="br">137 </a><span class="com">// Numerically stable softmax for a minibatch of 1</span>
+<a id="L138" href="#L138" class="br">138 </a><span class="kwrd">private</span> <span class="type">void</span> <a href="grain.warpctc.d.html#L138" title="grain.warpctc.softmax" class="hid">softmax</a>(<span class="kwrd">const</span>(<span class="type">float</span>)* <span class="hid">acts</span>, <span class="type">int</span> <span class="hid">alphabet_size</span>, <span class="type">int</span> <span class="hid">T</span>, <span class="type">float</span> *<span class="hid">probs</span>)
+<a id="L139" href="#L139" class="br">139 </a>{
+<a id="L140" href="#L140" class="br">140 </a>    <span class="kwrd">import</span> <span class="hid">std.math</span>;
+<a id="L141" href="#L141" class="br">141 </a>    <span class="kwrd">for</span> (<span class="type">int</span> <span class="hid">t</span> = <span class="num">0</span>; <span class="hid">t</span> &lt; <span class="hid">T</span>; ++<span class="hid">t</span>)
+<a id="L142" href="#L142" class="br">142 </a>    {
+<a id="L143" href="#L143" class="br">143 </a>        <span class="type">float</span> <span class="hid">max_activation</span> = -<span class="type">float</span>.<span class="hid">infinity</span>;
+<a id="L144" href="#L144" class="br">144 </a>        <span class="kwrd">for</span> (<span class="type">int</span> <span class="hid">a</span> = <span class="num">0</span>; <span class="hid">a</span> &lt; <span class="hid">alphabet_size</span>; ++<span class="hid">a</span>)
+<a id="L145" href="#L145" class="br">145 </a>            <span class="hid">max_activation</span> = <span class="hid">fmax</span>(<span class="hid">max_activation</span>, <span class="hid">acts</span>[<span class="hid">t</span>*<span class="hid">alphabet_size</span> + <span class="hid">a</span>]);
+<a id="L146" href="#L146" class="br">146 </a>
+<a id="L147" href="#L147" class="br">147 </a>        <span class="type">float</span> <span class="hid">denom</span> = <span class="num">0</span>;
+<a id="L148" href="#L148" class="br">148 </a>        <span class="kwrd">for</span> (<span class="type">int</span> <span class="hid">a</span> = <span class="num">0</span>; <span class="hid">a</span> &lt; <span class="hid">alphabet_size</span>; ++<span class="hid">a</span>)
+<a id="L149" href="#L149" class="br">149 </a>            <span class="hid">denom</span> += <span class="hid">exp</span>(<span class="hid">acts</span>[<span class="hid">t</span>*<span class="hid">alphabet_size</span> + <span class="hid">a</span>] - <span class="hid">max_activation</span>);
+<a id="L150" href="#L150" class="br">150 </a>
+<a id="L151" href="#L151" class="br">151 </a>        <span class="kwrd">for</span> (<span class="type">int</span> <span class="hid">a</span> = <span class="num">0</span>; <span class="hid">a</span> &lt; <span class="hid">alphabet_size</span>; ++<span class="hid">a</span>)
+<a id="L152" href="#L152" class="br">152 </a>            <span class="hid">probs</span>[<span class="hid">t</span>*<span class="hid">alphabet_size</span> + <span class="hid">a</span>] = <span class="hid">exp</span>(<span class="hid">acts</span>[<span class="hid">t</span>*<span class="hid">alphabet_size</span> + <span class="hid">a</span>] - <span class="hid">max_activation</span>) / <span class="hid">denom</span>;
+<a id="L153" href="#L153" class="br">153 </a>    }
+<a id="L154" href="#L154" class="br">154 </a>}
+<a id="L155" href="#L155" class="br">155 </a>
+<a id="L156" href="#L156" class="br">156 </a>
+<a id="L157" href="#L157" class="br">157 </a><span class="type">void</span> <a href="grain.warpctc.d.html#L157" title="grain.warpctc.throw_on_error" class="hid">throw_on_error</a>(<a href="grain.warpctc.d.html#L9" title="grain.warpctc.ctcStatus_t" class="hid">ctcStatus_t</a> <span class="hid">status</span>, <span class="type">string</span> <span class="hid">message</span>)
+<a id="L158" href="#L158" class="br">158 </a>{
+<a id="L159" href="#L159" class="br">159 </a>    <span class="kwrd">import</span> <span class="hid">std.format</span> : <span class="hid">format</span>;
+<a id="L160" href="#L160" class="br">160 </a>    <span class="kwrd">import</span> <span class="hid">std.</span>.<span class="type">string</span> : <span class="hid">fromStringz</span>;
+<a id="L161" href="#L161" class="br">161 </a>
+<a id="L162" href="#L162" class="br">162 </a>    <span class="kwrd">assert</span>(<span class="hid">status</span> == <a href="grain.warpctc.d.html#L10" title="grain.warpctc.CTC_STATUS_SUCCESS" class="hid">CTC_STATUS_SUCCESS</a>,
+<a id="L163" href="#L163" class="br">163 </a>           <span class="hid">format</span>!<span class="str">&quot;%s, stat = %s&quot;</span>(<span class="hid">message</span>, <a href="grain.warpctc.d.html#L30" title="grain.warpctc.ctcGetStatusString" class="hid">ctcGetStatusString</a>(<span class="hid">status</span>).<span class="hid">fromStringz</span>));
+<a id="L164" href="#L164" class="br">164 </a>}
+<a id="L165" href="#L165" class="br">165 </a>
+<a id="L166" href="#L166" class="br">166 </a>
+<a id="L167" href="#L167" class="br">167 </a><span class="kwrd">unittest</span>
+<a id="L168" href="#L168" class="br">168 </a>{
+<a id="L169" href="#L169" class="br">169 </a>    <span class="kwrd">import</span> <span class="hid">std.stdio</span>;
+<a id="L170" href="#L170" class="br">170 </a>    <span class="kwrd">import</span> <span class="hid">std.math</span>;
+<a id="L171" href="#L171" class="br">171 </a>    <span class="kwrd">import</span> <span class="hid">core.stdc.stdlib</span>;
+<a id="L172" href="#L172" class="br">172 </a>    <span class="kwrd">assert</span>(<a href="grain.warpctc.d.html#L20" title="grain.warpctc.get_warpctc_version" class="hid">get_warpctc_version</a>() == <span class="num">2</span>);
+<a id="L173" href="#L173" class="br">173 </a>    <span class="com">// https://github.com/baidu-research/warp-ctc/blob/master/tests/test_cpu.cpp</span>
+<a id="L174" href="#L174" class="br">174 </a>
+<a id="L175" href="#L175" class="br">175 </a>    <span class="kwrd">const</span> <span class="type">int</span> <span class="hid">alphabet_size</span> = <span class="num">5</span>;
+<a id="L176" href="#L176" class="br">176 </a>    <span class="kwrd">const</span> <span class="type">int</span> <span class="hid">T</span> = <span class="num">2</span>;
+<a id="L177" href="#L177" class="br">177 </a>
+<a id="L178" href="#L178" class="br">178 </a>    <span class="type">float</span>[] <span class="hid">activations</span> = [<span class="num">0.1</span>, <span class="num">0.6</span>, <span class="num">0.1</span>, <span class="num">0.1</span>, <span class="num">0.1</span>,
+<a id="L179" href="#L179" class="br">179 </a>                           <span class="num">0.1</span>, <span class="num">0.1</span>, <span class="num">0.6</span>, <span class="num">0.1</span>, <span class="num">0.1</span>];
+<a id="L180" href="#L180" class="br">180 </a>
+<a id="L181" href="#L181" class="br">181 </a>    <span class="com">// Calculate the score analytically</span>
+<a id="L182" href="#L182" class="br">182 </a>    <span class="type">float</span> <span class="hid">expected_score</span>;
+<a id="L183" href="#L183" class="br">183 </a>    {
+<a id="L184" href="#L184" class="br">184 </a>        <span class="kwrd">auto</span> <span class="hid">probs</span> = <span class="kwrd">new</span> <span class="type">float</span>[<span class="hid">activations.length</span>];
+<a id="L185" href="#L185" class="br">185 </a>        <a href="grain.warpctc.d.html#L138" title="grain.warpctc.softmax" class="hid">softmax</a>(<span class="hid">activations.ptr</span>, <span class="hid">alphabet_size</span>, <span class="hid">T</span>, <span class="hid">probs.ptr</span>);
+<a id="L186" href="#L186" class="br">186 </a>
+<a id="L187" href="#L187" class="br">187 </a>        <span class="com">// Score calculation is specific to the given activations above</span>
+<a id="L188" href="#L188" class="br">188 </a>        <span class="hid">expected_score</span> = <span class="hid">probs</span>[<span class="num">1</span>] * <span class="hid">probs</span>[<span class="num">7</span>];
+<a id="L189" href="#L189" class="br">189 </a>    }
+<a id="L190" href="#L190" class="br">190 </a>
+<a id="L191" href="#L191" class="br">191 </a>    <span class="type">int</span>[] <span class="hid">labels</span> = [<span class="num">1</span>, <span class="num">2</span>];
+<a id="L192" href="#L192" class="br">192 </a>    <span class="type">int</span>[] <span class="hid">label_lengths</span> = [<span class="num">2</span>];
+<a id="L193" href="#L193" class="br">193 </a>    <span class="type">int</span>[] <span class="hid">lengths</span> = [<span class="hid">T</span>];
+<a id="L194" href="#L194" class="br">194 </a>
+<a id="L195" href="#L195" class="br">195 </a>    <span class="type">float</span> <span class="hid">score</span>;
+<a id="L196" href="#L196" class="br">196 </a>    <a href="grain.warpctc.d.html#L46" title="grain.warpctc.ctcOptions" class="hid">ctcOptions</a> <span class="hid">options</span>;
+<a id="L197" href="#L197" class="br">197 </a>    <span class="hid">options.loc</span> = <a href="grain.warpctc.d.html#L33" title="grain.warpctc.CTC_CPU" class="hid">CTC_CPU</a>;
+<a id="L198" href="#L198" class="br">198 </a>    <span class="hid">options.num_threads</span> = <span class="num">1</span>;
+<a id="L199" href="#L199" class="br">199 </a>
+<a id="L200" href="#L200" class="br">200 </a>    <span class="hid">size_t</span> <span class="hid">cpu_alloc_bytes</span>;
+<a id="L201" href="#L201" class="br">201 </a>    <a href="grain.warpctc.d.html#L157" title="grain.warpctc.throw_on_error" class="hid">throw_on_error</a>(<a href="grain.warpctc.d.html#L130" title="grain.warpctc.get_workspace_size" class="hid">get_workspace_size</a>(<span class="hid">label_lengths.ptr</span>, <span class="hid">lengths.ptr</span>,
+<a id="L202" href="#L202" class="br">202 </a>                                      <span class="hid">alphabet_size</span>, <span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">lengths.length</span>, <span class="hid">options</span>,
+<a id="L203" href="#L203" class="br">203 </a>                                      &amp;<span class="hid">cpu_alloc_bytes</span>),
+<a id="L204" href="#L204" class="br">204 </a>                   <span class="str">&quot;Error: get_workspace_size in small_test&quot;</span>);
+<a id="L205" href="#L205" class="br">205 </a>
+<a id="L206" href="#L206" class="br">206 </a>    <span class="type">void</span>* <span class="hid">ctc_cpu_workspace</span> = <span class="hid">malloc</span>(<span class="hid">cpu_alloc_bytes</span>);
+<a id="L207" href="#L207" class="br">207 </a>
+<a id="L208" href="#L208" class="br">208 </a>    <a href="grain.warpctc.d.html#L157" title="grain.warpctc.throw_on_error" class="hid">throw_on_error</a>(<a href="grain.warpctc.d.html#L101" title="grain.warpctc.compute_ctc_loss" class="hid">compute_ctc_loss</a>(<span class="hid">activations.ptr</span>, <span class="kwrd">null</span>,
+<a id="L209" href="#L209" class="br">209 </a>                                    <span class="hid">labels.ptr</span>, <span class="hid">label_lengths.ptr</span>,
+<a id="L210" href="#L210" class="br">210 </a>                                    <span class="hid">lengths.ptr</span>,
+<a id="L211" href="#L211" class="br">211 </a>                                    <span class="hid">alphabet_size</span>,
+<a id="L212" href="#L212" class="br">212 </a>                                    <span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">lengths.length</span>,
+<a id="L213" href="#L213" class="br">213 </a>                                    &amp;<span class="hid">score</span>,
+<a id="L214" href="#L214" class="br">214 </a>                                    <span class="hid">ctc_cpu_workspace</span>,
+<a id="L215" href="#L215" class="br">215 </a>                                    <span class="hid">options</span>),
+<a id="L216" href="#L216" class="br">216 </a>                   <span class="str">&quot;Error: compute_ctc_loss in small_test&quot;</span>);
+<a id="L217" href="#L217" class="br">217 </a>
+<a id="L218" href="#L218" class="br">218 </a>    <span class="hid">free</span>(<span class="hid">ctc_cpu_workspace</span>);
+<a id="L219" href="#L219" class="br">219 </a>    <span class="hid">score</span> = <span class="hid">exp</span>(-<span class="hid">score</span>);
+<a id="L220" href="#L220" class="br">220 </a>    <span class="kwrd">const</span> <span class="type">float</span> <span class="hid">eps</span> = <span class="num">1e-6</span>;
+<a id="L221" href="#L221" class="br">221 </a>
+<a id="L222" href="#L222" class="br">222 </a>    <span class="kwrd">const</span> <span class="type">float</span> <span class="hid">lb</span> = <span class="hid">expected_score</span> - <span class="hid">eps</span>;
+<a id="L223" href="#L223" class="br">223 </a>    <span class="kwrd">const</span> <span class="type">float</span> <span class="hid">ub</span> = <span class="hid">expected_score</span> + <span class="hid">eps</span>;
+<a id="L224" href="#L224" class="br">224 </a>    <span class="kwrd">assert</span>(<span class="hid">score</span> &gt; <span class="hid">lb</span> &amp;&amp; <span class="hid">score</span> &lt; <span class="hid">ub</span>);
+<a id="L225" href="#L225" class="br">225 </a>}
+<a id="L226" href="#L226" class="br">226 </a>
+<a id="L227" href="#L227" class="br">227 </a><span class="kwrd">version</span> (<span class="hid">grain_cuda</span>) <span class="kwrd">unittest</span>
+<a id="L228" href="#L228" class="br">228 </a>{
+<a id="L229" href="#L229" class="br">229 </a>    <span class="kwrd">import</span> <span class="hid">derelict.cuda</span>;
+<a id="L230" href="#L230" class="br">230 </a>    <span class="kwrd">import</span> <span class="hid">grain.cuda</span>;
+<a id="L231" href="#L231" class="br">231 </a>    <span class="kwrd">import</span> <span class="hid">std.math</span>;
+<a id="L232" href="#L232" class="br">232 </a>
+<a id="L233" href="#L233" class="br">233 </a>    <span class="kwrd">const</span> <span class="type">int</span> <span class="hid">alphabet_size</span> = <span class="num">5</span>;
+<a id="L234" href="#L234" class="br">234 </a>    <span class="kwrd">const</span> <span class="type">int</span> <span class="hid">T</span> = <span class="num">2</span>;
+<a id="L235" href="#L235" class="br">235 </a>
+<a id="L236" href="#L236" class="br">236 </a>    <span class="type">float</span>[] <span class="hid">activations</span> = [<span class="num">0.1</span>, <span class="num">0.6</span>, <span class="num">0.1</span>, <span class="num">0.1</span>, <span class="num">0.1</span>,
+<a id="L237" href="#L237" class="br">237 </a>                           <span class="num">0.1</span>, <span class="num">0.1</span>, <span class="num">0.6</span>, <span class="num">0.1</span>, <span class="num">0.1</span>];
+<a id="L238" href="#L238" class="br">238 </a>
+<a id="L239" href="#L239" class="br">239 </a>    <span class="com">// Calculate the score analytically</span>
+<a id="L240" href="#L240" class="br">240 </a>    <span class="type">float</span> <span class="hid">expected_score</span>;
+<a id="L241" href="#L241" class="br">241 </a>    {
+<a id="L242" href="#L242" class="br">242 </a>        <span class="kwrd">auto</span> <span class="hid">probs</span> = <span class="kwrd">new</span> <span class="type">float</span>[<span class="hid">activations.length</span>];
+<a id="L243" href="#L243" class="br">243 </a>        <a href="grain.warpctc.d.html#L138" title="grain.warpctc.softmax" class="hid">softmax</a>(<span class="hid">activations.ptr</span>, <span class="hid">alphabet_size</span>, <span class="hid">T</span>, <span class="hid">probs.ptr</span>);
+<a id="L244" href="#L244" class="br">244 </a>
+<a id="L245" href="#L245" class="br">245 </a>        <span class="com">// Score calculation is specific to the given activations above</span>
+<a id="L246" href="#L246" class="br">246 </a>        <span class="hid">expected_score</span> = <span class="hid">probs</span>[<span class="num">1</span>] * <span class="hid">probs</span>[<span class="num">7</span>];
+<a id="L247" href="#L247" class="br">247 </a>    }
+<a id="L248" href="#L248" class="br">248 </a>
+<a id="L249" href="#L249" class="br">249 </a>    <a href="grain.warpctc.d.html#L7" title="grain.warpctc.CUstream" class="hid">CUstream</a> <span class="hid">stream</span>;
+<a id="L250" href="#L250" class="br">250 </a>    <span class="hid">cuStreamCreate</span>(<span class="kwrd">cast</span>(<span class="type">void</span>**) &amp;<span class="hid">stream</span>, <span class="hid">CU_STREAM_DEFAULT</span>);
+<a id="L251" href="#L251" class="br">251 </a>    <span class="kwrd">scope</span> (<span class="hid">exit</span>) <span class="hid">cuStreamDestroy</span>(<span class="hid">stream</span>);
+<a id="L252" href="#L252" class="br">252 </a>    <span class="com">// throw_on_error(cudaStreamCreate(&amp;stream),</span>
+<a id="L253" href="#L253" class="br">253 </a>    <span class="com">//                &quot;cudaStreamCreate&quot;);</span>
+<a id="L254" href="#L254" class="br">254 </a>
+<a id="L255" href="#L255" class="br">255 </a>    <span class="com">// float *activations_gpu;</span>
+<a id="L256" href="#L256" class="br">256 </a>    <span class="kwrd">auto</span> <span class="hid">activations_gpu</span> = <span class="hid">CuPtr</span>!<span class="type">float</span>(<span class="hid">activations</span>);
+<a id="L257" href="#L257" class="br">257 </a>    <span class="com">// throw_on_error(cudaMalloc(cast(void**) &amp;activations_gpu,</span>
+<a id="L258" href="#L258" class="br">258 </a>    <span class="com">//                activations.length * float.sizeof),</span>
+<a id="L259" href="#L259" class="br">259 </a>    <span class="com">//                &quot;cudaMalloc&quot;);</span>
+<a id="L260" href="#L260" class="br">260 </a>    <span class="com">// throw_on_error(cudaMemcpyAsync(activations_gpu, activations.ptr,</span>
+<a id="L261" href="#L261" class="br">261 </a>    <span class="com">//                                activations.length * float.sizeof,</span>
+<a id="L262" href="#L262" class="br">262 </a>    <span class="com">//                                cudaMemcpyHostToDevice, stream),</span>
+<a id="L263" href="#L263" class="br">263 </a>    <span class="com">//                &quot;cudaMemcpyAsync&quot;);</span>
+<a id="L264" href="#L264" class="br">264 </a>
+<a id="L265" href="#L265" class="br">265 </a>    <span class="type">int</span>[] <span class="hid">labels</span> = [<span class="num">1</span>, <span class="num">2</span>];
+<a id="L266" href="#L266" class="br">266 </a>    <span class="type">int</span>[] <span class="hid">label_lengths</span> = [<span class="num">2</span>];
+<a id="L267" href="#L267" class="br">267 </a>    <span class="type">int</span>[] <span class="hid">lengths</span> = [<span class="hid">T</span>];
+<a id="L268" href="#L268" class="br">268 </a>
+<a id="L269" href="#L269" class="br">269 </a>    <span class="type">float</span> <span class="hid">score</span>;
+<a id="L270" href="#L270" class="br">270 </a>
+<a id="L271" href="#L271" class="br">271 </a>    <a href="grain.warpctc.d.html#L46" title="grain.warpctc.ctcOptions" class="hid">ctcOptions</a> <span class="hid">options</span>;
+<a id="L272" href="#L272" class="br">272 </a>    <span class="hid">options.loc</span> = <span class="hid">CTC_GPU</span>;
+<a id="L273" href="#L273" class="br">273 </a>    <span class="hid">options.stream</span> = <span class="kwrd">cast</span>(<a href="grain.warpctc.d.html#L7" title="grain.warpctc.CUstream" class="hid">CUstream</a>) <span class="hid">stream</span>;
+<a id="L274" href="#L274" class="br">274 </a>
+<a id="L275" href="#L275" class="br">275 </a>    <span class="hid">size_t</span> <span class="hid">gpu_alloc_bytes</span>;
+<a id="L276" href="#L276" class="br">276 </a>    <a href="grain.warpctc.d.html#L157" title="grain.warpctc.throw_on_error" class="hid">throw_on_error</a>(<a href="grain.warpctc.d.html#L130" title="grain.warpctc.get_workspace_size" class="hid">get_workspace_size</a>(<span class="hid">label_lengths.ptr</span>, <span class="hid">lengths.ptr</span>,
+<a id="L277" href="#L277" class="br">277 </a>                                      <span class="hid">alphabet_size</span>, <span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">lengths.length</span>, <span class="hid">options</span>,
+<a id="L278" href="#L278" class="br">278 </a>                                      &amp;<span class="hid">gpu_alloc_bytes</span>),
+<a id="L279" href="#L279" class="br">279 </a>                   <span class="str">&quot;Error: get_workspace_size in small_test&quot;</span>);
+<a id="L280" href="#L280" class="br">280 </a>
+<a id="L281" href="#L281" class="br">281 </a>    <span class="com">// char *ctc_gpu_workspace;</span>
+<a id="L282" href="#L282" class="br">282 </a>    <span class="kwrd">auto</span> <span class="hid">ctc_gpu_workspace</span> = <span class="hid">CuPtr</span>!<span class="type">char</span>(<span class="hid">gpu_alloc_bytes</span>);
+<a id="L283" href="#L283" class="br">283 </a>    <span class="com">// throw_on_error(cudaMalloc(cast(void**) &amp;ctc_gpu_workspace, gpu_alloc_bytes),</span>
+<a id="L284" href="#L284" class="br">284 </a>    <span class="com">//                &quot;cudaMalloc&quot;);</span>
+<a id="L285" href="#L285" class="br">285 </a>
+<a id="L286" href="#L286" class="br">286 </a>    <a href="grain.warpctc.d.html#L157" title="grain.warpctc.throw_on_error" class="hid">throw_on_error</a>(<a href="grain.warpctc.d.html#L101" title="grain.warpctc.compute_ctc_loss" class="hid">compute_ctc_loss</a>(<span class="hid">activations_gpu.data</span>, <span class="kwrd">null</span>,
+<a id="L287" href="#L287" class="br">287 </a>                                    <span class="hid">labels.ptr</span>, <span class="hid">label_lengths.ptr</span>,
+<a id="L288" href="#L288" class="br">288 </a>                                    <span class="hid">lengths.ptr</span>,
+<a id="L289" href="#L289" class="br">289 </a>                                    <span class="hid">alphabet_size</span>,
+<a id="L290" href="#L290" class="br">290 </a>                                    <span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">lengths.length</span>,
+<a id="L291" href="#L291" class="br">291 </a>                                    &amp;<span class="hid">score</span>,
+<a id="L292" href="#L292" class="br">292 </a>                                    <span class="hid">ctc_gpu_workspace.data</span>,
+<a id="L293" href="#L293" class="br">293 </a>                                    <span class="hid">options</span>),
+<a id="L294" href="#L294" class="br">294 </a>                   <span class="str">&quot;Error: compute_ctc_loss in small_test&quot;</span>);
+<a id="L295" href="#L295" class="br">295 </a>
+<a id="L296" href="#L296" class="br">296 </a>    <span class="hid">score</span> = <span class="hid">exp</span>(-<span class="hid">score</span>);
+<a id="L297" href="#L297" class="br">297 </a>    <span class="kwrd">const</span> <span class="type">float</span> <span class="hid">eps</span> = <span class="num">1e-6</span>;
+<a id="L298" href="#L298" class="br">298 </a>
+<a id="L299" href="#L299" class="br">299 </a>    <span class="kwrd">const</span> <span class="type">float</span> <span class="hid">lb</span> = <span class="hid">expected_score</span> - <span class="hid">eps</span>;
+<a id="L300" href="#L300" class="br">300 </a>    <span class="kwrd">const</span> <span class="type">float</span> <span class="hid">ub</span> = <span class="hid">expected_score</span> + <span class="hid">eps</span>;
+<a id="L301" href="#L301" class="br">301 </a>
+<a id="L302" href="#L302" class="br">302 </a>    <span class="com">// throw_on_error(cudaFree(activations_gpu),</span>
+<a id="L303" href="#L303" class="br">303 </a>    <span class="com">//                &quot;cudaFree&quot;);</span>
+<a id="L304" href="#L304" class="br">304 </a>    <span class="com">// throw_on_error(cudaFree(ctc_gpu_workspace),</span>
+<a id="L305" href="#L305" class="br">305 </a>    <span class="com">//                &quot;cudaFree&quot;);</span>
+<a id="L306" href="#L306" class="br">306 </a>    <span class="com">// throw_on_error(cudaStreamDestroy(stream),</span>
+<a id="L307" href="#L307" class="br">307 </a>    <span class="com">//                &quot;cudaStreamDestroy&quot;);</span>
+<a id="L308" href="#L308" class="br">308 </a>
+<a id="L309" href="#L309" class="br">309 </a>    <span class="kwrd">assert</span>(<span class="hid">score</span> &gt; <span class="hid">lb</span> &amp;&amp; <span class="hid">score</span> &lt; <span class="hid">ub</span>);
+<a id="L310" href="#L310" class="br">310 </a>}</pre></div>
+        <div id="page-nav">
+        <div id="source-navigation"><div class="list-holder"><ul><li><a href="../grain.warpctc.html" class="docs">[Docs] </a><a href="#L1">grain.warpctc</a><ul><li><a href="#L6">CUstream_st</a></li><li><a href="#L7">CUstream</a></li><li><a href="#L9">ctcStatus_t</a></li><li><a href="#L10">CTC_STATUS_SUCCESS</a></li><li><a href="../grain.warpctc.get_warpctc_version.html" class="docs">[Docs] </a><a href="#L20">get_warpctc_version</a></li><li><a href="../grain.warpctc.ctcGetStatusString.html" class="docs">[Docs] </a><a href="#L30">ctcGetStatusString</a></li><li><a href="#L32">ctcComputeLocation</a></li><li><a href="#L33">CTC_CPU</a></li><li><a href="../grain.warpctc.ctcOptions.html" class="docs">[Docs] </a><a href="#L46">ctcOptions</a><ul><li><a href="../grain.warpctc.ctcOptions.loc.html" class="docs">[Docs] </a><a href="#L49">loc</a></li><li><a href="../grain.warpctc.ctcOptions.__anonymous.html" class="docs">[Docs] </a><a href="#L50">__anonymous</a><ul><li><a href="../grain.warpctc.ctcOptions.__anonymous.num_threads.html" class="docs">[Docs] </a><a href="#L53">num_threads</a></li><li><a href="../grain.warpctc.ctcOptions.__anonymous.stream.html" class="docs">[Docs] </a><a href="#L56">stream</a></li></ul></li><li><a href="../grain.warpctc.ctcOptions.blank_label.html" class="docs">[Docs] </a><a href="#L60">blank_label</a></li></ul></li><li><a href="../grain.warpctc.compute_ctc_loss.html" class="docs">[Docs] </a><a href="#L101">compute_ctc_loss</a></li><li><a href="../grain.warpctc.get_workspace_size.html" class="docs">[Docs] </a><a href="#L130">get_workspace_size</a></li><li><a href="#L138">softmax</a></li><li><a href="#L157">throw_on_error</a></li></ul></li></ul></div></div></div>
+    </div>
+    <div id="page-footer">
+        Distributed under <a href="https://www.boost.org/users/license.html">BSL-1.0</a>.
+        Copyright <a href="https://shigekikarita.github.io">Shigeki Karita</a> 2018.
+        Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a>
+    </div>
+</body>
+</html>

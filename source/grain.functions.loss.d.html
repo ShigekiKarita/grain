@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>grain.functions.loss source code</title>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+        <link rel="stylesheet" href="../style.css" />
+        <script type="text/javascript" src="../script.js"></script>
+
+    
+    <link rel="prefetch" href="../search-results.html" />
+</head>
+<body>
+    <div id="page-header">
+        <div id="logotype">
+        <span>Documentation</span>
+        <nav>
+            <a href="https://github.com/ShigekiKarita/grain">GitHub</a>
+            <a href="https://github.com/ShigekiKarita/grain/tree/master/example">Example</a>
+            <a href="http://dlang.org/">Dlang.org</a>
+        </nav>
+        </div>
+
+        <form action="search-docs.html" id="search">
+            <input type="search" placeholder="Find a symbol name..." name="searchTerm" />
+            <input type="submit" value="Go" />
+        </form>
+    </div>
+    <div id="page-body">
+        <div id="page-content">
+        <pre class="d_code highlighted with-line-wrappers"><a id="L1" href="#L1" class="br">1 </a><span class="com">/**
+<a id="L2" href="#L2" class="br">2 </a>   A module for loss functions that always output scalar values to be minimized.
+<a id="L3" href="#L3" class="br">3 </a>   Loss function is the end of forwardprop and also is the start point of backprop.
+<a id="L4" href="#L4" class="br">4 </a> */</span>
+<a id="L5" href="#L5" class="br">5 </a><span class="kwrd">module</span> <span class="hid">grain.functions.loss</span>;
+<a id="L6" href="#L6" class="br">6 </a>
+<a id="L7" href="#L7" class="br">7 </a><span class="kwrd">import</span> <span class="hid">grain.autograd</span>;
+<a id="L8" href="#L8" class="br">8 </a><span class="kwrd">import</span> <span class="hid">grain.cuda</span>;
+<a id="L9" href="#L9" class="br">9 </a><span class="kwrd">import</span> <span class="hid">grain.functions.common</span>;
+<a id="L10" href="#L10" class="br">10 </a><span class="kwrd">import</span> <span class="hid">grain.utility</span> : <span class="hid">toTuple</span>, <span class="hid">fromTuple</span>, <span class="hid">castArray</span>;
+<a id="L11" href="#L11" class="br">11 </a>
+<a id="L12" href="#L12" class="br">12 </a><span class="kwrd">struct</span> <a href="grain.functions.loss.d.html#L12" title="grain.functions.loss.NegativeLogLikelihood" class="hid">NegativeLogLikelihood</a>(<span class="hid">F</span>, <span class="hid">I</span> = <span class="type">long</span>) {
+<a id="L13" href="#L13" class="br">13 </a>    <span class="com">/++
+<a id="L14" href="#L14" class="br">14 </a>    Compute negative log-likelihood: -logP(y=t)
+<a id="L15" href="#L15" class="br">15 </a>    Params:
+<a id="L16" href="#L16" class="br">16 </a>      logP: log softmax output as prediction. shape: (nBatch, nClass)
+<a id="L17" href="#L17" class="br">17 </a>      targetId: target integer id of class. shape: (nBatch)
+<a id="L18" href="#L18" class="br">18 </a>      +/</span>
+<a id="L19" href="#L19" class="br">19 </a>
+<a id="L20" href="#L20" class="br">20 </a>    <span class="kwrd">mixin</span> <span class="hid">FunctionCommon</span>;
+<a id="L21" href="#L21" class="br">21 </a>
+<a id="L22" href="#L22" class="br">22 </a>    <span class="type">bool</span> <span class="hid">sizeAverage</span> = <span class="kwrd">true</span>;
+<a id="L23" href="#L23" class="br">23 </a>    <span class="type">int</span> <span class="hid">ignoreIndex</span> = -<span class="num">100</span>;
+<a id="L24" href="#L24" class="br">24 </a>    <span class="com">// TODO: bool reduce = true;</span>
+<a id="L25" href="#L25" class="br">25 </a>
+<a id="L26" href="#L26" class="br">26 </a>    <span class="com">// cache for backward</span>
+<a id="L27" href="#L27" class="br">27 </a>    <span class="hid">Variable</span>!(<span class="hid">I</span>, <span class="num">1</span>, <span class="hid">HostStorage</span>) <span class="hid">_htargetId</span>;
+<a id="L28" href="#L28" class="br">28 </a>    <span class="hid">F</span> <span class="hid">_normalize</span>;
+<a id="L29" href="#L29" class="br">29 </a>    <span class="type">int</span> <span class="hid">_nClass</span>;
+<a id="L30" href="#L30" class="br">30 </a>
+<a id="L31" href="#L31" class="br">31 </a>    <span class="kwrd">auto</span> <span class="hid">forward</span>(<span class="hid">Variable</span>!(<span class="hid">F</span>, <span class="num">2</span>, <span class="hid">HostStorage</span>) <span class="hid">logP</span>, <span class="hid">Variable</span>!(<span class="hid">I</span>, <span class="num">1</span>, <span class="hid">HostStorage</span>) <span class="hid">targetId</span>) {
+<a id="L32" href="#L32" class="br">32 </a>        <span class="kwrd">import</span> <span class="hid">mir.math</span>;
+<a id="L33" href="#L33" class="br">33 </a>        <span class="kwrd">import</span> <span class="hid">mir.ndslice</span>;
+<a id="L34" href="#L34" class="br">34 </a>
+<a id="L35" href="#L35" class="br">35 </a>        <span class="hid">F</span> <span class="hid">result</span> = <span class="num">0.0</span>;
+<a id="L36" href="#L36" class="br">36 </a>        <span class="hid">size_t</span> <span class="hid">count</span> = <span class="num">0</span>;
+<a id="L37" href="#L37" class="br">37 </a>        <span class="kwrd">foreach</span> (<span class="hid">i</span>; <span class="num">0</span> .. <span class="hid">targetId.sliced.length</span>) {
+<a id="L38" href="#L38" class="br">38 </a>            <span class="kwrd">auto</span> <span class="hid">t</span> = <span class="hid">targetId.sliced</span>[<span class="hid">i</span>];
+<a id="L39" href="#L39" class="br">39 </a>            <span class="kwrd">if</span> (<span class="hid">t</span> != <span class="kwrd">this</span>.<span class="hid">ignoreIndex</span>) {
+<a id="L40" href="#L40" class="br">40 </a>                <span class="hid">result</span> -= <span class="hid">logP.sliced</span>[<span class="hid">i</span>, <span class="hid">t</span>];
+<a id="L41" href="#L41" class="br">41 </a>                ++<span class="hid">count</span>;
+<a id="L42" href="#L42" class="br">42 </a>            }
+<a id="L43" href="#L43" class="br">43 </a>        }
+<a id="L44" href="#L44" class="br">44 </a>        <span class="kwrd">if</span> (<span class="kwrd">this</span>.<span class="hid">sizeAverage</span> &amp;&amp; <span class="hid">count</span> &gt; <span class="num">0</span>) {
+<a id="L45" href="#L45" class="br">45 </a>            <span class="hid">result</span> /= <span class="hid">count</span>;
+<a id="L46" href="#L46" class="br">46 </a>        }
+<a id="L47" href="#L47" class="br">47 </a>        <span class="com">// TODO if train</span>
+<a id="L48" href="#L48" class="br">48 </a>        <span class="kwrd">this</span>.<span class="hid">_nClass</span> = <span class="hid">logP.shape</span>[<span class="num">1</span>];
+<a id="L49" href="#L49" class="br">49 </a>        <span class="kwrd">this</span>.<span class="hid">_htargetId</span> = <span class="hid">targetId</span>;
+<a id="L50" href="#L50" class="br">50 </a>        <span class="kwrd">this</span>.<span class="hid">_normalize</span> = <span class="kwrd">this</span>.<span class="hid">sizeAverage</span> &amp;&amp; <span class="hid">count</span> &gt; <span class="num">0</span> ? <span class="num">1.0</span> / <span class="hid">count</span> : <span class="num">1.0</span>;
+<a id="L51" href="#L51" class="br">51 </a>        <span class="kwrd">return</span> <span class="hid">result.variable</span>;
+<a id="L52" href="#L52" class="br">52 </a>    }
+<a id="L53" href="#L53" class="br">53 </a>
+<a id="L54" href="#L54" class="br">54 </a>    <span class="kwrd">auto</span> <span class="hid">backward</span>(<span class="hid">Variable</span>!(<span class="hid">F</span>, <span class="num">0</span>, <span class="hid">HostStorage</span>) <span class="hid">gy</span>) {
+<a id="L55" href="#L55" class="br">55 </a>        <span class="kwrd">import</span> <span class="hid">std.typecons</span>;
+<a id="L56" href="#L56" class="br">56 </a>        <span class="kwrd">import</span> <span class="hid">mir.math</span>;
+<a id="L57" href="#L57" class="br">57 </a>        <span class="kwrd">import</span> <span class="hid">mir.ndslice</span>;
+<a id="L58" href="#L58" class="br">58 </a>        <span class="kwrd">import</span> <span class="hid">numir</span>;
+<a id="L59" href="#L59" class="br">59 </a>
+<a id="L60" href="#L60" class="br">60 </a>        <span class="kwrd">auto</span> <span class="hid">nBatch</span> = <span class="kwrd">this</span>.<span class="hid">_htargetId.shape</span>[<span class="num">0</span>];
+<a id="L61" href="#L61" class="br">61 </a>        <span class="kwrd">auto</span> <span class="hid">glogP</span> = <span class="hid">zeros</span>!<span class="hid">F</span>(<span class="hid">nBatch</span>, <span class="kwrd">this</span>.<span class="hid">_nClass</span>);
+<a id="L62" href="#L62" class="br">62 </a>        <span class="kwrd">auto</span> <span class="hid">coeff</span> = <span class="hid">gy.data</span>[<span class="num">0</span>] * <span class="kwrd">this</span>.<span class="hid">_normalize</span>;
+<a id="L63" href="#L63" class="br">63 </a>        <span class="kwrd">foreach</span> (<span class="hid">i</span>; <span class="num">0</span> .. <span class="hid">nBatch</span>) {
+<a id="L64" href="#L64" class="br">64 </a>            <span class="kwrd">auto</span> <span class="hid">t</span> = <span class="kwrd">this</span>.<span class="hid">_htargetId.sliced</span>[<span class="hid">i</span>];
+<a id="L65" href="#L65" class="br">65 </a>            <span class="kwrd">if</span> (<span class="hid">t</span> != <span class="kwrd">this</span>.<span class="hid">ignoreIndex</span>) {
+<a id="L66" href="#L66" class="br">66 </a>                <span class="hid">glogP</span>[<span class="hid">i</span>][<span class="hid">t</span>] = -<span class="hid">coeff</span>;
+<a id="L67" href="#L67" class="br">67 </a>            }
+<a id="L68" href="#L68" class="br">68 </a>        }
+<a id="L69" href="#L69" class="br">69 </a>        <span class="kwrd">return</span> <span class="hid">tuple</span>(<span class="hid">glogP.variable</span>, <span class="kwrd">typeof</span>(<span class="kwrd">this</span>.<span class="hid">_htargetId</span>)());
+<a id="L70" href="#L70" class="br">70 </a>    }
+<a id="L71" href="#L71" class="br">71 </a>
+<a id="L72" href="#L72" class="br">72 </a>    <span class="kwrd">version</span> (<span class="hid">grain_cuda</span>) {
+<a id="L73" href="#L73" class="br">73 </a>        <span class="hid">Variable</span>!(<span class="hid">I</span>, <span class="num">1</span>, <span class="hid">DeviceStorage</span>) <span class="hid">_dtargetId</span>;
+<a id="L74" href="#L74" class="br">74 </a>        <span class="kwrd">auto</span> <span class="hid">forward</span>(<span class="hid">Variable</span>!(<span class="hid">F</span>, <span class="num">2</span>, <span class="hid">DeviceStorage</span>) <span class="hid">logP</span>, <span class="hid">Variable</span>!(<span class="hid">I</span>, <span class="num">1</span>, <span class="hid">DeviceStorage</span>) <span class="hid">targetId</span>) {
+<a id="L75" href="#L75" class="br">75 </a>            <span class="kwrd">static</span> <span class="kwrd">assert</span>(<span class="kwrd">is</span>(<span class="hid">F</span> == <span class="type">float</span>), <span class="str">&quot;only float is supported now&quot;</span>);
+<a id="L76" href="#L76" class="br">76 </a>            <span class="kwrd">static</span> <span class="kwrd">assert</span>(<span class="kwrd">is</span>(<span class="hid">I</span> == <span class="type">int</span>), <span class="str">&quot;only int is supported now&quot;</span>);
+<a id="L77" href="#L77" class="br">77 </a>
+<a id="L78" href="#L78" class="br">78 </a>            <span class="kwrd">import</span> <span class="hid">grain.kernel</span> : <span class="hid">nll</span>;
+<a id="L79" href="#L79" class="br">79 </a>
+<a id="L80" href="#L80" class="br">80 </a>            <span class="kwrd">this</span>.<span class="hid">_nClass</span> = <span class="hid">logP.shape</span>[<span class="num">1</span>];
+<a id="L81" href="#L81" class="br">81 </a>            <span class="kwrd">auto</span> <span class="hid">dresult</span> = <span class="hid">CuArray</span>!<span class="hid">F</span>([<span class="num">0</span>]); <span class="com">// [result].variable.to!DeviceStorage; &lt;- FIXME</span>
+<a id="L82" href="#L82" class="br">82 </a>            <span class="kwrd">auto</span> <span class="hid">dcount</span> = <span class="hid">CuArray</span>!<span class="type">int</span>([<span class="num">0</span>]); <span class="com">// [count].variable.to!DeviceStorage;</span>
+<a id="L83" href="#L83" class="br">83 </a>
+<a id="L84" href="#L84" class="br">84 </a>            <span class="kwrd">auto</span> <span class="hid">batchSize</span> = <span class="hid">targetId.shape</span>[<span class="num">0</span>];
+<a id="L85" href="#L85" class="br">85 </a>            <span class="hid">Global.kernel</span>!<span class="hid">nll.call</span>(<span class="hid">dresult.ptr</span>, <span class="hid">dcount.ptr</span>, <span class="hid">logP.data.ptr</span>,
+<a id="L86" href="#L86" class="br">86 </a>                    <span class="hid">targetId.data.ptr</span>, <span class="kwrd">this</span>.<span class="hid">ignoreIndex</span>, <span class="hid">batchSize</span>, <span class="hid">logP.strides</span>[
+<a id="L87" href="#L87" class="br">87 </a>                    <span class="num">0</span>]).<span class="hid">launch</span>(<span class="hid">batchSize</span>);
+<a id="L88" href="#L88" class="br">88 </a>
+<a id="L89" href="#L89" class="br">89 </a>            <span class="hid">F</span> <span class="hid">result</span> = <span class="num">0.0</span>;
+<a id="L90" href="#L90" class="br">90 </a>            <span class="type">int</span> <span class="hid">count</span> = <span class="num">0</span>;
+<a id="L91" href="#L91" class="br">91 </a>            <span class="hid">dresult.toHost</span>(&amp;<span class="hid">result</span>);
+<a id="L92" href="#L92" class="br">92 </a>            <span class="hid">dcount.toHost</span>(&amp;<span class="hid">count</span>);
+<a id="L93" href="#L93" class="br">93 </a>
+<a id="L94" href="#L94" class="br">94 </a>            <span class="kwrd">if</span> (<span class="kwrd">this</span>.<span class="hid">sizeAverage</span> &amp;&amp; <span class="hid">count</span> &gt; <span class="num">0</span>) {
+<a id="L95" href="#L95" class="br">95 </a>                <span class="hid">result</span> /= <span class="hid">count</span>;
+<a id="L96" href="#L96" class="br">96 </a>            }
+<a id="L97" href="#L97" class="br">97 </a>            <span class="com">// TODO if train</span>
+<a id="L98" href="#L98" class="br">98 </a>            <span class="kwrd">this</span>.<span class="hid">_nClass</span> = <span class="hid">logP.shape</span>[<span class="num">1</span>];
+<a id="L99" href="#L99" class="br">99 </a>            <span class="kwrd">this</span>.<span class="hid">_dtargetId</span> = <span class="hid">targetId</span>;
+<a id="L100" href="#L100" class="br">100 </a>            <span class="kwrd">this</span>.<span class="hid">_normalize</span> = <span class="kwrd">this</span>.<span class="hid">sizeAverage</span> &amp;&amp; <span class="hid">count</span> &gt; <span class="num">0</span> ? <span class="num">1.0</span> / <span class="hid">count</span> : <span class="num">1.0</span>;
+<a id="L101" href="#L101" class="br">101 </a>            <span class="kwrd">return</span> <span class="hid">result.variable.to</span>!<span class="hid">DeviceStorage</span>;
+<a id="L102" href="#L102" class="br">102 </a>        }
+<a id="L103" href="#L103" class="br">103 </a>
+<a id="L104" href="#L104" class="br">104 </a>        <span class="kwrd">auto</span> <span class="hid">backward</span>(<span class="hid">Variable</span>!(<span class="hid">F</span>, <span class="num">0</span>, <span class="hid">DeviceStorage</span>) <span class="hid">gy</span>) {
+<a id="L105" href="#L105" class="br">105 </a>            <span class="kwrd">static</span> <span class="kwrd">assert</span>(<span class="kwrd">is</span>(<span class="hid">F</span> == <span class="type">float</span>), <span class="str">&quot;only float is supported now&quot;</span>);
+<a id="L106" href="#L106" class="br">106 </a>            <span class="kwrd">static</span> <span class="kwrd">assert</span>(<span class="kwrd">is</span>(<span class="hid">I</span> == <span class="type">int</span>), <span class="str">&quot;only int is supported now&quot;</span>);
+<a id="L107" href="#L107" class="br">107 </a>
+<a id="L108" href="#L108" class="br">108 </a>            <span class="kwrd">import</span> <span class="hid">grain.kernel</span>;
+<a id="L109" href="#L109" class="br">109 </a>            <span class="kwrd">import</span> <span class="hid">std.typecons</span> : <span class="hid">tuple</span>;
+<a id="L110" href="#L110" class="br">110 </a>
+<a id="L111" href="#L111" class="br">111 </a>            <span class="kwrd">auto</span> <span class="hid">nBatch</span> = <span class="kwrd">this</span>.<span class="hid">_dtargetId.shape</span>[<span class="num">0</span>];
+<a id="L112" href="#L112" class="br">112 </a>            <span class="kwrd">auto</span> <span class="hid">glogP</span> = <span class="hid">CuArray</span>!<span class="hid">F</span>(<span class="hid">nBatch</span> * <span class="kwrd">this</span>.<span class="hid">_nClass</span>);
+<a id="L113" href="#L113" class="br">113 </a>            <span class="hid">glogP.zero_</span>();
+<a id="L114" href="#L114" class="br">114 </a>            <span class="kwrd">auto</span> <span class="hid">coeff</span> = <span class="hid">gy.to</span>!<span class="hid">HostStorage.data</span>[<span class="num">0</span>] * <span class="kwrd">this</span>.<span class="hid">_normalize</span>;
+<a id="L115" href="#L115" class="br">115 </a>            <span class="hid">Global.kernel</span>!<span class="hid">nllGrad.call</span>(<span class="hid">glogP.ptr</span>, -<span class="hid">coeff</span>,
+<a id="L116" href="#L116" class="br">116 </a>                    <span class="kwrd">this</span>.<span class="hid">_dtargetId.data.ptr</span>,
+<a id="L117" href="#L117" class="br">117 </a>                    <span class="kwrd">this</span>.<span class="hid">ignoreIndex</span>, <span class="hid">nBatch</span>, <span class="kwrd">this</span>.<span class="hid">_nClass</span>).<span class="hid">launch</span>(<span class="hid">nBatch</span>);
+<a id="L118" href="#L118" class="br">118 </a>            <span class="kwrd">auto</span> <span class="hid">v</span> = <span class="hid">Variable</span>!(<span class="hid">F</span>, <span class="num">2</span>, <span class="hid">DeviceStorage</span>)(<span class="kwrd">false</span>, [<span class="hid">nBatch</span>,
+<a id="L119" href="#L119" class="br">119 </a>                    <span class="kwrd">this</span>.<span class="hid">_nClass</span>], [<span class="kwrd">this</span>.<span class="hid">_nClass</span>, <span class="num">1</span>], <span class="hid">glogP</span>);
+<a id="L120" href="#L120" class="br">120 </a>            <span class="kwrd">return</span> <span class="hid">tuple</span>(<span class="hid">v</span>, <span class="kwrd">typeof</span>(<span class="kwrd">this</span>.<span class="hid">_dtargetId</span>)());
+<a id="L121" href="#L121" class="br">121 </a>        }
+<a id="L122" href="#L122" class="br">122 </a>
+<a id="L123" href="#L123" class="br">123 </a>    }
+<a id="L124" href="#L124" class="br">124 </a>}
+<a id="L125" href="#L125" class="br">125 </a>
+<a id="L126" href="#L126" class="br">126 </a><span class="com">/// test nll simple case, gradcheck and cpu/cuda equality</span>
+<a id="L127" href="#L127" class="br">127 </a><span class="kwrd">unittest</span> {
+<a id="L128" href="#L128" class="br">128 </a>    <span class="com">/++ equivalent torch v0.4 code
+<a id="L129" href="#L129" class="br">129 </a>     &gt;&gt;&gt; x = torch.FloatTensor([[0.2, 0.4, 0.4], [0.1,0.5,0.4]])
+<a id="L130" href="#L130" class="br">130 </a>     &gt;&gt;&gt; x.requires_grad = True
+<a id="L131" href="#L131" class="br">131 </a>     &gt;&gt;&gt; t = torch.LongTensor([1, 0])
+<a id="L132" href="#L132" class="br">132 </a>     &gt;&gt;&gt; l = torch.nn.functional.nll_loss(x, t)
+<a id="L133" href="#L133" class="br">133 </a>     &gt;&gt;&gt; print(l)
+<a id="L134" href="#L134" class="br">134 </a>     tensor(-0.2500)
+<a id="L135" href="#L135" class="br">135 </a>
+<a id="L136" href="#L136" class="br">136 </a>     &gt;&gt;&gt; l.backward()
+<a id="L137" href="#L137" class="br">137 </a>     &gt;&gt;&gt; print(x.grad)
+<a id="L138" href="#L138" class="br">138 </a>     tensor([[0.0, -0.5, 0.0], [-0.5, 0.0, 0.0]])
+<a id="L139" href="#L139" class="br">139 </a>     +/</span>
+<a id="L140" href="#L140" class="br">140 </a>    <span class="kwrd">import</span> <span class="hid">std.typecons</span>;
+<a id="L141" href="#L141" class="br">141 </a>    <span class="kwrd">import</span> <span class="hid">grain.testing</span>;
+<a id="L142" href="#L142" class="br">142 </a>
+<a id="L143" href="#L143" class="br">143 </a>    <a href="grain.functions.loss.d.html#L12" title="grain.functions.loss.NegativeLogLikelihood" class="hid">NegativeLogLikelihood</a>!(<span class="type">float</span>, <span class="type">int</span>) <span class="hid">func</span>;
+<a id="L144" href="#L144" class="br">144 </a>    <span class="kwrd">auto</span> <span class="hid">hx</span> = [[<span class="num">0.2f</span>, <span class="num">0.4f</span>, <span class="num">0.4f</span>], [<span class="num">0.1f</span>, <span class="num">0.5f</span>, <span class="num">0.4f</span>], [<span class="num">0.1f</span>, <span class="num">0.5f</span>, <span class="num">0.4f</span>]]
+<a id="L145" href="#L145" class="br">145 </a>        .<span class="hid">variable</span>;
+<a id="L146" href="#L146" class="br">146 </a>    <span class="kwrd">auto</span> <span class="hid">ht</span> = [<span class="num">1</span>, <span class="num">0</span>, <span class="hid">func.ignoreIndex</span>].<span class="hid">variable</span>;
+<a id="L147" href="#L147" class="br">147 </a>    <span class="kwrd">auto</span> <span class="hid">hl</span> = <span class="hid">func.forward</span>(<span class="hid">hx</span>, <span class="hid">ht</span>);
+<a id="L148" href="#L148" class="br">148 </a>    <span class="kwrd">assert</span>(<span class="hid">func._normalize</span> == <span class="num">0.5</span>);
+<a id="L149" href="#L149" class="br">149 </a>    <span class="kwrd">assert</span>(<span class="hid">hl.sliced</span> == [-(<span class="num">0.4f</span> + <span class="num">0.1f</span> + <span class="num">0.0f</span>) / <span class="num">2</span>]);
+<a id="L150" href="#L150" class="br">150 </a>    <span class="kwrd">auto</span> <span class="hid">hgx</span> = <span class="hid">func.backward</span>(<span class="num">1.0f</span>.<span class="hid">variable</span>);
+<a id="L151" href="#L151" class="br">151 </a>    <span class="kwrd">assert</span>(<span class="hid">hgx</span>[<span class="num">0</span>].<span class="hid">sliced</span> == [[<span class="num">0.0</span>, -<span class="num">0.5</span>, <span class="num">0.0</span>], [-<span class="num">0.5</span>, <span class="num">0.0</span>, <span class="num">0.0</span>], [<span class="num">0.0</span>, <span class="num">0.0</span>, <span class="num">0.0</span>]]);
+<a id="L152" href="#L152" class="br">152 </a>    <span class="kwrd">assert</span>(!<span class="hid">hgx</span>[<span class="num">1</span>].<span class="hid">defined</span>);
+<a id="L153" href="#L153" class="br">153 </a>    <span class="hid">gradCheck</span>(<span class="hid">func</span>, <span class="hid">tuple</span>(<span class="hid">hx</span>, <span class="hid">ht</span>), <span class="num">1.0f</span>.<span class="hid">variable</span>);
+<a id="L154" href="#L154" class="br">154 </a>
+<a id="L155" href="#L155" class="br">155 </a>    <span class="kwrd">version</span> (<span class="hid">grain_cuda</span>) {
+<a id="L156" href="#L156" class="br">156 </a>        <span class="kwrd">auto</span> <span class="hid">dx</span> = <span class="hid">hx.to</span>!<span class="hid">DeviceStorage</span>;
+<a id="L157" href="#L157" class="br">157 </a>        <span class="kwrd">auto</span> <span class="hid">dt</span> = <span class="hid">ht.to</span>!<span class="hid">DeviceStorage</span>;
+<a id="L158" href="#L158" class="br">158 </a>        <span class="kwrd">auto</span> <span class="hid">dl</span> = <span class="hid">func.forward</span>(<span class="hid">dx</span>, <span class="hid">dt</span>);
+<a id="L159" href="#L159" class="br">159 </a>        <span class="kwrd">assert</span>(<span class="hid">func._normalize</span> == <span class="num">0.5</span>);
+<a id="L160" href="#L160" class="br">160 </a>        <span class="kwrd">assert</span>(<span class="hid">dl.to</span>!<span class="hid">HostStorage.sliced</span> == [-(<span class="num">0.4f</span> + <span class="num">0.1f</span> + <span class="num">0.0f</span>) / <span class="num">2</span>]);
+<a id="L161" href="#L161" class="br">161 </a>        <span class="kwrd">auto</span> <span class="hid">dgx</span> = <span class="hid">func.backward</span>(<span class="num">1.0f</span>.<span class="hid">variable.to</span>!<span class="hid">DeviceStorage</span>);
+<a id="L162" href="#L162" class="br">162 </a>        <span class="kwrd">assert</span>(<span class="hid">dgx</span>[<span class="num">0</span>].<span class="hid">to</span>!<span class="hid">HostStorage.sliced</span> ==
+<a id="L163" href="#L163" class="br">163 </a>               [[<span class="num">0.0</span>, -<span class="num">0.5</span>, <span class="num">0.0</span>],
+<a id="L164" href="#L164" class="br">164 </a>                [-<span class="num">0.5</span>, <span class="num">0.0</span>, <span class="num">0.0</span>],
+<a id="L165" href="#L165" class="br">165 </a>                [<span class="num">0.0</span>, <span class="num">0.0</span>, <span class="num">0.0</span>]]);
+<a id="L166" href="#L166" class="br">166 </a>        <span class="kwrd">assert</span>(!<span class="hid">dgx</span>[<span class="num">1</span>].<span class="hid">defined</span>);
+<a id="L167" href="#L167" class="br">167 </a>    }
+<a id="L168" href="#L168" class="br">168 </a>}
+<a id="L169" href="#L169" class="br">169 </a>
+<a id="L170" href="#L170" class="br">170 </a><span class="com">/// test variable.backward</span>
+<a id="L171" href="#L171" class="br">171 </a><span class="kwrd">unittest</span> {
+<a id="L172" href="#L172" class="br">172 </a>    <span class="kwrd">import</span> <span class="hid">std.typecons</span>;
+<a id="L173" href="#L173" class="br">173 </a>    <span class="kwrd">import</span> <span class="hid">grain.testing</span>;
+<a id="L174" href="#L174" class="br">174 </a>    <span class="kwrd">import</span> <span class="hid">mir.ndslice</span>;
+<a id="L175" href="#L175" class="br">175 </a>    <span class="kwrd">static</span> <span class="kwrd">import</span> <span class="hid">grain.config</span>;
+<a id="L176" href="#L176" class="br">176 </a>
+<a id="L177" href="#L177" class="br">177 </a>    <span class="hid">grain.config.backprop</span> = <span class="kwrd">true</span>;
+<a id="L178" href="#L178" class="br">178 </a>
+<a id="L179" href="#L179" class="br">179 </a>    <a href="grain.functions.loss.d.html#L12" title="grain.functions.loss.NegativeLogLikelihood" class="hid">NegativeLogLikelihood</a>!(<span class="type">float</span>, <span class="type">int</span>) <span class="hid">func</span>;
+<a id="L180" href="#L180" class="br">180 </a>    <span class="kwrd">auto</span> <span class="hid">hx</span> = [[<span class="num">0.2f</span>, <span class="num">0.4f</span>, <span class="num">0.4f</span>], [<span class="num">0.1f</span>, <span class="num">0.5f</span>, <span class="num">0.4f</span>], [<span class="num">0.1f</span>, <span class="num">0.5f</span>, <span class="num">0.4f</span>]]
+<a id="L181" href="#L181" class="br">181 </a>        .<span class="hid">variable</span>;
+<a id="L182" href="#L182" class="br">182 </a>    <span class="hid">hx.requiresGrad</span> = <span class="kwrd">true</span>;
+<a id="L183" href="#L183" class="br">183 </a>    <span class="kwrd">auto</span> <span class="hid">ht</span> = [<span class="num">1</span>, <span class="num">0</span>, <span class="hid">func.ignoreIndex</span>].<span class="hid">variable</span>;
+<a id="L184" href="#L184" class="br">184 </a>    <span class="kwrd">auto</span> <span class="hid">hl</span> = <span class="hid">func.applyForward</span>(<span class="hid">hx</span>, <span class="hid">ht</span>);
+<a id="L185" href="#L185" class="br">185 </a>
+<a id="L186" href="#L186" class="br">186 </a>    <span class="kwrd">assert</span>(<span class="hid">func._normalize</span> == <span class="num">0.5</span>);
+<a id="L187" href="#L187" class="br">187 </a>    <span class="kwrd">assert</span>(<span class="hid">hl.sliced</span> == [-(<span class="num">0.4f</span> + <span class="num">0.1f</span> + <span class="num">0.0f</span>) / <span class="num">2</span>]);
+<a id="L188" href="#L188" class="br">188 </a>    <span class="kwrd">auto</span> <span class="hid">u</span> = <span class="hid">UntypedVariable</span>(<span class="num">1.0f</span>.<span class="hid">variable</span>);
+<a id="L189" href="#L189" class="br">189 </a>    <span class="hid">hl.backward</span>(&amp;<span class="hid">u</span>);
+<a id="L190" href="#L190" class="br">190 </a>
+<a id="L191" href="#L191" class="br">191 </a>    <span class="kwrd">assert</span>(<span class="hid">hx.grad</span>[].<span class="hid">sliced</span>(<span class="num">3</span>, <span class="num">3</span>) == [[<span class="num">0.0</span>, -<span class="num">0.5</span>, <span class="num">0.0</span>], [-<span class="num">0.5</span>, <span class="num">0.0</span>, <span class="num">0.0</span>], [<span class="num">0.0</span>, <span class="num">0.0</span>,
+<a id="L192" href="#L192" class="br">192 </a>            <span class="num">0.0</span>]]);
+<a id="L193" href="#L193" class="br">193 </a>    <span class="com">// TODO assert(!ht.grad.defined);</span>
+<a id="L194" href="#L194" class="br">194 </a>}
+<a id="L195" href="#L195" class="br">195 </a>
+<a id="L196" href="#L196" class="br">196 </a><span class="kwrd">struct</span> <a href="grain.functions.loss.d.html#L196" title="grain.functions.loss.HuberLoss" class="hid">HuberLoss</a>(<span class="hid">T</span>) {
+<a id="L197" href="#L197" class="br">197 </a>    <span class="kwrd">auto</span> <span class="hid">forward</span>() {
+<a id="L198" href="#L198" class="br">198 </a>
+<a id="L199" href="#L199" class="br">199 </a>    }
+<a id="L200" href="#L200" class="br">200 </a>}
+<a id="L201" href="#L201" class="br">201 </a>
+<a id="L202" href="#L202" class="br">202 </a><span class="com">/+
+<a id="L203" href="#L203" class="br">203 </a>/**
+<a id="L204" href="#L204" class="br">204 </a>   PyTorch equality check
+<a id="L205" href="#L205" class="br">205 </a> */
+<a id="L206" href="#L206" class="br">206 </a>unittest {
+<a id="L207" href="#L207" class="br">207 </a>    import std.typecons;
+<a id="L208" href="#L208" class="br">208 </a>    import grain.testing;
+<a id="L209" href="#L209" class="br">209 </a>    import mir.ndslice;
+<a id="L210" href="#L210" class="br">210 </a>    static import grain.config;
+<a id="L211" href="#L211" class="br">211 </a>
+<a id="L212" href="#L212" class="br">212 </a>    grain.config.backprop = true;
+<a id="L213" href="#L213" class="br">213 </a>
+<a id="L214" href="#L214" class="br">214 </a>    HuberLoss!float func;
+<a id="L215" href="#L215" class="br">215 </a>    auto hx = [[0.2f, 0.4f, 0.4f], [0.1f, 0.5f, 0.4f], [0.1f, 0.5f, 0.4f]]
+<a id="L216" href="#L216" class="br">216 </a>        .variable;
+<a id="L217" href="#L217" class="br">217 </a>    hx.requiresGrad = true;
+<a id="L218" href="#L218" class="br">218 </a>    auto ht = [1, 0, func.ignoreIndex].variable;
+<a id="L219" href="#L219" class="br">219 </a>    auto hl = func.applyForward(hx, ht);
+<a id="L220" href="#L220" class="br">220 </a>
+<a id="L221" href="#L221" class="br">221 </a>    assert(func._normalize == 0.5);
+<a id="L222" href="#L222" class="br">222 </a>    assert(hl.sliced == [-(0.4f + 0.1f + 0.0f) / 2]);
+<a id="L223" href="#L223" class="br">223 </a>    auto u = UntypedVariable(1.0f.variable);
+<a id="L224" href="#L224" class="br">224 </a>    hl.backward(&amp;u);
+<a id="L225" href="#L225" class="br">225 </a>
+<a id="L226" href="#L226" class="br">226 </a>    assert(hx.grad[].sliced(3, 3) == [[0.0, -0.5, 0.0], [-0.5, 0.0, 0.0], [0.0, 0.0,
+<a id="L227" href="#L227" class="br">227 </a>            0.0]]);
+<a id="L228" href="#L228" class="br">228 </a>}
+<a id="L229" href="#L229" class="br">229 </a>+/</span></pre></div>
+        <div id="page-nav">
+        <div id="source-navigation"><div class="list-holder"><ul><li><a href="../grain.functions.loss.html" class="docs">[Docs] </a><a href="#L1">grain.functions.loss</a><ul><li><a href="#L7">grain.autograd</a></li><li><a href="#L8">grain.cuda</a></li><li><a href="#L9">grain.functions.common</a></li><li><a href="#L10">grain.utility</a></li><li><a href="../grain.functions.loss.NegativeLogLikelihood.html" class="docs">[Docs] </a><a href="#L12">NegativeLogLikelihood</a><ul><li><a href="../grain.functions.loss.NegativeLogLikelihood.__anonymous.html" class="docs">[Docs] </a><a href="#L20">__anonymous</a></li><li><a href="#L22">sizeAverage</a></li><li><a href="#L23">ignoreIndex</a></li><li><a href="#L27">_htargetId</a></li><li><a href="#L28">_normalize</a></li><li><a href="#L29">_nClass</a></li><li><a href="#L31">forward</a></li><li><a href="#L54">backward</a></li><li><a href="#L73">_dtargetId</a></li><li><a href="#L74">forward</a></li><li><a href="#L104">backward</a></li></ul></li><li><a href="#L196">HuberLoss</a><ul><li><a href="#L197">forward</a></li></ul></li></ul></li></ul></div></div></div>
+    </div>
+    <div id="page-footer">
+        Distributed under <a href="https://www.boost.org/users/license.html">BSL-1.0</a>.
+        Copyright <a href="https://shigekikarita.github.io">Shigeki Karita</a> 2018.
+        Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a>
+    </div>
+</body>
+</html>

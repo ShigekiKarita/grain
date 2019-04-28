@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Launcher (grain.cuda.Launcher)</title>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+        <link rel="stylesheet" href="style.css" />
+        <script type="text/javascript" src="script.js"></script>
+
+    
+    <link rel="prefetch" href="search-results.html" />
+</head>
+<body>
+    <div id="page-header">
+        <div id="logotype">
+        <span>Documentation</span>
+        <nav>
+            <a href="https://github.com/ShigekiKarita/grain">GitHub</a>
+            <a href="https://github.com/ShigekiKarita/grain/tree/master/example">Example</a>
+            <a href="http://dlang.org/">Dlang.org</a>
+        </nav>
+        </div>
+
+        <form action="search-docs.html" id="search">
+            <input type="search" placeholder="Find a symbol name..." name="searchTerm" />
+            <input type="submit" value="Go" />
+        </form>
+    </div>
+    <div id="page-body">
+        <div id="page-content">
+        <h1>Launcher</h1><div class="breadcrumbs"><a href="grain.html" class="breadcrumb">grain</a><a href="grain.cuda.html" class="breadcrumb">cuda</a></div><div><div class="documentation-comment synopsis"><div><p>cuda kernel function launcher with runtime numbers of blocks/threads</p></div></div></div><div class="annotated-prototype"><div class="aggregate-prototype"><div class="attributes"><span><span class="lang-feature">version</span>(<span>grain_cuda</span>)</span> </div><span class="builtin-type">struct</span> Launcher (<div class="parameters-list toplevel"><div class="template-parameter-item parameter-item">	<span><span data-ident="Args" class="name">Args</span>...</span></div></div>) {<div class="aggregate-member"><tt class="highlighted"><span class="hid">CUfunction</span></tt> <span class="name">cuFunction</span>;</div><div class="aggregate-member"><tt class="highlighted"><span class="hid">Args</span></tt> <span class="name">args</span>;</div><div class="aggregate-member"><a href="grain.cuda.Launcher.kernelParams.html"><span class="lang-feature">auto</span>  <span class="name">kernelParams</span><tt class="highlighted">(<span class="hid">T</span> <span class="hid">args</span>)</tt>;</a></div><div class="aggregate-member"><a href="grain.cuda.Launcher.launch.1.html"><tt class="highlighted"><span class="type">void</span></tt> <span class="name">launch</span><tt class="highlighted">(<span class="type">uint</span>[<span class="num">3</span>] <span class="hid">grid</span>, <span class="type">uint</span>[<span class="num">3</span>] <span class="hid">block</span>, <span class="type">uint</span> <span class="hid">sharedMemBytes</span> = <span class="num">0</span>, <span class="hid">CUstream</span> <span class="hid">stream</span> = <span class="kwrd">null</span>)</tt>;</a></div><div class="aggregate-member"><span class="builtin-type">enum</span> <span class="name">CUDA_NUM_THREADS</span>;</div><div class="aggregate-member"><a href="grain.cuda.Launcher.launch.2.html"><tt class="highlighted"><span class="type">void</span></tt> <span class="name">launch</span><tt class="highlighted">(<span class="type">uint</span> <span class="hid">n</span> = <span class="num">1</span>, <span class="type">uint</span> <span class="hid">sharedMemBytes</span> = <span class="num">0</span>, <span class="hid">CUstream</span> <span class="hid">stream</span> = <span class="kwrd">null</span>)</tt>;</a></div>}</div></div><h2 id="members"><a href="#members" class="header-anchor">Members</a></h2><h3 id="function" class="member-list-header hide-from-toc"><a href="#function" class="header-anchor">Functions</a></h3><dl class="member-list native"><dt><a href="grain.cuda.Launcher.kernelParams.html">kernelParams</a><div style="max-width: 28ch;" class="simplified-prototype"><span class="lang-feature">auto</span>  <span class="name">kernelParams</span><tt class="highlighted">(<span class="hid">T</span> <span class="hid">args</span>)</tt></div></dt><dd><div><p>create kernel function as void<a href="Args.length.html" class="xref">Args.length</a></p></div></dd><dt><a href="grain.cuda.Launcher.launch.1.html">launch</a><div style="max-width: 97ch;" class="simplified-prototype"><tt class="highlighted"><span class="type">void</span></tt> <span class="name">launch</span><tt class="highlighted">(<span class="type">uint</span>[<span class="num">3</span>] <span class="hid">grid</span>, <span class="type">uint</span>[<span class="num">3</span>] <span class="hid">block</span>, <span class="type">uint</span> <span class="hid">sharedMemBytes</span> = <span class="num">0</span>, <span class="hid">CUstream</span> <span class="hid">stream</span> = <span class="kwrd">null</span>)</tt></div></dt><dd><div><p>detailed launch function</p></div></dd><dt><a href="grain.cuda.Launcher.launch.2.html">launch</a><div style="max-width: 79ch;" class="simplified-prototype"><tt class="highlighted"><span class="type">void</span></tt> <span class="name">launch</span><tt class="highlighted">(<span class="type">uint</span> <span class="hid">n</span> = <span class="num">1</span>, <span class="type">uint</span> <span class="hid">sharedMemBytes</span> = <span class="num">0</span>, <span class="hid">CUstream</span> <span class="hid">stream</span> = <span class="kwrd">null</span>)</tt></div></dt><dd><div><p>convinient launch function</p></div></dd></dl><div><h2 id="meta"><a href="#meta" class="header-anchor">Meta</a></h2><div class="documentation-comment source-section other-section"><h3 id="source"><a href="#source" class="header-anchor">Source</a></h3><div><p><a href="source/grain.cuda.d.html#L133">See Implementation</a><br /></p></div></div></div></div>
+        <div id="page-nav"><a href="grain.html" class="parent">grain</a><a href="grain.cuda.html" class="parent">cuda</a>
+        <span class="type-separator">aliases</span><ul><li><a href="grain.cuda.CudaElementType.1.html" class="alias">CudaElementType</a></li></ul><span class="type-separator">classes</span><ul><li><a href="grain.cuda.Global.html" class="class">Global</a></li></ul><span class="type-separator">functions</span><ul><li><a href="grain.cuda.axpy.html" class="function">axpy</a></li><li><a href="grain.cuda.checkCUDNN.html" class="function">checkCUDNN</a></li><li><a href="grain.cuda.checkCublasErrors.html" class="function">checkCublasErrors</a></li><li><a href="grain.cuda.checkCudaErrors.html" class="function">checkCudaErrors</a></li><li><a href="grain.cuda.copy.html" class="function">copy</a></li><li><a href="grain.cuda.dup.html" class="function">dup</a></li><li><a href="grain.cuda.empty.html" class="function">empty</a></li><li><a href="grain.cuda.fill_.1.html" class="function">fill_</a></li><li><a href="grain.cuda.global.html" class="function">global</a></li><li><a href="grain.cuda.sum.html" class="function">sum</a></li><li><a href="grain.cuda.toHost.1.html" class="function">toHost</a></li><li><a href="grain.cuda.zero_.html" class="function">zero_</a></li><li><a href="grain.cuda.zeros.html" class="function">zeros</a></li></ul><span class="type-separator">structs</span><ul><li><a href="grain.cuda.CuArray.html" class="struct">CuArray</a></li><li><a href="grain.cuda.CuModule.html" class="struct">CuModule</a></li><li><a href="grain.cuda.CuPtr.html" class="struct">CuPtr</a></li><li><a href="grain.cuda.Kernel.html" class="struct">Kernel</a></li><li><a href="grain.cuda.Launcher.html" class="struct current">Launcher</a></li></ul><span class="type-separator">variables</span><ul><li><a href="grain.cuda.isDeviceMemory.html" class="variable">isDeviceMemory</a></li></ul></div>
+    </div>
+    <div id="page-footer">
+        Distributed under <a href="https://www.boost.org/users/license.html">BSL-1.0</a>.
+        Copyright <a href="https://shigekikarita.github.io">Shigeki Karita</a> 2018.
+        Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a>
+    </div>
+</body>
+</html>

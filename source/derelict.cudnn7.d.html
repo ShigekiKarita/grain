@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>derelict.cudnn7 source code</title>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+        <link rel="stylesheet" href="../style.css" />
+        <script type="text/javascript" src="../script.js"></script>
+
+    
+    <link rel="prefetch" href="../search-results.html" />
+</head>
+<body>
+    <div id="page-header">
+        <div id="logotype">
+        <span>Documentation</span>
+        <nav>
+            <a href="https://github.com/ShigekiKarita/grain">GitHub</a>
+            <a href="https://github.com/ShigekiKarita/grain/tree/master/example">Example</a>
+            <a href="http://dlang.org/">Dlang.org</a>
+        </nav>
+        </div>
+
+        <form action="search-docs.html" id="search">
+            <input type="search" placeholder="Find a symbol name..." name="searchTerm" />
+            <input type="submit" value="Go" />
+        </form>
+    </div>
+    <div id="page-body">
+        <div id="page-content">
+        <pre class="d_code highlighted with-line-wrappers"><a id="L1" href="#L1" class="br">1 </a><span class="kwrd">module</span> <span class="hid">derelict.cudnn7</span>;
+<a id="L2" href="#L2" class="br">2 </a>
+<a id="L3" href="#L3" class="br">3 </a><span class="com">/**
+<a id="L4" href="#L4" class="br">4 </a>    Translation of cudnn.h
+<a id="L5" href="#L5" class="br">5 </a>    forked from https://github.com/henrygouk/DerelictCuDNN/blob/master/source/derelict/cudnn7.d
+<a id="L6" href="#L6" class="br">6 </a>*/</span>
+<a id="L7" href="#L7" class="br">7 </a>
+<a id="L8" href="#L8" class="br">8 </a><span class="kwrd">import</span> <span class="hid">derelict.cuda.runtimeapi</span>;
+<a id="L9" href="#L9" class="br">9 </a><span class="kwrd">import</span> <span class="hid">derelict.util.loader</span>;
+<a id="L10" href="#L10" class="br">10 </a>
+<a id="L11" href="#L11" class="br">11 </a><span class="kwrd">private</span>
+<a id="L12" href="#L12" class="br">12 </a>{
+<a id="L13" href="#L13" class="br">13 </a>    <span class="kwrd">import</span> <span class="hid">derelict.util.system</span>;
+<a id="L14" href="#L14" class="br">14 </a>
+<a id="L15" href="#L15" class="br">15 </a>    <span class="kwrd">static</span> <span class="kwrd">if</span>(<span class="hid">Derelict_OS_Linux</span>)
+<a id="L16" href="#L16" class="br">16 </a>    {
+<a id="L17" href="#L17" class="br">17 </a>        <span class="kwrd">version</span>(<span class="hid">X86_64</span>)
+<a id="L18" href="#L18" class="br">18 </a>            <span class="kwrd">enum</span> <a href="derelict.cudnn7.d.html#L0" title="derelict.cudnn7.libNames" class="hid">libNames</a> = <span class="str">&quot;libcudnn.so.7&quot;</span>;
+<a id="L19" href="#L19" class="br">19 </a>        <span class="kwrd">else</span>
+<a id="L20" href="#L20" class="br">20 </a>            <span class="kwrd">static</span> <span class="kwrd">assert</span>(<span class="num">0</span>, <span class="str">&quot;Need to implement cuDNN libNames for this arch.&quot;</span>);
+<a id="L21" href="#L21" class="br">21 </a>    }
+<a id="L22" href="#L22" class="br">22 </a>    <span class="kwrd">else</span> <span class="kwrd">static</span> <span class="kwrd">if</span>(<span class="hid">Derelict_OS_Windows</span>)
+<a id="L23" href="#L23" class="br">23 </a>    {
+<a id="L24" href="#L24" class="br">24 </a>        <span class="kwrd">version</span>(<span class="hid">X86_64</span>)
+<a id="L25" href="#L25" class="br">25 </a>            <span class="kwrd">enum</span> <a href="derelict.cudnn7.d.html#L0" title="derelict.cudnn7.libNames" class="hid">libNames</a> = <span class="str">&quot;cudnn64_7.dll&quot;</span>;
+<a id="L26" href="#L26" class="br">26 </a>        <span class="kwrd">else</span>
+<a id="L27" href="#L27" class="br">27 </a>            <span class="kwrd">static</span> <span class="kwrd">assert</span>(<span class="num">0</span>, <span class="str">&quot;There are no cuDNN libNames for this arch and operating system.&quot;</span>);
+<a id="L28" href="#L28" class="br">28 </a>    }
+<a id="L29" href="#L29" class="br">29 </a>    <span class="kwrd">else</span> <span class="kwrd">static</span> <span class="kwrd">if</span>(<span class="hid">Derelict_OS_Mac</span>)
+<a id="L30" href="#L30" class="br">30 </a>    {
+<a id="L31" href="#L31" class="br">31 </a>        <span class="kwrd">version</span>(<span class="hid">X86_64</span>)
+<a id="L32" href="#L32" class="br">32 </a>            <span class="kwrd">enum</span> <a href="derelict.cudnn7.d.html#L0" title="derelict.cudnn7.libNames" class="hid">libNames</a> = <span class="str">&quot;libcudnn.7.dylib,libcudnn.dylib&quot;</span>;
+<a id="L33" href="#L33" class="br">33 </a>        <span class="kwrd">else</span>
+<a id="L34" href="#L34" class="br">34 </a>            <span class="kwrd">static</span> <span class="kwrd">assert</span>(<span class="num">0</span>, <span class="str">&quot;There are no cuDNN libNames for this arch and operating system.&quot;</span>);
+<a id="L35" href="#L35" class="br">35 </a>    }
+<a id="L36" href="#L36" class="br">36 </a>    <span class="kwrd">else</span>
+<a id="L37" href="#L37" class="br">37 </a>    {
+<a id="L38" href="#L38" class="br">38 </a>        <span class="kwrd">static</span> <span class="kwrd">assert</span>(<span class="num">0</span>, <span class="str">&quot;Need to implement cuDNN libNames for this operating system.&quot;</span>);
+<a id="L39" href="#L39" class="br">39 </a>    }
+<a id="L40" href="#L40" class="br">40 </a>
+<a id="L41" href="#L41" class="br">41 </a>    <span class="kwrd">enum</span> <a href="derelict.cudnn7.d.html#L0" title="derelict.cudnn7.functionTypes" class="hid">functionTypes</a> = [
+<a id="L42" href="#L42" class="br">42 </a>        [<span class="str">&quot;cudnnCreate&quot;</span>, <span class="str">&quot;cudnnHandle_t *&quot;</span>],
+<a id="L43" href="#L43" class="br">43 </a>        [<span class="str">&quot;cudnnDestroy&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>],
+<a id="L44" href="#L44" class="br">44 </a>        [<span class="str">&quot;cudnnSetStream&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;cudaStream_t&quot;</span>],
+<a id="L45" href="#L45" class="br">45 </a>        [<span class="str">&quot;cudnnGetStream&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;cudaStream_t *&quot;</span>],
+<a id="L46" href="#L46" class="br">46 </a>
+<a id="L47" href="#L47" class="br">47 </a>
+<a id="L48" href="#L48" class="br">48 </a>        [<span class="str">&quot;cudnnCreateTensorDescriptor&quot;</span>, <span class="str">&quot;cudnnTensorDescriptor_t *&quot;</span>],
+<a id="L49" href="#L49" class="br">49 </a>        [<span class="str">&quot;cudnnSetTensor4dDescriptor&quot;</span>, <span class="str">&quot;cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;cudnnTensorFormat_t&quot;</span>, <span class="str">&quot;cudnnDataType_t&quot;</span>, <span class="str">&quot;int&quot;</span>,
+<a id="L50" href="#L50" class="br">50 </a>            <span class="str">&quot;int&quot;</span>, <span class="str">&quot;int&quot;</span>, <span class="str">&quot;int&quot;</span>],
+<a id="L51" href="#L51" class="br">51 </a>        [<span class="str">&quot;cudnnSetTensor4dDescriptorEx&quot;</span>, <span class="str">&quot;cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;cudnnDataType_t&quot;</span>, <span class="str">&quot;int&quot;</span>, <span class="str">&quot;int&quot;</span>, <span class="str">&quot;int&quot;</span>, <span class="str">&quot;int&quot;</span>,
+<a id="L52" href="#L52" class="br">52 </a>            <span class="str">&quot;int&quot;</span>, <span class="str">&quot;int&quot;</span>, <span class="str">&quot;int&quot;</span>, <span class="str">&quot;int&quot;</span>],
+<a id="L53" href="#L53" class="br">53 </a>        [<span class="str">&quot;cudnnGetTensor4dDescriptor&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;cudnnDataType_t *&quot;</span>, <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;int *&quot;</span>,
+<a id="L54" href="#L54" class="br">54 </a>            <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;int *&quot;</span>],
+<a id="L55" href="#L55" class="br">55 </a>        [<span class="str">&quot;cudnnSetTensorNdDescriptor&quot;</span>, <span class="str">&quot;cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;cudnnDataType_t&quot;</span>, <span class="str">&quot;int&quot;</span>, <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;int *&quot;</span>],
+<a id="L56" href="#L56" class="br">56 </a>        [<span class="str">&quot;cudnnGetTensorNdDescriptor&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;int&quot;</span>, <span class="str">&quot;cudnnDataType_t *&quot;</span>, <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;int&quot;</span>,
+<a id="L57" href="#L57" class="br">57 </a>            <span class="str">&quot;int&quot;</span>],
+<a id="L58" href="#L58" class="br">58 </a>        [<span class="str">&quot;cudnnDestroyTensorDescriptor&quot;</span>, <span class="str">&quot;cudnnTensorDescriptor_t&quot;</span>],
+<a id="L59" href="#L59" class="br">59 </a>        [<span class="str">&quot;cudnnTransformTensor&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L60" href="#L60" class="br">60 </a>            <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;void *&quot;</span>],
+<a id="L61" href="#L61" class="br">61 </a>        [<span class="str">&quot;cudnnAddTensor&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L62" href="#L62" class="br">62 </a>            <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;void *&quot;</span>],
+<a id="L63" href="#L63" class="br">63 </a>        
+<a id="L64" href="#L64" class="br">64 </a>
+<a id="L65" href="#L65" class="br">65 </a>        [<span class="str">&quot;cudnnCreateOpTensorDescriptor&quot;</span>, <span class="str">&quot;cudnnOpTensorDescriptor_t *&quot;</span>],
+<a id="L66" href="#L66" class="br">66 </a>        [<span class="str">&quot;cudnnSetOpTensorDescriptor&quot;</span>, <span class="str">&quot;cudnnOpTensorDescriptor_t&quot;</span>, <span class="str">&quot;cudnnOpTensorOp_t&quot;</span>, <span class="str">&quot;cudnnDataType_t&quot;</span>,
+<a id="L67" href="#L67" class="br">67 </a>            <span class="str">&quot;cudnnNanPropagation_t&quot;</span>],
+<a id="L68" href="#L68" class="br">68 </a>        [<span class="str">&quot;cudnnGetOpTensorDescriptor&quot;</span>, <span class="str">&quot;const cudnnOpTensorDescriptor_t&quot;</span>, <span class="str">&quot;cudnnOpTensorOp_t *&quot;</span>, <span class="str">&quot;cudnnDataType_t *&quot;</span>,
+<a id="L69" href="#L69" class="br">69 </a>            <span class="str">&quot;cudnnNanPropagation_t *&quot;</span>],
+<a id="L70" href="#L70" class="br">70 </a>        [<span class="str">&quot;cudnnDestroyOpTensorDescriptor&quot;</span>, <span class="str">&quot;cudnnOpTensorDescriptor_t&quot;</span>],
+<a id="L71" href="#L71" class="br">71 </a>        [<span class="str">&quot;cudnnOpTensor&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnOpTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L72" href="#L72" class="br">72 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L73" href="#L73" class="br">73 </a>            <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;void *&quot;</span>],
+<a id="L74" href="#L74" class="br">74 </a>        [<span class="str">&quot;cudnnSetTensor&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>],
+<a id="L75" href="#L75" class="br">75 </a>        [<span class="str">&quot;cudnnScaleTensor&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>],
+<a id="L76" href="#L76" class="br">76 </a>
+<a id="L77" href="#L77" class="br">77 </a>        [<span class="str">&quot;cudnnCreateReduceTensorDescriptor&quot;</span>,
+<a id="L78" href="#L78" class="br">78 </a>         <span class="str">&quot;cudnnReduceTensorDescriptor_t *&quot;</span>],
+<a id="L79" href="#L79" class="br">79 </a>        [<span class="str">&quot;cudnnSetReduceTensorDescriptor&quot;</span>,
+<a id="L80" href="#L80" class="br">80 </a>         <span class="str">&quot;cudnnReduceTensorDescriptor_t&quot;</span>, <span class="str">&quot;cudnnReduceTensorOp_t&quot;</span>,
+<a id="L81" href="#L81" class="br">81 </a>         <span class="str">&quot;cudnnDataType_t&quot;</span>, <span class="str">&quot;cudnnNanPropagation_t&quot;</span>, <span class="str">&quot;cudnnReduceTensorIndices_t&quot;</span>, <span class="str">&quot;cudnnIndicesType_t&quot;</span>],
+<a id="L82" href="#L82" class="br">82 </a>        [<span class="str">&quot;cudnnGetReduceTensorDescriptor&quot;</span>,
+<a id="L83" href="#L83" class="br">83 </a>         <span class="str">&quot;const cudnnReduceTensorDescriptor_t&quot;</span>,
+<a id="L84" href="#L84" class="br">84 </a>         <span class="str">&quot;cudnnReduceTensorOp_t *&quot;</span>,
+<a id="L85" href="#L85" class="br">85 </a>         <span class="str">&quot;cudnnDataType_t *&quot;</span>,
+<a id="L86" href="#L86" class="br">86 </a>         <span class="str">&quot;cudnnNanPropagation_t *&quot;</span>,
+<a id="L87" href="#L87" class="br">87 </a>         <span class="str">&quot;cudnnReduceTensorIndices_t *&quot;</span>,
+<a id="L88" href="#L88" class="br">88 </a>         <span class="str">&quot;cudnnIndicesType_t *&quot;</span>],
+<a id="L89" href="#L89" class="br">89 </a>        [<span class="str">&quot;cudnnDestroyReduceTensorDescriptor&quot;</span>,
+<a id="L90" href="#L90" class="br">90 </a>         <span class="str">&quot;cudnnReduceTensorDescriptor_t&quot;</span>],
+<a id="L91" href="#L91" class="br">91 </a>        <span class="com">/* Helper function to return the minimum size of the index space to be passed to the reduction given the input and output tensors */</span>
+<a id="L92" href="#L92" class="br">92 </a>        [<span class="str">&quot;cudnnGetReductionIndicesSize&quot;</span>,
+<a id="L93" href="#L93" class="br">93 </a>         <span class="str">&quot;cudnnHandle_t&quot;</span>,
+<a id="L94" href="#L94" class="br">94 </a>         <span class="str">&quot;cudnnReduceTensorDescriptor_t&quot;</span>,
+<a id="L95" href="#L95" class="br">95 </a>         <span class="str">&quot;cudnnTensorDescriptor_t&quot;</span>,
+<a id="L96" href="#L96" class="br">96 </a>         <span class="str">&quot;cudnnTensorDescriptor_t&quot;</span>,
+<a id="L97" href="#L97" class="br">97 </a>         <span class="str">&quot;size_t *&quot;</span>],
+<a id="L98" href="#L98" class="br">98 </a>        <span class="com">/* Helper function to return the minimum size of the workspace to be passed to the reduction given the input and output tensors */</span>
+<a id="L99" href="#L99" class="br">99 </a>        [<span class="str">&quot;cudnnGetReductionWorkspaceSize&quot;</span>,
+<a id="L100" href="#L100" class="br">100 </a>         <span class="str">&quot;cudnnHandle_t&quot;</span>,
+<a id="L101" href="#L101" class="br">101 </a>         <span class="str">&quot;const cudnnReduceTensorDescriptor_t&quot;</span>,
+<a id="L102" href="#L102" class="br">102 </a>         <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L103" href="#L103" class="br">103 </a>         <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L104" href="#L104" class="br">104 </a>         <span class="str">&quot;size_t *&quot;</span>],
+<a id="L105" href="#L105" class="br">105 </a>        <span class="com">/* Tensor operation : C = reduce op( alpha * A ) + beta * C */</span>
+<a id="L106" href="#L106" class="br">106 </a>        <span class="com">/* The NaN propagation enum applies to only the min and max reduce ops; the other reduce ops propagate NaN as usual. */</span>
+<a id="L107" href="#L107" class="br">107 </a>        <span class="com">/* The indices space is ignored for reduce ops other than min or max. */</span>
+<a id="L108" href="#L108" class="br">108 </a>        [<span class="str">&quot;cudnnReduceTensor&quot;</span>,
+<a id="L109" href="#L109" class="br">109 </a>         <span class="str">&quot;cudnnHandle_t&quot;</span>,
+<a id="L110" href="#L110" class="br">110 </a>         <span class="str">&quot;const cudnnReduceTensorDescriptor_t&quot;</span>,
+<a id="L111" href="#L111" class="br">111 </a>         <span class="str">&quot;void *&quot;</span>,                             <span class="com">//  indices,</span>
+<a id="L112" href="#L112" class="br">112 </a>         <span class="str">&quot;size_t&quot;</span>,                             <span class="com">//  indicesSizeInBytes,</span>
+<a id="L113" href="#L113" class="br">113 </a>         <span class="str">&quot;void *&quot;</span>,                             <span class="com">//  workspace,</span>
+<a id="L114" href="#L114" class="br">114 </a>         <span class="str">&quot;size_t&quot;</span>,                             <span class="com">//  workspaceSizeInBytes,</span>
+<a id="L115" href="#L115" class="br">115 </a>         <span class="str">&quot;const void *&quot;</span>,                       <span class="com">//  alpha,</span>
+<a id="L116" href="#L116" class="br">116 </a>         <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,      <span class="com">//  aDesc,</span>
+<a id="L117" href="#L117" class="br">117 </a>         <span class="str">&quot;const void *&quot;</span>,                       <span class="com">//  A,</span>
+<a id="L118" href="#L118" class="br">118 </a>         <span class="str">&quot;const void *&quot;</span>,                       <span class="com">//  beta,</span>
+<a id="L119" href="#L119" class="br">119 </a>         <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,      <span class="com">//  cDesc,</span>
+<a id="L120" href="#L120" class="br">120 </a>         <span class="str">&quot;void  *&quot;</span>                             <span class="com">//  C</span>
+<a id="L121" href="#L121" class="br">121 </a>            ],
+<a id="L122" href="#L122" class="br">122 </a>
+<a id="L123" href="#L123" class="br">123 </a>
+<a id="L124" href="#L124" class="br">124 </a>        [<span class="str">&quot;cudnnCreateFilterDescriptor&quot;</span>, <span class="str">&quot;cudnnFilterDescriptor_t *&quot;</span>],
+<a id="L125" href="#L125" class="br">125 </a>        [<span class="str">&quot;cudnnSetFilter4dDescriptor&quot;</span>, <span class="str">&quot;cudnnFilterDescriptor_t&quot;</span>, <span class="str">&quot;cudnnDataType_t&quot;</span>, <span class="str">&quot;cudnnTensorFormat_t&quot;</span>, <span class="str">&quot;int&quot;</span>,
+<a id="L126" href="#L126" class="br">126 </a>			<span class="str">&quot;int&quot;</span>, <span class="str">&quot;int&quot;</span>, <span class="str">&quot;int&quot;</span>],
+<a id="L127" href="#L127" class="br">127 </a>        [<span class="str">&quot;cudnnGetFilter4dDescriptor&quot;</span>, <span class="str">&quot;cudnnDataType_t *&quot;</span>, <span class="str">&quot;cudnnTensorFormat_t *&quot;</span>, <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;int *&quot;</span>,
+<a id="L128" href="#L128" class="br">128 </a>			<span class="str">&quot;int *&quot;</span>],
+<a id="L129" href="#L129" class="br">129 </a>        [<span class="str">&quot;cudnnSetFilterNdDescriptor&quot;</span>, <span class="str">&quot;cudnnFilterDescriptor_t&quot;</span>, <span class="str">&quot;cudnnDataType_t&quot;</span>, <span class="str">&quot;cudnnTensorFormat_t&quot;</span>, <span class="str">&quot;int&quot;</span>,
+<a id="L130" href="#L130" class="br">130 </a>            <span class="str">&quot;const int*&quot;</span>],
+<a id="L131" href="#L131" class="br">131 </a>        [<span class="str">&quot;cudnnGetFilterNdDescriptor&quot;</span>, <span class="str">&quot;const cudnnFilterDescriptor_t&quot;</span>, <span class="str">&quot;int&quot;</span>, <span class="str">&quot;cudnnDataType_t *&quot;</span>,
+<a id="L132" href="#L132" class="br">132 </a>            <span class="str">&quot;cudnnTensorFormat_t *&quot;</span>, <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;int*&quot;</span>],
+<a id="L133" href="#L133" class="br">133 </a>        [<span class="str">&quot;cudnnDestroyFilterDescriptor&quot;</span>, <span class="str">&quot;cudnnFilterDescriptor_t&quot;</span>],
+<a id="L134" href="#L134" class="br">134 </a>        [<span class="str">&quot;cudnnCreateConvolutionDescriptor&quot;</span>, <span class="str">&quot;cudnnConvolutionDescriptor_t *&quot;</span>],
+<a id="L135" href="#L135" class="br">135 </a>        [<span class="str">&quot;cudnnSetConvolution2dDescriptor&quot;</span>, <span class="str">&quot;cudnnConvolutionDescriptor_t&quot;</span>, <span class="str">&quot;int&quot;</span>, <span class="str">&quot;int&quot;</span>, <span class="str">&quot;int&quot;</span>, <span class="str">&quot;int&quot;</span>, <span class="str">&quot;int&quot;</span>,
+<a id="L136" href="#L136" class="br">136 </a>            <span class="str">&quot;int&quot;</span>, <span class="str">&quot;cudnnConvolutionMode_t&quot;</span>, <span class="str">&quot;cudnnDataType_t&quot;</span>],
+<a id="L137" href="#L137" class="br">137 </a>        [<span class="str">&quot;cudnnGetConvolution2dDescriptor&quot;</span>, <span class="str">&quot;const cudnnConvolutionDescriptor_t&quot;</span>, <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;int *&quot;</span>,
+<a id="L138" href="#L138" class="br">138 </a>            <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;cudnnConvolutionMode_t *&quot;</span>, <span class="str">&quot;cudnnDataType_t *&quot;</span>],
+<a id="L139" href="#L139" class="br">139 </a>        [<span class="str">&quot;cudnnGetConvolution2dForwardOutputDim&quot;</span>, <span class="str">&quot;const cudnnConvolutionDescriptor_t&quot;</span>,
+<a id="L140" href="#L140" class="br">140 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnFilterDescriptor_t&quot;</span>, <span class="str">&quot;int&quot;</span>, <span class="str">&quot;int&quot;</span>, <span class="str">&quot;int&quot;</span>, <span class="str">&quot;int&quot;</span>],
+<a id="L141" href="#L141" class="br">141 </a>        [<span class="str">&quot;cudnnSetConvolutionNdDescriptor&quot;</span>, <span class="str">&quot;cudnnConvolutionDescriptor_t&quot;</span>, <span class="str">&quot;int&quot;</span>, <span class="str">&quot;const int*&quot;</span>, <span class="str">&quot;const int*&quot;</span>,
+<a id="L142" href="#L142" class="br">142 </a>            <span class="str">&quot;const int*&quot;</span>, <span class="str">&quot;cudnnConvolutionMode_t&quot;</span>, <span class="str">&quot;cudnnDataType_t&quot;</span>],
+<a id="L143" href="#L143" class="br">143 </a>        [<span class="str">&quot;cudnnGetConvolutionNdDescriptor&quot;</span>, <span class="str">&quot;const cudnnConvolutionDescriptor_t&quot;</span>, <span class="str">&quot;int&quot;</span>, <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;int*&quot;</span>, <span class="str">&quot;int*&quot;</span>,
+<a id="L144" href="#L144" class="br">144 </a>            <span class="str">&quot;int*&quot;</span>, <span class="str">&quot;cudnnConvolutionMode_t *&quot;</span>, <span class="str">&quot;cudnnDataType_t *&quot;</span>],
+<a id="L145" href="#L145" class="br">145 </a>        [<span class="str">&quot;cudnnGetConvolutionNdForwardOutputDim&quot;</span>, <span class="str">&quot;const cudnnConvolutionDescriptor_t&quot;</span>,
+<a id="L146" href="#L146" class="br">146 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnFilterDescriptor_t&quot;</span>, <span class="str">&quot;int&quot;</span>, <span class="str">&quot;int*&quot;</span>],
+<a id="L147" href="#L147" class="br">147 </a>        [<span class="str">&quot;cudnnDestroyConvolutionDescriptor&quot;</span>, <span class="str">&quot;cudnnConvolutionDescriptor_t&quot;</span>],
+<a id="L148" href="#L148" class="br">148 </a>
+<a id="L149" href="#L149" class="br">149 </a>        [<span class="str">&quot;cudnnSetConvolutionGroupCount&quot;</span>,
+<a id="L150" href="#L150" class="br">150 </a>         <span class="str">&quot;cudnnConvolutionDescriptor_t&quot;</span>, <span class="str">&quot;int&quot;</span>],
+<a id="L151" href="#L151" class="br">151 </a>        [<span class="str">&quot;cudnnGetConvolutionGroupCount&quot;</span>,
+<a id="L152" href="#L152" class="br">152 </a>         <span class="str">&quot;cudnnConvolutionDescriptor_t&quot;</span>, <span class="str">&quot;int*&quot;</span>],
+<a id="L153" href="#L153" class="br">153 </a>
+<a id="L154" href="#L154" class="br">154 </a>        [<span class="str">&quot;cudnnFindConvolutionForwardAlgorithm&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L155" href="#L155" class="br">155 </a>            <span class="str">&quot;const cudnnFilterDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnConvolutionDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L156" href="#L156" class="br">156 </a>            <span class="str">&quot;const int&quot;</span>, <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;cudnnConvolutionFwdAlgoPerf_t *&quot;</span>],
+<a id="L157" href="#L157" class="br">157 </a>        [<span class="str">&quot;cudnnFindConvolutionForwardAlgorithmEx&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L158" href="#L158" class="br">158 </a>            <span class="str">&quot;const cudnnFilterDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnConvolutionDescriptor_t&quot;</span>,
+<a id="L159" href="#L159" class="br">159 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;const int&quot;</span>, <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;cudnnConvolutionFwdAlgoPerf_t *&quot;</span>,
+<a id="L160" href="#L160" class="br">160 </a>            <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;size_t&quot;</span>],
+<a id="L161" href="#L161" class="br">161 </a>        [<span class="str">&quot;cudnnGetConvolutionForwardAlgorithm&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L162" href="#L162" class="br">162 </a>            <span class="str">&quot;const cudnnFilterDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnConvolutionDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L163" href="#L163" class="br">163 </a>            <span class="str">&quot;cudnnConvolutionFwdPreference_t&quot;</span>, <span class="str">&quot;size_t&quot;</span>, <span class="str">&quot;cudnnConvolutionFwdAlgo_t *&quot;</span>],
+<a id="L164" href="#L164" class="br">164 </a>        [<span class="str">&quot;cudnnGetConvolutionForwardWorkspaceSize&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L165" href="#L165" class="br">165 </a>            <span class="str">&quot;const cudnnFilterDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnConvolutionDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L166" href="#L166" class="br">166 </a>            <span class="str">&quot;cudnnConvolutionFwdAlgo_t&quot;</span>, <span class="str">&quot;size_t *&quot;</span>],
+<a id="L167" href="#L167" class="br">167 </a>        [<span class="str">&quot;cudnnConvolutionForward&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L168" href="#L168" class="br">168 </a>            <span class="str">&quot;const cudnnFilterDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnConvolutionDescriptor_t&quot;</span>,
+<a id="L169" href="#L169" class="br">169 </a>            <span class="str">&quot;cudnnConvolutionFwdAlgo_t&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;size_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L170" href="#L170" class="br">170 </a>            <span class="str">&quot;void *&quot;</span>],
+<a id="L171" href="#L171" class="br">171 </a>        [<span class="str">&quot;cudnnConvolutionBackwardBias&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L172" href="#L172" class="br">172 </a>            <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;void *&quot;</span>],
+<a id="L173" href="#L173" class="br">173 </a>        
+<a id="L174" href="#L174" class="br">174 </a>
+<a id="L175" href="#L175" class="br">175 </a>        [<span class="str">&quot;cudnnFindConvolutionBackwardFilterAlgorithm&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L176" href="#L176" class="br">176 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnConvolutionDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnFilterDescriptor_t&quot;</span>,
+<a id="L177" href="#L177" class="br">177 </a>            <span class="str">&quot;const int&quot;</span>, <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;cudnnConvolutionBwdFilterAlgoPerf_t *&quot;</span>],
+<a id="L178" href="#L178" class="br">178 </a>        [<span class="str">&quot;cudnnFindConvolutionBackwardFilterAlgorithmEx&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L179" href="#L179" class="br">179 </a>            <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnConvolutionDescriptor_t&quot;</span>,
+<a id="L180" href="#L180" class="br">180 </a>            <span class="str">&quot;const cudnnFilterDescriptor_t&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;const int&quot;</span>, <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;cudnnConvolutionBwdFilterAlgoPerf_t *&quot;</span>,
+<a id="L181" href="#L181" class="br">181 </a>            <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;size_t&quot;</span>],
+<a id="L182" href="#L182" class="br">182 </a>        [<span class="str">&quot;cudnnGetConvolutionBackwardFilterAlgorithm&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L183" href="#L183" class="br">183 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnConvolutionDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnFilterDescriptor_t&quot;</span>,
+<a id="L184" href="#L184" class="br">184 </a>            <span class="str">&quot;cudnnConvolutionBwdFilterPreference_t&quot;</span>, <span class="str">&quot;size_t&quot;</span>, <span class="str">&quot;cudnnConvolutionBwdFilterAlgo_t *&quot;</span>],
+<a id="L185" href="#L185" class="br">185 </a>        [<span class="str">&quot;cudnnGetConvolutionBackwardFilterWorkspaceSize&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L186" href="#L186" class="br">186 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnConvolutionDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnFilterDescriptor_t&quot;</span>,
+<a id="L187" href="#L187" class="br">187 </a>            <span class="str">&quot;cudnnConvolutionBwdFilterAlgo_t&quot;</span>, <span class="str">&quot;size_t *&quot;</span>],
+<a id="L188" href="#L188" class="br">188 </a>        [<span class="str">&quot;cudnnConvolutionBackwardFilter&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L189" href="#L189" class="br">189 </a>            <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnConvolutionDescriptor_t&quot;</span>,
+<a id="L190" href="#L190" class="br">190 </a>            <span class="str">&quot;cudnnConvolutionBwdFilterAlgo_t&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;size_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnFilterDescriptor_t&quot;</span>,
+<a id="L191" href="#L191" class="br">191 </a>            <span class="str">&quot;void *&quot;</span>],
+<a id="L192" href="#L192" class="br">192 </a>        
+<a id="L193" href="#L193" class="br">193 </a>
+<a id="L194" href="#L194" class="br">194 </a>        [<span class="str">&quot;cudnnFindConvolutionBackwardDataAlgorithm&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnFilterDescriptor_t&quot;</span>,
+<a id="L195" href="#L195" class="br">195 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnConvolutionDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L196" href="#L196" class="br">196 </a>            <span class="str">&quot;const int&quot;</span>, <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;cudnnConvolutionBwdDataAlgoPerf_t *&quot;</span>],
+<a id="L197" href="#L197" class="br">197 </a>        [<span class="str">&quot;cudnnFindConvolutionBackwardDataAlgorithmEx&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnFilterDescriptor_t&quot;</span>,
+<a id="L198" href="#L198" class="br">198 </a>            <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnConvolutionDescriptor_t&quot;</span>,
+<a id="L199" href="#L199" class="br">199 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;const int&quot;</span>, <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;cudnnConvolutionBwdDataAlgoPerf_t *&quot;</span>,
+<a id="L200" href="#L200" class="br">200 </a>            <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;size_t&quot;</span>],
+<a id="L201" href="#L201" class="br">201 </a>        [<span class="str">&quot;cudnnGetConvolutionBackwardDataAlgorithm&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnFilterDescriptor_t&quot;</span>,
+<a id="L202" href="#L202" class="br">202 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnConvolutionDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L203" href="#L203" class="br">203 </a>            <span class="str">&quot;cudnnConvolutionBwdDataPreference_t&quot;</span>, <span class="str">&quot;size_t&quot;</span>, <span class="str">&quot;cudnnConvolutionBwdDataAlgo_t *&quot;</span>],
+<a id="L204" href="#L204" class="br">204 </a>        [<span class="str">&quot;cudnnGetConvolutionBackwardDataWorkspaceSize&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnFilterDescriptor_t&quot;</span>,
+<a id="L205" href="#L205" class="br">205 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnConvolutionDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L206" href="#L206" class="br">206 </a>            <span class="str">&quot;cudnnConvolutionBwdDataAlgo_t&quot;</span>, <span class="str">&quot;size_t *&quot;</span>],
+<a id="L207" href="#L207" class="br">207 </a>        [<span class="str">&quot;cudnnConvolutionBackwardData&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnFilterDescriptor_t&quot;</span>,
+<a id="L208" href="#L208" class="br">208 </a>            <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnConvolutionDescriptor_t&quot;</span>,
+<a id="L209" href="#L209" class="br">209 </a>            <span class="str">&quot;cudnnConvolutionBwdDataAlgo_t&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;size_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L210" href="#L210" class="br">210 </a>            <span class="str">&quot;void *&quot;</span>],
+<a id="L211" href="#L211" class="br">211 </a>        [<span class="str">&quot;cudnnIm2Col&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L212" href="#L212" class="br">212 </a>            <span class="str">&quot;const cudnnFilterDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnConvolutionDescriptor_t&quot;</span>, <span class="str">&quot;void *&quot;</span>],
+<a id="L213" href="#L213" class="br">213 </a>        
+<a id="L214" href="#L214" class="br">214 </a>
+<a id="L215" href="#L215" class="br">215 </a>        [<span class="str">&quot;cudnnSoftmaxForward&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;cudnnSoftmaxAlgorithm_t&quot;</span>, <span class="str">&quot;cudnnSoftmaxMode_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L216" href="#L216" class="br">216 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L217" href="#L217" class="br">217 </a>            <span class="str">&quot;void *&quot;</span>],
+<a id="L218" href="#L218" class="br">218 </a>        [<span class="str">&quot;cudnnSoftmaxBackward&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;cudnnSoftmaxAlgorithm_t&quot;</span>, <span class="str">&quot;cudnnSoftmaxMode_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L219" href="#L219" class="br">219 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L220" href="#L220" class="br">220 </a>            <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;void *&quot;</span>],
+<a id="L221" href="#L221" class="br">221 </a>        
+<a id="L222" href="#L222" class="br">222 </a>
+<a id="L223" href="#L223" class="br">223 </a>        [<span class="str">&quot;cudnnCreatePoolingDescriptor&quot;</span>, <span class="str">&quot;cudnnPoolingDescriptor_t *&quot;</span>],
+<a id="L224" href="#L224" class="br">224 </a>        [<span class="str">&quot;cudnnSetPooling2dDescriptor&quot;</span>, <span class="str">&quot;cudnnPoolingDescriptor_t&quot;</span>, <span class="str">&quot;cudnnPoolingMode_t&quot;</span>, <span class="str">&quot;cudnnNanPropagation_t&quot;</span>,
+<a id="L225" href="#L225" class="br">225 </a>            <span class="str">&quot;int&quot;</span>, <span class="str">&quot;int&quot;</span>, <span class="str">&quot;int&quot;</span>, <span class="str">&quot;int&quot;</span>, <span class="str">&quot;int&quot;</span>, <span class="str">&quot;int&quot;</span>],
+<a id="L226" href="#L226" class="br">226 </a>        [<span class="str">&quot;cudnnGetPooling2dDescriptor&quot;</span>, <span class="str">&quot;const cudnnPoolingDescriptor_t&quot;</span>, <span class="str">&quot;cudnnPoolingMode_t *&quot;</span>,
+<a id="L227" href="#L227" class="br">227 </a>            <span class="str">&quot;cudnnNanPropagation_t *&quot;</span>, <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;int *&quot;</span>],
+<a id="L228" href="#L228" class="br">228 </a>        [<span class="str">&quot;cudnnSetPoolingNdDescriptor&quot;</span>, <span class="str">&quot;cudnnPoolingDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnPoolingMode_t&quot;</span>,
+<a id="L229" href="#L229" class="br">229 </a>            <span class="str">&quot;const cudnnNanPropagation_t&quot;</span>, <span class="str">&quot;int&quot;</span>, <span class="str">&quot;const int*&quot;</span>, <span class="str">&quot;const int*&quot;</span>, <span class="str">&quot;const int*&quot;</span>],
+<a id="L230" href="#L230" class="br">230 </a>        [<span class="str">&quot;cudnnGetPoolingNdDescriptor&quot;</span>, <span class="str">&quot;cudnnPoolingDescriptor_t&quot;</span>, <span class="str">&quot;int&quot;</span>, <span class="str">&quot;cudnnPoolingMode_t *&quot;</span>,
+<a id="L231" href="#L231" class="br">231 </a>            <span class="str">&quot;cudnnNanPropagation_t *&quot;</span>, <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;int*&quot;</span>, <span class="str">&quot;int*&quot;</span>, <span class="str">&quot;int*&quot;</span>],
+<a id="L232" href="#L232" class="br">232 </a>        [<span class="str">&quot;cudnnGetPoolingNdForwardOutputDim&quot;</span>, <span class="str">&quot;const cudnnPoolingDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L233" href="#L233" class="br">233 </a>            <span class="str">&quot;int&quot;</span>, <span class="str">&quot;int*&quot;</span>],
+<a id="L234" href="#L234" class="br">234 </a>        [<span class="str">&quot;cudnnGetPooling2dForwardOutputDim&quot;</span>, <span class="str">&quot;const cudnnPoolingDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L235" href="#L235" class="br">235 </a>            <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;int *&quot;</span>, <span class="str">&quot;int *&quot;</span>],
+<a id="L236" href="#L236" class="br">236 </a>        [<span class="str">&quot;cudnnDestroyPoolingDescriptor&quot;</span>, <span class="str">&quot;cudnnPoolingDescriptor_t&quot;</span>],
+<a id="L237" href="#L237" class="br">237 </a>        [<span class="str">&quot;cudnnPoolingForward&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnPoolingDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L238" href="#L238" class="br">238 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L239" href="#L239" class="br">239 </a>            <span class="str">&quot;void *&quot;</span>],
+<a id="L240" href="#L240" class="br">240 </a>        [<span class="str">&quot;cudnnPoolingBackward&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnPoolingDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L241" href="#L241" class="br">241 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L242" href="#L242" class="br">242 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L243" href="#L243" class="br">243 </a>            <span class="str">&quot;void *&quot;</span>],
+<a id="L244" href="#L244" class="br">244 </a>        
+<a id="L245" href="#L245" class="br">245 </a>
+<a id="L246" href="#L246" class="br">246 </a>        [<span class="str">&quot;cudnnCreateActivationDescriptor&quot;</span>, <span class="str">&quot;cudnnActivationDescriptor_t *&quot;</span>],
+<a id="L247" href="#L247" class="br">247 </a>        [<span class="str">&quot;cudnnSetActivationDescriptor&quot;</span>, <span class="str">&quot;cudnnActivationDescriptor_t&quot;</span>, <span class="str">&quot;cudnnActivationMode_t&quot;</span>,
+<a id="L248" href="#L248" class="br">248 </a>            <span class="str">&quot;cudnnNanPropagation_t&quot;</span>, <span class="str">&quot;double&quot;</span>],
+<a id="L249" href="#L249" class="br">249 </a>        [<span class="str">&quot;cudnnGetActivationDescriptor&quot;</span>, <span class="str">&quot;const cudnnActivationDescriptor_t&quot;</span>, <span class="str">&quot;cudnnActivationMode_t *&quot;</span>,
+<a id="L250" href="#L250" class="br">250 </a>            <span class="str">&quot;cudnnNanPropagation_t &quot;</span>, <span class="str">&quot;double *&quot;</span>],
+<a id="L251" href="#L251" class="br">251 </a>        [<span class="str">&quot;cudnnDestroyActivationDescriptor&quot;</span>, <span class="str">&quot;cudnnActivationDescriptor_t&quot;</span>],
+<a id="L252" href="#L252" class="br">252 </a>        [<span class="str">&quot;cudnnActivationForward&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;cudnnActivationDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L253" href="#L253" class="br">253 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L254" href="#L254" class="br">254 </a>            <span class="str">&quot;void *&quot;</span>],
+<a id="L255" href="#L255" class="br">255 </a>        [<span class="str">&quot;cudnnActivationBackward&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;cudnnActivationDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L256" href="#L256" class="br">256 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L257" href="#L257" class="br">257 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L258" href="#L258" class="br">258 </a>            <span class="str">&quot;void *&quot;</span>],
+<a id="L259" href="#L259" class="br">259 </a>        
+<a id="L260" href="#L260" class="br">260 </a>
+<a id="L261" href="#L261" class="br">261 </a>        [<span class="str">&quot;cudnnCreateLRNDescriptor&quot;</span>, <span class="str">&quot;cudnnLRNDescriptor_t *&quot;</span>],
+<a id="L262" href="#L262" class="br">262 </a>        [<span class="str">&quot;cudnnSetLRNDescriptor&quot;</span>, <span class="str">&quot;cudnnLRNDescriptor_t&quot;</span>, <span class="str">&quot;uint&quot;</span>, <span class="str">&quot;double&quot;</span>, <span class="str">&quot;double&quot;</span>, <span class="str">&quot;double&quot;</span>],
+<a id="L263" href="#L263" class="br">263 </a>        [<span class="str">&quot;cudnnGetLRNDescriptor&quot;</span>, <span class="str">&quot;cudnnLRNDescriptor_t&quot;</span>, <span class="str">&quot;uint *&quot;</span>, <span class="str">&quot;double *&quot;</span>, <span class="str">&quot;double *&quot;</span>, <span class="str">&quot;double *&quot;</span>],
+<a id="L264" href="#L264" class="br">264 </a>        [<span class="str">&quot;cudnnDestroyLRNDescriptor&quot;</span>, <span class="str">&quot;cudnnLRNDescriptor_t&quot;</span>],
+<a id="L265" href="#L265" class="br">265 </a>        [<span class="str">&quot;cudnnLRNCrossChannelForward&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;cudnnLRNDescriptor_t&quot;</span>, <span class="str">&quot;cudnnLRNMode_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L266" href="#L266" class="br">266 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L267" href="#L267" class="br">267 </a>            <span class="str">&quot;void *&quot;</span>],
+<a id="L268" href="#L268" class="br">268 </a>        [<span class="str">&quot;cudnnLRNCrossChannelBackward&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;cudnnLRNDescriptor_t&quot;</span>, <span class="str">&quot;cudnnLRNMode_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L269" href="#L269" class="br">269 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L270" href="#L270" class="br">270 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L271" href="#L271" class="br">271 </a>            <span class="str">&quot;void *&quot;</span>],
+<a id="L272" href="#L272" class="br">272 </a>        [<span class="str">&quot;cudnnDivisiveNormalizationForward&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;cudnnLRNDescriptor_t&quot;</span>, <span class="str">&quot;cudnnDivNormMode_t&quot;</span>,
+<a id="L273" href="#L273" class="br">273 </a>            <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;void *&quot;</span>,
+<a id="L274" href="#L274" class="br">274 </a>            <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;void *&quot;</span>],
+<a id="L275" href="#L275" class="br">275 </a>        [<span class="str">&quot;cudnnDivisiveNormalizationBackward&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;cudnnLRNDescriptor_t&quot;</span>, <span class="str">&quot;cudnnDivNormMode_t&quot;</span>,
+<a id="L276" href="#L276" class="br">276 </a>            <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L277" href="#L277" class="br">277 </a>            <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;void *&quot;</span>],
+<a id="L278" href="#L278" class="br">278 </a>        
+<a id="L279" href="#L279" class="br">279 </a>
+<a id="L280" href="#L280" class="br">280 </a>        [<span class="str">&quot;cudnnDeriveBNTensorDescriptor&quot;</span>, <span class="str">&quot;cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L281" href="#L281" class="br">281 </a>            <span class="str">&quot;cudnnBatchNormMode_t&quot;</span>],
+<a id="L282" href="#L282" class="br">282 </a>        [<span class="str">&quot;cudnnBatchNormalizationForwardTraining&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;cudnnBatchNormMode_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L283" href="#L283" class="br">283 </a>            <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L284" href="#L284" class="br">284 </a>            <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;double&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;void *&quot;</span>,
+<a id="L285" href="#L285" class="br">285 </a>            <span class="str">&quot;double&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;void *&quot;</span>],
+<a id="L286" href="#L286" class="br">286 </a>        [<span class="str">&quot;cudnnBatchNormalizationForwardInference&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;cudnnBatchNormMode_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L287" href="#L287" class="br">287 </a>            <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;void *&quot;</span>,
+<a id="L288" href="#L288" class="br">288 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;double&quot;</span>],
+<a id="L289" href="#L289" class="br">289 </a>        [<span class="str">&quot;cudnnBatchNormalizationBackward&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;cudnnBatchNormMode_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L290" href="#L290" class="br">290 </a>            <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L291" href="#L291" class="br">291 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;void *&quot;</span>,
+<a id="L292" href="#L292" class="br">292 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;double&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L293" href="#L293" class="br">293 </a>            <span class="str">&quot;const void *&quot;</span>],
+<a id="L294" href="#L294" class="br">294 </a>        
+<a id="L295" href="#L295" class="br">295 </a>
+<a id="L296" href="#L296" class="br">296 </a>        [<span class="str">&quot;cudnnCreateSpatialTransformerDescriptor&quot;</span>, <span class="str">&quot;cudnnSpatialTransformerDescriptor_t *&quot;</span>],
+<a id="L297" href="#L297" class="br">297 </a>        [<span class="str">&quot;cudnnSetSpatialTransformerNdDescriptor&quot;</span>, <span class="str">&quot;cudnnSpatialTransformerDescriptor_t&quot;</span>, <span class="str">&quot;cudnnSamplerType_t&quot;</span>,
+<a id="L298" href="#L298" class="br">298 </a>            <span class="str">&quot;cudnnDataType_t&quot;</span>, <span class="str">&quot;const int&quot;</span>, <span class="str">&quot;const int*&quot;</span>],
+<a id="L299" href="#L299" class="br">299 </a>        [<span class="str">&quot;cudnnDestroySpatialTransformerDescriptor&quot;</span>, <span class="str">&quot;cudnnSpatialTransformerDescriptor_t&quot;</span>],
+<a id="L300" href="#L300" class="br">300 </a>        [<span class="str">&quot;cudnnSpatialTfGridGeneratorForward&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnSpatialTransformerDescriptor_t&quot;</span>,
+<a id="L301" href="#L301" class="br">301 </a>            <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;void *&quot;</span>],
+<a id="L302" href="#L302" class="br">302 </a>        [<span class="str">&quot;cudnnSpatialTfGridGeneratorBackward&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnSpatialTransformerDescriptor_t&quot;</span>,
+<a id="L303" href="#L303" class="br">303 </a>            <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;void *&quot;</span>],
+<a id="L304" href="#L304" class="br">304 </a>        [<span class="str">&quot;cudnnSpatialTfSamplerForward&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;cudnnSpatialTransformerDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L305" href="#L305" class="br">305 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L306" href="#L306" class="br">306 </a>            <span class="str">&quot;cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;void *&quot;</span>],
+<a id="L307" href="#L307" class="br">307 </a>        [<span class="str">&quot;cudnnSpatialTfSamplerBackward&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;cudnnSpatialTransformerDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L308" href="#L308" class="br">308 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;void *&quot;</span>,
+<a id="L309" href="#L309" class="br">309 </a>            <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;void *&quot;</span>],
+<a id="L310" href="#L310" class="br">310 </a>        
+<a id="L311" href="#L311" class="br">311 </a>
+<a id="L312" href="#L312" class="br">312 </a>        [<span class="str">&quot;cudnnCreateDropoutDescriptor&quot;</span>, <span class="str">&quot;cudnnDropoutDescriptor_t *&quot;</span>],
+<a id="L313" href="#L313" class="br">313 </a>        [<span class="str">&quot;cudnnDestroyDropoutDescriptor&quot;</span>, <span class="str">&quot;cudnnDropoutDescriptor_t&quot;</span>],
+<a id="L314" href="#L314" class="br">314 </a>        [<span class="str">&quot;cudnnDropoutGetStatesSize&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;size_t *&quot;</span>],
+<a id="L315" href="#L315" class="br">315 </a>        [<span class="str">&quot;cudnnDropoutGetReserveSpaceSize&quot;</span>, <span class="str">&quot;cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;size_t *&quot;</span>],
+<a id="L316" href="#L316" class="br">316 </a>        [<span class="str">&quot;cudnnSetDropoutDescriptor&quot;</span>, <span class="str">&quot;cudnnDropoutDescriptor_t&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;float&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;size_t&quot;</span>,
+<a id="L317" href="#L317" class="br">317 </a>            <span class="str">&quot;ulong&quot;</span>],
+<a id="L318" href="#L318" class="br">318 </a>        [<span class="str">&quot;cudnnDropoutForward&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnDropoutDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L319" href="#L319" class="br">319 </a>            <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;size_t&quot;</span>],
+<a id="L320" href="#L320" class="br">320 </a>        [<span class="str">&quot;cudnnDropoutBackward&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnDropoutDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L321" href="#L321" class="br">321 </a>            <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;size_t&quot;</span>],
+<a id="L322" href="#L322" class="br">322 </a>        
+<a id="L323" href="#L323" class="br">323 </a>
+<a id="L324" href="#L324" class="br">324 </a>        [<span class="str">&quot;cudnnCreateRNNDescriptor&quot;</span>, <span class="str">&quot;cudnnRNNDescriptor_t *&quot;</span>],
+<a id="L325" href="#L325" class="br">325 </a>        [<span class="str">&quot;cudnnDestroyRNNDescriptor&quot;</span>, <span class="str">&quot;cudnnRNNDescriptor_t&quot;</span>],
+<a id="L326" href="#L326" class="br">326 </a>        [<span class="str">&quot;cudnnSetRNNDescriptor&quot;</span>, <span class="str">&quot;cudnnRNNDescriptor_t&quot;</span>, <span class="str">&quot;int&quot;</span>, <span class="str">&quot;int&quot;</span>, <span class="str">&quot;cudnnDropoutDescriptor_t&quot;</span>,
+<a id="L327" href="#L327" class="br">327 </a>            <span class="str">&quot;cudnnRNNInputMode_t&quot;</span>, <span class="str">&quot;cudnnDirectionMode_t&quot;</span>, <span class="str">&quot;cudnnRNNMode_t&quot;</span>, <span class="str">&quot;cudnnDataType_t&quot;</span>],
+<a id="L328" href="#L328" class="br">328 </a>        [<span class="str">&quot;cudnnGetRNNWorkspaceSize&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnRNNDescriptor_t&quot;</span>, <span class="str">&quot;const int&quot;</span>,
+<a id="L329" href="#L329" class="br">329 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t *&quot;</span>, <span class="str">&quot;size_t *&quot;</span>],
+<a id="L330" href="#L330" class="br">330 </a>        [<span class="str">&quot;cudnnGetRNNTrainingReserveSize&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnRNNDescriptor_t&quot;</span>, <span class="str">&quot;const int&quot;</span>,
+<a id="L331" href="#L331" class="br">331 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t *&quot;</span>, <span class="str">&quot;size_t *&quot;</span>],
+<a id="L332" href="#L332" class="br">332 </a>        [<span class="str">&quot;cudnnGetRNNParamsSize&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnRNNDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L333" href="#L333" class="br">333 </a>            <span class="str">&quot;size_t *&quot;</span>, <span class="str">&quot;cudnnDataType_t&quot;</span>],
+<a id="L334" href="#L334" class="br">334 </a>        [<span class="str">&quot;cudnnGetRNNLinLayerMatrixParams&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnRNNDescriptor_t&quot;</span>, <span class="str">&quot;const int&quot;</span>,
+<a id="L335" href="#L335" class="br">335 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnFilterDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const int&quot;</span>,
+<a id="L336" href="#L336" class="br">336 </a>            <span class="str">&quot;cudnnFilterDescriptor_t&quot;</span>, <span class="str">&quot;void **&quot;</span>],
+<a id="L337" href="#L337" class="br">337 </a>        [<span class="str">&quot;cudnnGetRNNLinLayerBiasParams&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnRNNDescriptor_t&quot;</span>, <span class="str">&quot;const int&quot;</span>,
+<a id="L338" href="#L338" class="br">338 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const cudnnFilterDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const int&quot;</span>,
+<a id="L339" href="#L339" class="br">339 </a>            <span class="str">&quot;cudnnFilterDescriptor_t&quot;</span>, <span class="str">&quot;void **&quot;</span>],
+<a id="L340" href="#L340" class="br">340 </a>        [<span class="str">&quot;cudnnRNNForwardInference&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnRNNDescriptor_t&quot;</span>, <span class="str">&quot;const int&quot;</span>,
+<a id="L341" href="#L341" class="br">341 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L342" href="#L342" class="br">342 </a>            <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnFilterDescriptor_t&quot;</span>,
+<a id="L343" href="#L343" class="br">343 </a>            <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t *&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;void *&quot;</span>,
+<a id="L344" href="#L344" class="br">344 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;size_t&quot;</span>],
+<a id="L345" href="#L345" class="br">345 </a>        [<span class="str">&quot;cudnnRNNForwardTraining&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnRNNDescriptor_t&quot;</span>, <span class="str">&quot;const int&quot;</span>,
+<a id="L346" href="#L346" class="br">346 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L347" href="#L347" class="br">347 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnFilterDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L348" href="#L348" class="br">348 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t *&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;void *&quot;</span>,
+<a id="L349" href="#L349" class="br">349 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;size_t&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;size_t&quot;</span>],
+<a id="L350" href="#L350" class="br">350 </a>        [<span class="str">&quot;cudnnRNNBackwardData&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnRNNDescriptor_t&quot;</span>, <span class="str">&quot;const int&quot;</span>,
+<a id="L351" href="#L351" class="br">351 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t *&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L352" href="#L352" class="br">352 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L353" href="#L353" class="br">353 </a>            <span class="str">&quot;const cudnnFilterDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L354" href="#L354" class="br">354 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t *&quot;</span>, <span class="str">&quot;void *&quot;</span>,
+<a id="L355" href="#L355" class="br">355 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;void *&quot;</span>,
+<a id="L356" href="#L356" class="br">356 </a>            <span class="str">&quot;size_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;size_t&quot;</span>],
+<a id="L357" href="#L357" class="br">357 </a>        [<span class="str">&quot;cudnnRNNBackwardWeights&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const cudnnRNNDescriptor_t&quot;</span>, <span class="str">&quot;const int&quot;</span>,
+<a id="L358" href="#L358" class="br">358 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>,
+<a id="L359" href="#L359" class="br">359 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;size_t&quot;</span>,
+<a id="L360" href="#L360" class="br">360 </a>            <span class="str">&quot;const cudnnFilterDescriptor_t&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;size_t&quot;</span>],
+<a id="L361" href="#L361" class="br">361 </a>
+<a id="L362" href="#L362" class="br">362 </a>        <span class="com">//New in cuDNN v6</span>
+<a id="L363" href="#L363" class="br">363 </a>        [<span class="str">&quot;cudnnConvolutionBiasActivationForward&quot;</span>, <span class="str">&quot;cudnnHandle_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L364" href="#L364" class="br">364 </a>            <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnFilterDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnConvolutionDescriptor_t&quot;</span>,
+<a id="L365" href="#L365" class="br">365 </a>            <span class="str">&quot;cudnnConvolutionFwdAlgo_t&quot;</span>, <span class="str">&quot;void *&quot;</span>, <span class="str">&quot;size_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>,
+<a id="L366" href="#L366" class="br">366 </a>            <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;const void *&quot;</span>, <span class="str">&quot;const cudnnActivationDescriptor_t&quot;</span>,
+<a id="L367" href="#L367" class="br">367 </a>            <span class="str">&quot;const cudnnTensorDescriptor_t&quot;</span>, <span class="str">&quot;void *&quot;</span>]
+<a id="L368" href="#L368" class="br">368 </a>    ];
+<a id="L369" href="#L369" class="br">369 </a>
+<a id="L370" href="#L370" class="br">370 </a>    <span class="type">string</span> <a href="derelict.cudnn7.d.html#L370" title="derelict.cudnn7.generateFunctionAliases" class="hid">generateFunctionAliases</a>()
+<a id="L371" href="#L371" class="br">371 </a>    {
+<a id="L372" href="#L372" class="br">372 </a>        <span class="kwrd">import</span> <span class="hid">std.algorithm</span> : <span class="hid">joiner</span>;
+<a id="L373" href="#L373" class="br">373 </a>        <span class="kwrd">import</span> <span class="hid">std.conv</span> : <span class="hid">to</span>;
+<a id="L374" href="#L374" class="br">374 </a>
+<a id="L375" href="#L375" class="br">375 </a>        <span class="type">string</span> <span class="hid">ret</span>;
+<a id="L376" href="#L376" class="br">376 </a>
+<a id="L377" href="#L377" class="br">377 </a>        <span class="kwrd">foreach</span>(<span class="hid">ft</span>; <a href="derelict.cudnn7.d.html#L0" title="derelict.cudnn7.functionTypes" class="hid">functionTypes</a>)
+<a id="L378" href="#L378" class="br">378 </a>        {
+<a id="L379" href="#L379" class="br">379 </a>            <span class="hid">ret</span> ~= <span class="str">&quot;alias da_&quot;</span> ~ <span class="hid">ft</span>[<span class="num">0</span>] ~ <span class="str">&quot; = cudnnStatus_t function(&quot;</span> ~ <span class="hid">ft</span>[<span class="num">1</span> .. $].<span class="hid">joiner</span>(<span class="str">&quot;,&quot;</span>).<span class="hid">to</span>!<span class="type">string</span> ~ <span class="str">&quot;);&quot;</span>;
+<a id="L380" href="#L380" class="br">380 </a>        }
+<a id="L381" href="#L381" class="br">381 </a>
+<a id="L382" href="#L382" class="br">382 </a>        <span class="kwrd">return</span> <span class="hid">ret</span>;
+<a id="L383" href="#L383" class="br">383 </a>    }
+<a id="L384" href="#L384" class="br">384 </a>
+<a id="L385" href="#L385" class="br">385 </a>    <span class="type">string</span> <a href="derelict.cudnn7.d.html#L385" title="derelict.cudnn7.generateFunctionPointers" class="hid">generateFunctionPointers</a>()
+<a id="L386" href="#L386" class="br">386 </a>    {
+<a id="L387" href="#L387" class="br">387 </a>        <span class="type">string</span> <span class="hid">ret</span>;
+<a id="L388" href="#L388" class="br">388 </a>
+<a id="L389" href="#L389" class="br">389 </a>        <span class="kwrd">foreach</span>(<span class="hid">ft</span>; <a href="derelict.cudnn7.d.html#L0" title="derelict.cudnn7.functionTypes" class="hid">functionTypes</a>)
+<a id="L390" href="#L390" class="br">390 </a>        {
+<a id="L391" href="#L391" class="br">391 </a>            <span class="hid">ret</span> ~= <span class="str">&quot;da_&quot;</span> ~ <span class="hid">ft</span>[<span class="num">0</span>] ~ <span class="str">&quot; &quot;</span> ~ <span class="hid">ft</span>[<span class="num">0</span>] ~ <span class="str">&quot;;&quot;</span>;
+<a id="L392" href="#L392" class="br">392 </a>        }
+<a id="L393" href="#L393" class="br">393 </a>
+<a id="L394" href="#L394" class="br">394 </a>        <span class="kwrd">return</span> <span class="hid">ret</span>;
+<a id="L395" href="#L395" class="br">395 </a>    }
+<a id="L396" href="#L396" class="br">396 </a>
+<a id="L397" href="#L397" class="br">397 </a>    <span class="type">string</span> <a href="derelict.cudnn7.d.html#L397" title="derelict.cudnn7.generateFunctionBinds" class="hid">generateFunctionBinds</a>()
+<a id="L398" href="#L398" class="br">398 </a>    {
+<a id="L399" href="#L399" class="br">399 </a>        <span class="type">string</span> <span class="hid">ret</span>;
+<a id="L400" href="#L400" class="br">400 </a>
+<a id="L401" href="#L401" class="br">401 </a>        <span class="kwrd">foreach</span>(<span class="hid">ft</span>; <a href="derelict.cudnn7.d.html#L0" title="derelict.cudnn7.functionTypes" class="hid">functionTypes</a>)
+<a id="L402" href="#L402" class="br">402 </a>        {
+<a id="L403" href="#L403" class="br">403 </a>            <span class="hid">ret</span> ~= <span class="str">&quot;bindFunc(cast(void**)&amp;&quot;</span> ~ <span class="hid">ft</span>[<span class="num">0</span>] ~ <span class="str">&quot;, \&quot;&quot;</span> ~ <span class="hid">ft</span>[<span class="num">0</span>] ~ <span class="str">&quot;\&quot;);&quot;</span>;
+<a id="L404" href="#L404" class="br">404 </a>        }
+<a id="L405" href="#L405" class="br">405 </a>
+<a id="L406" href="#L406" class="br">406 </a>        <span class="kwrd">return</span> <span class="hid">ret</span>;
+<a id="L407" href="#L407" class="br">407 </a>    }
+<a id="L408" href="#L408" class="br">408 </a>}
+<a id="L409" href="#L409" class="br">409 </a>
+<a id="L410" href="#L410" class="br">410 </a><span class="kwrd">struct</span> <a href="derelict.cudnn7.d.html#L410" title="derelict.cudnn7.cudnnContext" class="hid">cudnnContext</a>;
+<a id="L411" href="#L411" class="br">411 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L411" title="derelict.cudnn7.cudnnHandle_t" class="hid">cudnnHandle_t</a> = <a href="derelict.cudnn7.d.html#L410" title="derelict.cudnn7.cudnnContext" class="hid">cudnnContext</a>*;
+<a id="L412" href="#L412" class="br">412 </a>
+<a id="L413" href="#L413" class="br">413 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L413" title="derelict.cudnn7.cudnnStatus_t" class="hid">cudnnStatus_t</a> = <span class="type">int</span>;
+<a id="L414" href="#L414" class="br">414 </a><span class="kwrd">enum</span> : <a href="derelict.cudnn7.d.html#L413" title="derelict.cudnn7.cudnnStatus_t" class="hid">cudnnStatus_t</a>
+<a id="L415" href="#L415" class="br">415 </a>{
+<a id="L416" href="#L416" class="br">416 </a>    <a href="derelict.cudnn7.d.html#L414" title="derelict.cudnn7.CUDNN_STATUS_SUCCESS" class="hid">CUDNN_STATUS_SUCCESS</a>          = <span class="num">0</span>,
+<a id="L417" href="#L417" class="br">417 </a>    <span class="hid">CUDNN_STATUS_NOT_INITIALIZED</span>  = <span class="num">1</span>,
+<a id="L418" href="#L418" class="br">418 </a>    <span class="hid">CUDNN_STATUS_ALLOC_FAILED</span>     = <span class="num">2</span>,
+<a id="L419" href="#L419" class="br">419 </a>    <span class="hid">CUDNN_STATUS_BAD_PARAM</span>        = <span class="num">3</span>,
+<a id="L420" href="#L420" class="br">420 </a>    <span class="hid">CUDNN_STATUS_INTERNAL_ERROR</span>   = <span class="num">4</span>,
+<a id="L421" href="#L421" class="br">421 </a>    <span class="hid">CUDNN_STATUS_INVALID_VALUE</span>    = <span class="num">5</span>,
+<a id="L422" href="#L422" class="br">422 </a>    <span class="hid">CUDNN_STATUS_ARCH_MISMATCH</span>    = <span class="num">6</span>,
+<a id="L423" href="#L423" class="br">423 </a>    <span class="hid">CUDNN_STATUS_MAPPING_ERROR</span>    = <span class="num">7</span>,
+<a id="L424" href="#L424" class="br">424 </a>    <span class="hid">CUDNN_STATUS_EXECUTION_FAILED</span> = <span class="num">8</span>,
+<a id="L425" href="#L425" class="br">425 </a>    <span class="hid">CUDNN_STATUS_NOT_SUPPORTED</span>    = <span class="num">9</span>,
+<a id="L426" href="#L426" class="br">426 </a>    <span class="hid">CUDNN_STATUS_LICENSE_ERROR</span>    = <span class="num">10</span>
+<a id="L427" href="#L427" class="br">427 </a>}
+<a id="L428" href="#L428" class="br">428 </a>
+<a id="L429" href="#L429" class="br">429 </a><span class="kwrd">struct</span> <a href="derelict.cudnn7.d.html#L429" title="derelict.cudnn7.cudnnTensorStruct" class="hid">cudnnTensorStruct</a>;
+<a id="L430" href="#L430" class="br">430 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L430" title="derelict.cudnn7.cudnnTensorDescriptor_t" class="hid">cudnnTensorDescriptor_t</a> = <a href="derelict.cudnn7.d.html#L429" title="derelict.cudnn7.cudnnTensorStruct" class="hid">cudnnTensorStruct</a>*;
+<a id="L431" href="#L431" class="br">431 </a>
+<a id="L432" href="#L432" class="br">432 </a><span class="kwrd">struct</span> <a href="derelict.cudnn7.d.html#L432" title="derelict.cudnn7.cudnnConvolutionStruct" class="hid">cudnnConvolutionStruct</a>;
+<a id="L433" href="#L433" class="br">433 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L433" title="derelict.cudnn7.cudnnConvolutionDescriptor_t" class="hid">cudnnConvolutionDescriptor_t</a> = <a href="derelict.cudnn7.d.html#L432" title="derelict.cudnn7.cudnnConvolutionStruct" class="hid">cudnnConvolutionStruct</a>*;
+<a id="L434" href="#L434" class="br">434 </a>
+<a id="L435" href="#L435" class="br">435 </a><span class="kwrd">struct</span> <a href="derelict.cudnn7.d.html#L435" title="derelict.cudnn7.cudnnPoolingStruct" class="hid">cudnnPoolingStruct</a>;
+<a id="L436" href="#L436" class="br">436 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L436" title="derelict.cudnn7.cudnnPoolingDescriptor_t" class="hid">cudnnPoolingDescriptor_t</a> = <a href="derelict.cudnn7.d.html#L435" title="derelict.cudnn7.cudnnPoolingStruct" class="hid">cudnnPoolingStruct</a>*;
+<a id="L437" href="#L437" class="br">437 </a>
+<a id="L438" href="#L438" class="br">438 </a><span class="kwrd">struct</span> <a href="derelict.cudnn7.d.html#L438" title="derelict.cudnn7.cudnnFilterStruct" class="hid">cudnnFilterStruct</a>;
+<a id="L439" href="#L439" class="br">439 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L439" title="derelict.cudnn7.cudnnFilterDescriptor_t" class="hid">cudnnFilterDescriptor_t</a> = <a href="derelict.cudnn7.d.html#L438" title="derelict.cudnn7.cudnnFilterStruct" class="hid">cudnnFilterStruct</a>*;
+<a id="L440" href="#L440" class="br">440 </a>
+<a id="L441" href="#L441" class="br">441 </a><span class="kwrd">struct</span> <a href="derelict.cudnn7.d.html#L441" title="derelict.cudnn7.cudnnLRNStruct" class="hid">cudnnLRNStruct</a>;
+<a id="L442" href="#L442" class="br">442 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L442" title="derelict.cudnn7.cudnnLRNDescriptor_t" class="hid">cudnnLRNDescriptor_t</a> = <a href="derelict.cudnn7.d.html#L441" title="derelict.cudnn7.cudnnLRNStruct" class="hid">cudnnLRNStruct</a>*;
+<a id="L443" href="#L443" class="br">443 </a>
+<a id="L444" href="#L444" class="br">444 </a><span class="kwrd">struct</span> <a href="derelict.cudnn7.d.html#L444" title="derelict.cudnn7.cudnnActivationStruct" class="hid">cudnnActivationStruct</a>;
+<a id="L445" href="#L445" class="br">445 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L445" title="derelict.cudnn7.cudnnActivationDescriptor_t" class="hid">cudnnActivationDescriptor_t</a> = <a href="derelict.cudnn7.d.html#L444" title="derelict.cudnn7.cudnnActivationStruct" class="hid">cudnnActivationStruct</a>*;
+<a id="L446" href="#L446" class="br">446 </a>
+<a id="L447" href="#L447" class="br">447 </a><span class="kwrd">struct</span> <a href="derelict.cudnn7.d.html#L447" title="derelict.cudnn7.cudnnSpatialTransformerStruct" class="hid">cudnnSpatialTransformerStruct</a>;
+<a id="L448" href="#L448" class="br">448 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L448" title="derelict.cudnn7.cudnnSpatialTransformerDescriptor_t" class="hid">cudnnSpatialTransformerDescriptor_t</a> = <a href="derelict.cudnn7.d.html#L447" title="derelict.cudnn7.cudnnSpatialTransformerStruct" class="hid">cudnnSpatialTransformerStruct</a>*;
+<a id="L449" href="#L449" class="br">449 </a>
+<a id="L450" href="#L450" class="br">450 </a><span class="kwrd">struct</span> <a href="derelict.cudnn7.d.html#L450" title="derelict.cudnn7.cudnnOpTensorStruct" class="hid">cudnnOpTensorStruct</a>;
+<a id="L451" href="#L451" class="br">451 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L451" title="derelict.cudnn7.cudnnOpTensorDescriptor_t" class="hid">cudnnOpTensorDescriptor_t</a> = <a href="derelict.cudnn7.d.html#L450" title="derelict.cudnn7.cudnnOpTensorStruct" class="hid">cudnnOpTensorStruct</a>*;
+<a id="L452" href="#L452" class="br">452 </a>
+<a id="L453" href="#L453" class="br">453 </a><span class="kwrd">struct</span> <a href="derelict.cudnn7.d.html#L453" title="derelict.cudnn7.cudnnReduceTensorStruct" class="hid">cudnnReduceTensorStruct</a>;
+<a id="L454" href="#L454" class="br">454 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L454" title="derelict.cudnn7.cudnnReduceTensorDescriptor_t" class="hid">cudnnReduceTensorDescriptor_t</a> = <a href="derelict.cudnn7.d.html#L453" title="derelict.cudnn7.cudnnReduceTensorStruct" class="hid">cudnnReduceTensorStruct</a>*;
+<a id="L455" href="#L455" class="br">455 </a>
+<a id="L456" href="#L456" class="br">456 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L456" title="derelict.cudnn7.cudnnDataType_t" class="hid">cudnnDataType_t</a> = <span class="type">int</span>;
+<a id="L457" href="#L457" class="br">457 </a><span class="kwrd">enum</span> : <a href="derelict.cudnn7.d.html#L456" title="derelict.cudnn7.cudnnDataType_t" class="hid">cudnnDataType_t</a>
+<a id="L458" href="#L458" class="br">458 </a>{
+<a id="L459" href="#L459" class="br">459 </a>    <a href="derelict.cudnn7.d.html#L457" title="derelict.cudnn7.CUDNN_DATA_FLOAT" class="hid">CUDNN_DATA_FLOAT</a>  = <span class="num">0</span>,
+<a id="L460" href="#L460" class="br">460 </a>    <span class="hid">CUDNN_DATA_DOUBLE</span> = <span class="num">1</span>,
+<a id="L461" href="#L461" class="br">461 </a>    <span class="hid">CUDNN_DATA_HALF</span>   = <span class="num">2</span>
+<a id="L462" href="#L462" class="br">462 </a>}
+<a id="L463" href="#L463" class="br">463 </a>
+<a id="L464" href="#L464" class="br">464 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L464" title="derelict.cudnn7.cudnnNanPropagation_t" class="hid">cudnnNanPropagation_t</a> = <span class="type">int</span>;
+<a id="L465" href="#L465" class="br">465 </a><span class="kwrd">enum</span> : <a href="derelict.cudnn7.d.html#L464" title="derelict.cudnn7.cudnnNanPropagation_t" class="hid">cudnnNanPropagation_t</a>
+<a id="L466" href="#L466" class="br">466 </a>{
+<a id="L467" href="#L467" class="br">467 </a>    <a href="derelict.cudnn7.d.html#L465" title="derelict.cudnn7.CUDNN_NOT_PROPAGATE_NAN" class="hid">CUDNN_NOT_PROPAGATE_NAN</a>  = <span class="num">0</span>,
+<a id="L468" href="#L468" class="br">468 </a>    <span class="hid">CUDNN_PROPAGATE_NAN</span>      = <span class="num">1</span>
+<a id="L469" href="#L469" class="br">469 </a>}
+<a id="L470" href="#L470" class="br">470 </a>
+<a id="L471" href="#L471" class="br">471 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L471" title="derelict.cudnn7.cudnnDeterminism_t" class="hid">cudnnDeterminism_t</a> = <span class="type">int</span>;
+<a id="L472" href="#L472" class="br">472 </a><span class="kwrd">enum</span> : <a href="derelict.cudnn7.d.html#L471" title="derelict.cudnn7.cudnnDeterminism_t" class="hid">cudnnDeterminism_t</a>
+<a id="L473" href="#L473" class="br">473 </a>{
+<a id="L474" href="#L474" class="br">474 </a>    <a href="derelict.cudnn7.d.html#L472" title="derelict.cudnn7.CUDNN_NON_DETERMINISTIC" class="hid">CUDNN_NON_DETERMINISTIC</a> = <span class="num">0</span>,
+<a id="L475" href="#L475" class="br">475 </a>    <span class="hid">CUDNN_DETERMINISTIC</span> = <span class="num">1</span>
+<a id="L476" href="#L476" class="br">476 </a>}
+<a id="L477" href="#L477" class="br">477 </a>
+<a id="L478" href="#L478" class="br">478 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L478" title="derelict.cudnn7.cudnnTensorFormat_t" class="hid">cudnnTensorFormat_t</a> = <span class="type">int</span>;
+<a id="L479" href="#L479" class="br">479 </a><span class="kwrd">enum</span> : <a href="derelict.cudnn7.d.html#L478" title="derelict.cudnn7.cudnnTensorFormat_t" class="hid">cudnnTensorFormat_t</a>
+<a id="L480" href="#L480" class="br">480 </a>{
+<a id="L481" href="#L481" class="br">481 </a>    <a href="derelict.cudnn7.d.html#L479" title="derelict.cudnn7.CUDNN_TENSOR_NCHW" class="hid">CUDNN_TENSOR_NCHW</a> = <span class="num">0</span>,   <span class="com">/* row major (wStride = 1, hStride = w) */</span>
+<a id="L482" href="#L482" class="br">482 </a>    <span class="hid">CUDNN_TENSOR_NHWC</span> = <span class="num">1</span>    <span class="com">/* feature maps interleaved ( cStride = 1 )*/</span>
+<a id="L483" href="#L483" class="br">483 </a>}
+<a id="L484" href="#L484" class="br">484 </a>
+<a id="L485" href="#L485" class="br">485 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L485" title="derelict.cudnn7.cudnnOpTensorOp_t" class="hid">cudnnOpTensorOp_t</a> = <span class="type">int</span>;
+<a id="L486" href="#L486" class="br">486 </a><span class="kwrd">enum</span> : <a href="derelict.cudnn7.d.html#L485" title="derelict.cudnn7.cudnnOpTensorOp_t" class="hid">cudnnOpTensorOp_t</a>
+<a id="L487" href="#L487" class="br">487 </a>{
+<a id="L488" href="#L488" class="br">488 </a>    <a href="derelict.cudnn7.d.html#L486" title="derelict.cudnn7.CUDNN_OP_TENSOR_ADD" class="hid">CUDNN_OP_TENSOR_ADD</a> = <span class="num">0</span>,
+<a id="L489" href="#L489" class="br">489 </a>    <span class="hid">CUDNN_OP_TENSOR_MUL</span> = <span class="num">1</span>,
+<a id="L490" href="#L490" class="br">490 </a>    <span class="hid">CUDNN_OP_TENSOR_MIN</span> = <span class="num">2</span>,
+<a id="L491" href="#L491" class="br">491 </a>    <span class="hid">CUDNN_OP_TENSOR_MAX</span> = <span class="num">3</span>
+<a id="L492" href="#L492" class="br">492 </a>}
+<a id="L493" href="#L493" class="br">493 </a>
+<a id="L494" href="#L494" class="br">494 </a><span class="com">/**
+<a id="L495" href="#L495" class="br">495 </a>   CUDNN ReduceTensor op type
+<a id="L496" href="#L496" class="br">496 </a>*/</span>
+<a id="L497" href="#L497" class="br">497 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L497" title="derelict.cudnn7.cudnnReduceTensorOp_t" class="hid">cudnnReduceTensorOp_t</a> = <span class="type">int</span>;
+<a id="L498" href="#L498" class="br">498 </a><span class="kwrd">enum</span> : <a href="derelict.cudnn7.d.html#L497" title="derelict.cudnn7.cudnnReduceTensorOp_t" class="hid">cudnnReduceTensorOp_t</a>
+<a id="L499" href="#L499" class="br">499 </a>{
+<a id="L500" href="#L500" class="br">500 </a>    <a href="derelict.cudnn7.d.html#L498" title="derelict.cudnn7.CUDNN_REDUCE_TENSOR_ADD" class="hid">CUDNN_REDUCE_TENSOR_ADD</a>          = <span class="num">0</span>,
+<a id="L501" href="#L501" class="br">501 </a>    <span class="hid">CUDNN_REDUCE_TENSOR_MUL</span>          = <span class="num">1</span>,
+<a id="L502" href="#L502" class="br">502 </a>    <span class="hid">CUDNN_REDUCE_TENSOR_MIN</span>          = <span class="num">2</span>,
+<a id="L503" href="#L503" class="br">503 </a>    <span class="hid">CUDNN_REDUCE_TENSOR_MAX</span>          = <span class="num">3</span>,
+<a id="L504" href="#L504" class="br">504 </a>    <span class="hid">CUDNN_REDUCE_TENSOR_AMAX</span>         = <span class="num">4</span>,
+<a id="L505" href="#L505" class="br">505 </a>    <span class="hid">CUDNN_REDUCE_TENSOR_AVG</span>          = <span class="num">5</span>,
+<a id="L506" href="#L506" class="br">506 </a>    <span class="hid">CUDNN_REDUCE_TENSOR_NORM1</span>        = <span class="num">6</span>,
+<a id="L507" href="#L507" class="br">507 </a>    <span class="hid">CUDNN_REDUCE_TENSOR_NORM2</span>        = <span class="num">7</span>,
+<a id="L508" href="#L508" class="br">508 </a>    <span class="hid">CUDNN_REDUCE_TENSOR_MUL_NO_ZEROS</span> = <span class="num">8</span>,
+<a id="L509" href="#L509" class="br">509 </a>}
+<a id="L510" href="#L510" class="br">510 </a>
+<a id="L511" href="#L511" class="br">511 </a><span class="com">/**
+<a id="L512" href="#L512" class="br">512 </a>   CUDNN ReduceTensor indices type
+<a id="L513" href="#L513" class="br">513 </a>*/</span>
+<a id="L514" href="#L514" class="br">514 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L514" title="derelict.cudnn7.cudnnReduceTensorIndices_t" class="hid">cudnnReduceTensorIndices_t</a> = <span class="type">int</span>;
+<a id="L515" href="#L515" class="br">515 </a><span class="kwrd">enum</span> : <a href="derelict.cudnn7.d.html#L514" title="derelict.cudnn7.cudnnReduceTensorIndices_t" class="hid">cudnnReduceTensorIndices_t</a>
+<a id="L516" href="#L516" class="br">516 </a>{
+<a id="L517" href="#L517" class="br">517 </a>    <a href="derelict.cudnn7.d.html#L515" title="derelict.cudnn7.CUDNN_REDUCE_TENSOR_NO_INDICES" class="hid">CUDNN_REDUCE_TENSOR_NO_INDICES</a>        = <span class="num">0</span>,
+<a id="L518" href="#L518" class="br">518 </a>    <span class="hid">CUDNN_REDUCE_TENSOR_FLATTENED_INDICES</span> = <span class="num">1</span>,
+<a id="L519" href="#L519" class="br">519 </a>}
+<a id="L520" href="#L520" class="br">520 </a>
+<a id="L521" href="#L521" class="br">521 </a><span class="com">/**
+<a id="L522" href="#L522" class="br">522 </a>   CUDNN tensor indices type size (all unsigned)
+<a id="L523" href="#L523" class="br">523 </a>   Currently not supported, default is 32 bit unsigned.
+<a id="L524" href="#L524" class="br">524 </a>*/</span>
+<a id="L525" href="#L525" class="br">525 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L525" title="derelict.cudnn7.cudnnIndicesType_t" class="hid">cudnnIndicesType_t</a> = <span class="type">int</span>;
+<a id="L526" href="#L526" class="br">526 </a><span class="kwrd">enum</span> : <a href="derelict.cudnn7.d.html#L525" title="derelict.cudnn7.cudnnIndicesType_t" class="hid">cudnnIndicesType_t</a>
+<a id="L527" href="#L527" class="br">527 </a>{
+<a id="L528" href="#L528" class="br">528 </a>    <a href="derelict.cudnn7.d.html#L526" title="derelict.cudnn7.CUDNN_32BIT_INDICES" class="hid">CUDNN_32BIT_INDICES</a> = <span class="num">0</span>,
+<a id="L529" href="#L529" class="br">529 </a>    <span class="hid">CUDNN_64BIT_INDICES</span> = <span class="num">1</span>,
+<a id="L530" href="#L530" class="br">530 </a>    <span class="hid">CUDNN_16BIT_INDICES</span> = <span class="num">2</span>,
+<a id="L531" href="#L531" class="br">531 </a>    <span class="hid">CUDNN_8BIT_INDICES</span>  = <span class="num">3</span>,
+<a id="L532" href="#L532" class="br">532 </a>};
+<a id="L533" href="#L533" class="br">533 </a>
+<a id="L534" href="#L534" class="br">534 </a>
+<a id="L535" href="#L535" class="br">535 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L535" title="derelict.cudnn7.cudnnConvolutionMode_t" class="hid">cudnnConvolutionMode_t</a> = <span class="type">int</span>;
+<a id="L536" href="#L536" class="br">536 </a><span class="kwrd">enum</span> : <a href="derelict.cudnn7.d.html#L535" title="derelict.cudnn7.cudnnConvolutionMode_t" class="hid">cudnnConvolutionMode_t</a>
+<a id="L537" href="#L537" class="br">537 </a>{
+<a id="L538" href="#L538" class="br">538 </a>    <a href="derelict.cudnn7.d.html#L536" title="derelict.cudnn7.CUDNN_CONVOLUTION" class="hid">CUDNN_CONVOLUTION</a>       = <span class="num">0</span>,
+<a id="L539" href="#L539" class="br">539 </a>    <span class="hid">CUDNN_CROSS_CORRELATION</span> = <span class="num">1</span>
+<a id="L540" href="#L540" class="br">540 </a>}
+<a id="L541" href="#L541" class="br">541 </a>
+<a id="L542" href="#L542" class="br">542 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L542" title="derelict.cudnn7.cudnnConvolutionFwdPreference_t" class="hid">cudnnConvolutionFwdPreference_t</a> = <span class="type">int</span>;
+<a id="L543" href="#L543" class="br">543 </a><span class="kwrd">enum</span> : <a href="derelict.cudnn7.d.html#L542" title="derelict.cudnn7.cudnnConvolutionFwdPreference_t" class="hid">cudnnConvolutionFwdPreference_t</a>
+<a id="L544" href="#L544" class="br">544 </a>{
+<a id="L545" href="#L545" class="br">545 </a>    <a href="derelict.cudnn7.d.html#L543" title="derelict.cudnn7.CUDNN_CONVOLUTION_FWD_NO_WORKSPACE" class="hid">CUDNN_CONVOLUTION_FWD_NO_WORKSPACE</a>            = <span class="num">0</span>,
+<a id="L546" href="#L546" class="br">546 </a>    <span class="hid">CUDNN_CONVOLUTION_FWD_PREFER_FASTEST</span>          = <span class="num">1</span>,
+<a id="L547" href="#L547" class="br">547 </a>    <span class="hid">CUDNN_CONVOLUTION_FWD_SPECIFY_WORKSPACE_LIMIT</span> = <span class="num">2</span>
+<a id="L548" href="#L548" class="br">548 </a>}
+<a id="L549" href="#L549" class="br">549 </a>
+<a id="L550" href="#L550" class="br">550 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L550" title="derelict.cudnn7.cudnnConvolutionFwdAlgo_t" class="hid">cudnnConvolutionFwdAlgo_t</a> = <span class="type">int</span>;
+<a id="L551" href="#L551" class="br">551 </a><span class="kwrd">enum</span> : <a href="derelict.cudnn7.d.html#L550" title="derelict.cudnn7.cudnnConvolutionFwdAlgo_t" class="hid">cudnnConvolutionFwdAlgo_t</a>
+<a id="L552" href="#L552" class="br">552 </a>{
+<a id="L553" href="#L553" class="br">553 </a>    <a href="derelict.cudnn7.d.html#L551" title="derelict.cudnn7.CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM" class="hid">CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM</a>         = <span class="num">0</span>,
+<a id="L554" href="#L554" class="br">554 </a>    <span class="hid">CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM</span> = <span class="num">1</span>,
+<a id="L555" href="#L555" class="br">555 </a>    <span class="hid">CUDNN_CONVOLUTION_FWD_ALGO_GEMM</span>                  = <span class="num">2</span>,
+<a id="L556" href="#L556" class="br">556 </a>    <span class="hid">CUDNN_CONVOLUTION_FWD_ALGO_DIRECT</span>                = <span class="num">3</span>,
+<a id="L557" href="#L557" class="br">557 </a>    <span class="hid">CUDNN_CONVOLUTION_FWD_ALGO_FFT</span>                   = <span class="num">4</span>,
+<a id="L558" href="#L558" class="br">558 </a>    <span class="hid">CUDNN_CONVOLUTION_FWD_ALGO_FFT_TILING</span>            = <span class="num">5</span>,
+<a id="L559" href="#L559" class="br">559 </a>    <span class="hid">CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD</span>              = <span class="num">6</span>,
+<a id="L560" href="#L560" class="br">560 </a>    <span class="hid">CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD_NONFUSED</span>     = <span class="num">7</span>
+<a id="L561" href="#L561" class="br">561 </a>}
+<a id="L562" href="#L562" class="br">562 </a>
+<a id="L563" href="#L563" class="br">563 </a><span class="kwrd">struct</span> <a href="derelict.cudnn7.d.html#L563" title="derelict.cudnn7.cudnnConvolutionFwdAlgoPerf_t" class="hid">cudnnConvolutionFwdAlgoPerf_t</a>
+<a id="L564" href="#L564" class="br">564 </a>{
+<a id="L565" href="#L565" class="br">565 </a>    <a href="derelict.cudnn7.d.html#L550" title="derelict.cudnn7.cudnnConvolutionFwdAlgo_t" class="hid">cudnnConvolutionFwdAlgo_t</a>   <span class="hid">algo</span>;
+<a id="L566" href="#L566" class="br">566 </a>    <a href="derelict.cudnn7.d.html#L413" title="derelict.cudnn7.cudnnStatus_t" class="hid">cudnnStatus_t</a>               <span class="hid">status</span>;
+<a id="L567" href="#L567" class="br">567 </a>    <span class="type">float</span>                       <span class="hid">time</span>;
+<a id="L568" href="#L568" class="br">568 </a>    <span class="hid">size_t</span>                      <span class="hid">memory</span>;
+<a id="L569" href="#L569" class="br">569 </a>    <span class="type">int</span>[<span class="num">5</span>] <span class="hid">reserved</span>;
+<a id="L570" href="#L570" class="br">570 </a>}
+<a id="L571" href="#L571" class="br">571 </a>
+<a id="L572" href="#L572" class="br">572 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L572" title="derelict.cudnn7.cudnnConvolutionBwdFilterPreference_t" class="hid">cudnnConvolutionBwdFilterPreference_t</a> = <span class="type">int</span>;
+<a id="L573" href="#L573" class="br">573 </a><span class="kwrd">enum</span> : <a href="derelict.cudnn7.d.html#L572" title="derelict.cudnn7.cudnnConvolutionBwdFilterPreference_t" class="hid">cudnnConvolutionBwdFilterPreference_t</a>
+<a id="L574" href="#L574" class="br">574 </a>{
+<a id="L575" href="#L575" class="br">575 </a>    <a href="derelict.cudnn7.d.html#L573" title="derelict.cudnn7.CUDNN_CONVOLUTION_BWD_FILTER_NO_WORKSPACE" class="hid">CUDNN_CONVOLUTION_BWD_FILTER_NO_WORKSPACE</a>            = <span class="num">0</span>,
+<a id="L576" href="#L576" class="br">576 </a>    <span class="hid">CUDNN_CONVOLUTION_BWD_FILTER_PREFER_FASTEST</span>          = <span class="num">1</span>,
+<a id="L577" href="#L577" class="br">577 </a>    <span class="hid">CUDNN_CONVOLUTION_BWD_FILTER_SPECIFY_WORKSPACE_LIMIT</span> = <span class="num">2</span>
+<a id="L578" href="#L578" class="br">578 </a>}
+<a id="L579" href="#L579" class="br">579 </a>
+<a id="L580" href="#L580" class="br">580 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L580" title="derelict.cudnn7.cudnnConvolutionBwdFilterAlgo_t" class="hid">cudnnConvolutionBwdFilterAlgo_t</a> = <span class="type">int</span>;
+<a id="L581" href="#L581" class="br">581 </a><span class="kwrd">enum</span> : <a href="derelict.cudnn7.d.html#L580" title="derelict.cudnn7.cudnnConvolutionBwdFilterAlgo_t" class="hid">cudnnConvolutionBwdFilterAlgo_t</a>
+<a id="L582" href="#L582" class="br">582 </a>{
+<a id="L583" href="#L583" class="br">583 </a>    <a href="derelict.cudnn7.d.html#L581" title="derelict.cudnn7.CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0" class="hid">CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0</a>         = <span class="num">0</span>,  <span class="com">// non-deterministic</span>
+<a id="L584" href="#L584" class="br">584 </a>    <span class="hid">CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1</span>         = <span class="num">1</span>,
+<a id="L585" href="#L585" class="br">585 </a>    <span class="hid">CUDNN_CONVOLUTION_BWD_FILTER_ALGO_FFT</span>       = <span class="num">2</span>,
+<a id="L586" href="#L586" class="br">586 </a>    <span class="hid">CUDNN_CONVOLUTION_BWD_FILTER_ALGO_3</span>         = <span class="num">3</span>,  <span class="com">// non-deterministic, algo0 with workspace</span>
+<a id="L587" href="#L587" class="br">587 </a>    <span class="com">// CUDNN_CONVOLUTION_BWD_FILTER_ALGO_WINOGRAD  = 4, // not implemented</span>
+<a id="L588" href="#L588" class="br">588 </a>    <span class="hid">CUDNN_CONVOLUTION_BWD_FILTER_ALGO_WINOGRAD_NONFUSED</span> = <span class="num">5</span>
+<a id="L589" href="#L589" class="br">589 </a>}
+<a id="L590" href="#L590" class="br">590 </a>
+<a id="L591" href="#L591" class="br">591 </a><span class="kwrd">struct</span> <a href="derelict.cudnn7.d.html#L591" title="derelict.cudnn7.cudnnConvolutionBwdFilterAlgoPerf_t" class="hid">cudnnConvolutionBwdFilterAlgoPerf_t</a>
+<a id="L592" href="#L592" class="br">592 </a>{
+<a id="L593" href="#L593" class="br">593 </a>    <a href="derelict.cudnn7.d.html#L580" title="derelict.cudnn7.cudnnConvolutionBwdFilterAlgo_t" class="hid">cudnnConvolutionBwdFilterAlgo_t</a> <span class="hid">algo</span>;
+<a id="L594" href="#L594" class="br">594 </a>    <a href="derelict.cudnn7.d.html#L413" title="derelict.cudnn7.cudnnStatus_t" class="hid">cudnnStatus_t</a> <span class="hid">status</span>;
+<a id="L595" href="#L595" class="br">595 </a>    <span class="type">float</span> <span class="hid">time</span>;
+<a id="L596" href="#L596" class="br">596 </a>    <span class="hid">size_t</span> <span class="hid">memory</span>;
+<a id="L597" href="#L597" class="br">597 </a>    <span class="type">int</span>[<span class="num">5</span>] <span class="hid">reserved</span>;
+<a id="L598" href="#L598" class="br">598 </a>}
+<a id="L599" href="#L599" class="br">599 </a>
+<a id="L600" href="#L600" class="br">600 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L600" title="derelict.cudnn7.cudnnConvolutionBwdDataPreference_t" class="hid">cudnnConvolutionBwdDataPreference_t</a> = <span class="type">int</span>;
+<a id="L601" href="#L601" class="br">601 </a><span class="kwrd">enum</span> : <a href="derelict.cudnn7.d.html#L600" title="derelict.cudnn7.cudnnConvolutionBwdDataPreference_t" class="hid">cudnnConvolutionBwdDataPreference_t</a>
+<a id="L602" href="#L602" class="br">602 </a>{
+<a id="L603" href="#L603" class="br">603 </a>    <a href="derelict.cudnn7.d.html#L601" title="derelict.cudnn7.CUDNN_CONVOLUTION_BWD_DATA_NO_WORKSPACE" class="hid">CUDNN_CONVOLUTION_BWD_DATA_NO_WORKSPACE</a>             = <span class="num">0</span>,
+<a id="L604" href="#L604" class="br">604 </a>    <span class="hid">CUDNN_CONVOLUTION_BWD_DATA_PREFER_FASTEST</span>           = <span class="num">1</span>,
+<a id="L605" href="#L605" class="br">605 </a>    <span class="hid">CUDNN_CONVOLUTION_BWD_DATA_SPECIFY_WORKSPACE_LIMIT</span>  = <span class="num">2</span>
+<a id="L606" href="#L606" class="br">606 </a>}
+<a id="L607" href="#L607" class="br">607 </a>
+<a id="L608" href="#L608" class="br">608 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L608" title="derelict.cudnn7.cudnnConvolutionBwdDataAlgo_t" class="hid">cudnnConvolutionBwdDataAlgo_t</a> = <span class="type">int</span>;
+<a id="L609" href="#L609" class="br">609 </a><span class="kwrd">enum</span> : <a href="derelict.cudnn7.d.html#L608" title="derelict.cudnn7.cudnnConvolutionBwdDataAlgo_t" class="hid">cudnnConvolutionBwdDataAlgo_t</a>
+<a id="L610" href="#L610" class="br">610 </a>{
+<a id="L611" href="#L611" class="br">611 </a>    <a href="derelict.cudnn7.d.html#L609" title="derelict.cudnn7.CUDNN_CONVOLUTION_BWD_DATA_ALGO_0" class="hid">CUDNN_CONVOLUTION_BWD_DATA_ALGO_0</a>                 = <span class="num">0</span>, <span class="com">// non-deterministic</span>
+<a id="L612" href="#L612" class="br">612 </a>    <span class="hid">CUDNN_CONVOLUTION_BWD_DATA_ALGO_1</span>                 = <span class="num">1</span>,
+<a id="L613" href="#L613" class="br">613 </a>    <span class="hid">CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT</span>               = <span class="num">2</span>,
+<a id="L614" href="#L614" class="br">614 </a>    <span class="hid">CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT_TILING</span>        = <span class="num">3</span>,
+<a id="L615" href="#L615" class="br">615 </a>    <span class="hid">CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD</span>          = <span class="num">4</span>,
+<a id="L616" href="#L616" class="br">616 </a>    <span class="hid">CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD_NONFUSED</span> = <span class="num">5</span>
+<a id="L617" href="#L617" class="br">617 </a>}
+<a id="L618" href="#L618" class="br">618 </a>
+<a id="L619" href="#L619" class="br">619 </a><span class="kwrd">struct</span> <a href="derelict.cudnn7.d.html#L619" title="derelict.cudnn7.cudnnConvolutionBwdDataAlgoPerf_t" class="hid">cudnnConvolutionBwdDataAlgoPerf_t</a>
+<a id="L620" href="#L620" class="br">620 </a>{
+<a id="L621" href="#L621" class="br">621 </a>    <a href="derelict.cudnn7.d.html#L608" title="derelict.cudnn7.cudnnConvolutionBwdDataAlgo_t" class="hid">cudnnConvolutionBwdDataAlgo_t</a>   <span class="hid">algo</span>;
+<a id="L622" href="#L622" class="br">622 </a>    <a href="derelict.cudnn7.d.html#L413" title="derelict.cudnn7.cudnnStatus_t" class="hid">cudnnStatus_t</a>                   <span class="hid">status</span>;
+<a id="L623" href="#L623" class="br">623 </a>    <span class="type">float</span>                           <span class="hid">time</span>;
+<a id="L624" href="#L624" class="br">624 </a>    <span class="hid">size_t</span>                          <span class="hid">memory</span>;
+<a id="L625" href="#L625" class="br">625 </a>    <span class="type">int</span>[<span class="num">5</span>] <span class="hid">reserved</span>;
+<a id="L626" href="#L626" class="br">626 </a>}
+<a id="L627" href="#L627" class="br">627 </a>
+<a id="L628" href="#L628" class="br">628 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L628" title="derelict.cudnn7.cudnnSoftmaxAlgorithm_t" class="hid">cudnnSoftmaxAlgorithm_t</a> = <span class="type">int</span>;
+<a id="L629" href="#L629" class="br">629 </a><span class="kwrd">enum</span> : <a href="derelict.cudnn7.d.html#L628" title="derelict.cudnn7.cudnnSoftmaxAlgorithm_t" class="hid">cudnnSoftmaxAlgorithm_t</a>
+<a id="L630" href="#L630" class="br">630 </a>{
+<a id="L631" href="#L631" class="br">631 </a>    <a href="derelict.cudnn7.d.html#L629" title="derelict.cudnn7.CUDNN_SOFTMAX_FAST" class="hid">CUDNN_SOFTMAX_FAST</a>     = <span class="num">0</span>,         <span class="com">/* straightforward implementation */</span>
+<a id="L632" href="#L632" class="br">632 </a>    <span class="hid">CUDNN_SOFTMAX_ACCURATE</span> = <span class="num">1</span>,         <span class="com">/* subtract max from every point to avoid overflow */</span>
+<a id="L633" href="#L633" class="br">633 </a>    <span class="hid">CUDNN_SOFTMAX_LOG</span>      = <span class="num">2</span>
+<a id="L634" href="#L634" class="br">634 </a>}
+<a id="L635" href="#L635" class="br">635 </a>
+<a id="L636" href="#L636" class="br">636 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L636" title="derelict.cudnn7.cudnnSoftmaxMode_t" class="hid">cudnnSoftmaxMode_t</a> = <span class="type">int</span>;
+<a id="L637" href="#L637" class="br">637 </a><span class="kwrd">enum</span> : <a href="derelict.cudnn7.d.html#L636" title="derelict.cudnn7.cudnnSoftmaxMode_t" class="hid">cudnnSoftmaxMode_t</a>
+<a id="L638" href="#L638" class="br">638 </a>{
+<a id="L639" href="#L639" class="br">639 </a>    <a href="derelict.cudnn7.d.html#L637" title="derelict.cudnn7.CUDNN_SOFTMAX_MODE_INSTANCE" class="hid">CUDNN_SOFTMAX_MODE_INSTANCE</a> = <span class="num">0</span>,   <span class="com">/* compute the softmax over all C, H, W for each N */</span>
+<a id="L640" href="#L640" class="br">640 </a>    <span class="hid">CUDNN_SOFTMAX_MODE_CHANNEL</span> = <span class="num">1</span>
+<a id="L641" href="#L641" class="br">641 </a>}
+<a id="L642" href="#L642" class="br">642 </a>
+<a id="L643" href="#L643" class="br">643 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L643" title="derelict.cudnn7.cudnnPoolingMode_t" class="hid">cudnnPoolingMode_t</a> = <span class="type">int</span>;
+<a id="L644" href="#L644" class="br">644 </a><span class="kwrd">enum</span> : <a href="derelict.cudnn7.d.html#L643" title="derelict.cudnn7.cudnnPoolingMode_t" class="hid">cudnnPoolingMode_t</a>
+<a id="L645" href="#L645" class="br">645 </a>{
+<a id="L646" href="#L646" class="br">646 </a>    <a href="derelict.cudnn7.d.html#L644" title="derelict.cudnn7.CUDNN_POOLING_MAX" class="hid">CUDNN_POOLING_MAX</a>     = <span class="num">0</span>,
+<a id="L647" href="#L647" class="br">647 </a>    <span class="hid">CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING</span> = <span class="num">1</span>, <span class="com">// count for average includes padded values</span>
+<a id="L648" href="#L648" class="br">648 </a>    <span class="hid">CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING</span> = <span class="num">2</span>,
+<a id="L649" href="#L649" class="br">649 </a>    <span class="hid">CUDNN_POOLING_MAX_DETERMINISTIC</span>     = <span class="num">3</span>,
+<a id="L650" href="#L650" class="br">650 </a>}
+<a id="L651" href="#L651" class="br">651 </a>
+<a id="L652" href="#L652" class="br">652 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L652" title="derelict.cudnn7.cudnnActivationMode_t" class="hid">cudnnActivationMode_t</a> = <span class="type">int</span>;
+<a id="L653" href="#L653" class="br">653 </a><span class="kwrd">enum</span> : <a href="derelict.cudnn7.d.html#L652" title="derelict.cudnn7.cudnnActivationMode_t" class="hid">cudnnActivationMode_t</a>
+<a id="L654" href="#L654" class="br">654 </a>{
+<a id="L655" href="#L655" class="br">655 </a>    <a href="derelict.cudnn7.d.html#L653" title="derelict.cudnn7.CUDNN_ACTIVATION_SIGMOID" class="hid">CUDNN_ACTIVATION_SIGMOID</a>      = <span class="num">0</span>,
+<a id="L656" href="#L656" class="br">656 </a>    <span class="hid">CUDNN_ACTIVATION_RELU</span>         = <span class="num">1</span>,
+<a id="L657" href="#L657" class="br">657 </a>    <span class="hid">CUDNN_ACTIVATION_TANH</span>         = <span class="num">2</span>,
+<a id="L658" href="#L658" class="br">658 </a>    <span class="hid">CUDNN_ACTIVATION_CLIPPED_RELU</span> = <span class="num">3</span>
+<a id="L659" href="#L659" class="br">659 </a>}
+<a id="L660" href="#L660" class="br">660 </a>
+<a id="L661" href="#L661" class="br">661 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L661" title="derelict.cudnn7.cudnnLRNMode_t" class="hid">cudnnLRNMode_t</a> = <span class="type">int</span>;
+<a id="L662" href="#L662" class="br">662 </a><span class="kwrd">enum</span> : <a href="derelict.cudnn7.d.html#L661" title="derelict.cudnn7.cudnnLRNMode_t" class="hid">cudnnLRNMode_t</a>
+<a id="L663" href="#L663" class="br">663 </a>{
+<a id="L664" href="#L664" class="br">664 </a>    <a href="derelict.cudnn7.d.html#L662" title="derelict.cudnn7.CUDNN_LRN_CROSS_CHANNEL_DIM1" class="hid">CUDNN_LRN_CROSS_CHANNEL_DIM1</a> = <span class="num">0</span>
+<a id="L665" href="#L665" class="br">665 </a>}
+<a id="L666" href="#L666" class="br">666 </a>
+<a id="L667" href="#L667" class="br">667 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L667" title="derelict.cudnn7.cudnnDivNormMode_t" class="hid">cudnnDivNormMode_t</a> = <span class="type">int</span>;
+<a id="L668" href="#L668" class="br">668 </a><span class="kwrd">enum</span> : <a href="derelict.cudnn7.d.html#L667" title="derelict.cudnn7.cudnnDivNormMode_t" class="hid">cudnnDivNormMode_t</a>
+<a id="L669" href="#L669" class="br">669 </a>{
+<a id="L670" href="#L670" class="br">670 </a>    <a href="derelict.cudnn7.d.html#L668" title="derelict.cudnn7.CUDNN_DIVNORM_PRECOMPUTED_MEANS" class="hid">CUDNN_DIVNORM_PRECOMPUTED_MEANS</a> = <span class="num">0</span>
+<a id="L671" href="#L671" class="br">671 </a>}
+<a id="L672" href="#L672" class="br">672 </a>
+<a id="L673" href="#L673" class="br">673 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L673" title="derelict.cudnn7.cudnnBatchNormMode_t" class="hid">cudnnBatchNormMode_t</a> = <span class="type">int</span>;
+<a id="L674" href="#L674" class="br">674 </a><span class="kwrd">enum</span> : <a href="derelict.cudnn7.d.html#L673" title="derelict.cudnn7.cudnnBatchNormMode_t" class="hid">cudnnBatchNormMode_t</a>
+<a id="L675" href="#L675" class="br">675 </a>{
+<a id="L676" href="#L676" class="br">676 </a>    <span class="com">// bnScale, bnBias tensor dims are 1xCxHxWx.. (one value per CHW...-slice, normalized over N slice)</span>
+<a id="L677" href="#L677" class="br">677 </a>    <a href="derelict.cudnn7.d.html#L674" title="derelict.cudnn7.CUDNN_BATCHNORM_PER_ACTIVATION" class="hid">CUDNN_BATCHNORM_PER_ACTIVATION</a> = <span class="num">0</span>,
+<a id="L678" href="#L678" class="br">678 </a>
+<a id="L679" href="#L679" class="br">679 </a>    <span class="com">//bnScale, bnBias tensor dims are 1xCx1x1 (one value per C-dim normalized over Nx1xHxW subtensors)</span>
+<a id="L680" href="#L680" class="br">680 </a>    <span class="hid">CUDNN_BATCHNORM_SPATIAL</span>        = <span class="num">1</span>
+<a id="L681" href="#L681" class="br">681 </a>}
+<a id="L682" href="#L682" class="br">682 </a>
+<a id="L683" href="#L683" class="br">683 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L683" title="derelict.cudnn7.cudnnSamplerType_t" class="hid">cudnnSamplerType_t</a> = <span class="type">int</span>;
+<a id="L684" href="#L684" class="br">684 </a><span class="kwrd">enum</span> : <a href="derelict.cudnn7.d.html#L683" title="derelict.cudnn7.cudnnSamplerType_t" class="hid">cudnnSamplerType_t</a>
+<a id="L685" href="#L685" class="br">685 </a>{
+<a id="L686" href="#L686" class="br">686 </a>    <a href="derelict.cudnn7.d.html#L684" title="derelict.cudnn7.CUDNN_SAMPLER_BILINEAR" class="hid">CUDNN_SAMPLER_BILINEAR</a>=<span class="num">0</span>
+<a id="L687" href="#L687" class="br">687 </a>}
+<a id="L688" href="#L688" class="br">688 </a>
+<a id="L689" href="#L689" class="br">689 </a><span class="kwrd">struct</span> <a href="derelict.cudnn7.d.html#L689" title="derelict.cudnn7.cudnnDropoutStruct" class="hid">cudnnDropoutStruct</a>;
+<a id="L690" href="#L690" class="br">690 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L690" title="derelict.cudnn7.cudnnDropoutDescriptor_t" class="hid">cudnnDropoutDescriptor_t</a> = <a href="derelict.cudnn7.d.html#L689" title="derelict.cudnn7.cudnnDropoutStruct" class="hid">cudnnDropoutStruct</a>*;
+<a id="L691" href="#L691" class="br">691 </a>
+<a id="L692" href="#L692" class="br">692 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L692" title="derelict.cudnn7.cudnnRNNMode_t" class="hid">cudnnRNNMode_t</a> = <span class="type">int</span>;
+<a id="L693" href="#L693" class="br">693 </a><span class="kwrd">enum</span> : <a href="derelict.cudnn7.d.html#L692" title="derelict.cudnn7.cudnnRNNMode_t" class="hid">cudnnRNNMode_t</a>
+<a id="L694" href="#L694" class="br">694 </a>{
+<a id="L695" href="#L695" class="br">695 </a>    <a href="derelict.cudnn7.d.html#L693" title="derelict.cudnn7.CUDNN_RNN_RELU" class="hid">CUDNN_RNN_RELU</a> = <span class="num">0</span>, <span class="com">// Stock RNN with ReLu activation</span>
+<a id="L696" href="#L696" class="br">696 </a>    <span class="hid">CUDNN_RNN_TANH</span> = <span class="num">1</span>, <span class="com">// Stock RNN with tanh activation</span>
+<a id="L697" href="#L697" class="br">697 </a>    <span class="hid">CUDNN_LSTM</span> = <span class="num">2</span>,     <span class="com">// LSTM with no peephole connections</span>
+<a id="L698" href="#L698" class="br">698 </a>    <span class="hid">CUDNN_GRU</span> = <span class="num">3</span>       <span class="com">// Using h' = tanh(r * Uh(t-1) + Wx) and h = (1 - z) * h' + z * h(t-1);</span>
+<a id="L699" href="#L699" class="br">699 </a>}
+<a id="L700" href="#L700" class="br">700 </a>
+<a id="L701" href="#L701" class="br">701 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L701" title="derelict.cudnn7.cudnnDirectionMode_t" class="hid">cudnnDirectionMode_t</a> = <span class="type">int</span>;
+<a id="L702" href="#L702" class="br">702 </a><span class="kwrd">enum</span> : <a href="derelict.cudnn7.d.html#L701" title="derelict.cudnn7.cudnnDirectionMode_t" class="hid">cudnnDirectionMode_t</a>
+<a id="L703" href="#L703" class="br">703 </a>{
+<a id="L704" href="#L704" class="br">704 </a>    <a href="derelict.cudnn7.d.html#L702" title="derelict.cudnn7.CUDNN_UNIDIRECTIONAL" class="hid">CUDNN_UNIDIRECTIONAL</a> = <span class="num">0</span>,
+<a id="L705" href="#L705" class="br">705 </a>    <span class="hid">CUDNN_BIDIRECTIONAL</span> = <span class="num">1</span>      <span class="com">// Using output concatination at each step. Do we also want to support output sum?</span>
+<a id="L706" href="#L706" class="br">706 </a>}
+<a id="L707" href="#L707" class="br">707 </a>
+<a id="L708" href="#L708" class="br">708 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L708" title="derelict.cudnn7.cudnnRNNInputMode_t" class="hid">cudnnRNNInputMode_t</a> = <span class="type">int</span>;
+<a id="L709" href="#L709" class="br">709 </a><span class="kwrd">enum</span> : <a href="derelict.cudnn7.d.html#L708" title="derelict.cudnn7.cudnnRNNInputMode_t" class="hid">cudnnRNNInputMode_t</a>
+<a id="L710" href="#L710" class="br">710 </a>{
+<a id="L711" href="#L711" class="br">711 </a>    <a href="derelict.cudnn7.d.html#L709" title="derelict.cudnn7.CUDNN_LINEAR_INPUT" class="hid">CUDNN_LINEAR_INPUT</a> = <span class="num">0</span>,
+<a id="L712" href="#L712" class="br">712 </a>    <span class="hid">CUDNN_SKIP_INPUT</span> = <span class="num">1</span>
+<a id="L713" href="#L713" class="br">713 </a>}
+<a id="L714" href="#L714" class="br">714 </a>
+<a id="L715" href="#L715" class="br">715 </a><span class="kwrd">struct</span> <a href="derelict.cudnn7.d.html#L715" title="derelict.cudnn7.cudnnRNNStruct" class="hid">cudnnRNNStruct</a>;
+<a id="L716" href="#L716" class="br">716 </a><span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L716" title="derelict.cudnn7.cudnnRNNDescriptor_t" class="hid">cudnnRNNDescriptor_t</a> = <a href="derelict.cudnn7.d.html#L715" title="derelict.cudnn7.cudnnRNNStruct" class="hid">cudnnRNNStruct</a>*;
+<a id="L717" href="#L717" class="br">717 </a>
+<a id="L718" href="#L718" class="br">718 </a><span class="kwrd">extern</span>(<span class="hid">System</span>) @<span class="hid">nogc</span> <span class="kwrd">nothrow</span>
+<a id="L719" href="#L719" class="br">719 </a>{
+<a id="L720" href="#L720" class="br">720 </a>    <span class="kwrd">alias</span> <a href="derelict.cudnn7.d.html#L720" title="derelict.cudnn7.da_cudnnGetErrorString" class="hid">da_cudnnGetErrorString</a> = <span class="kwrd">const</span> <span class="type">char</span> *<span class="kwrd">function</span>(<a href="derelict.cudnn7.d.html#L413" title="derelict.cudnn7.cudnnStatus_t" class="hid">cudnnStatus_t</a>);
+<a id="L721" href="#L721" class="br">721 </a>
+<a id="L722" href="#L722" class="br">722 </a>    <span class="kwrd">mixin</span>(<a href="derelict.cudnn7.d.html#L370" title="derelict.cudnn7.generateFunctionAliases" class="hid">generateFunctionAliases</a>());
+<a id="L723" href="#L723" class="br">723 </a>}
+<a id="L724" href="#L724" class="br">724 </a>
+<a id="L725" href="#L725" class="br">725 </a><span class="kwrd">__gshared</span>
+<a id="L726" href="#L726" class="br">726 </a>{
+<a id="L727" href="#L727" class="br">727 </a>    <a href="derelict.cudnn7.d.html#L720" title="derelict.cudnn7.da_cudnnGetErrorString" class="hid">da_cudnnGetErrorString</a> <a href="derelict.cudnn7.d.html#L727" title="derelict.cudnn7.cudnnGetErrorString" class="hid">cudnnGetErrorString</a>;
+<a id="L728" href="#L728" class="br">728 </a>
+<a id="L729" href="#L729" class="br">729 </a>    <span class="kwrd">mixin</span>(<a href="derelict.cudnn7.d.html#L385" title="derelict.cudnn7.generateFunctionPointers" class="hid">generateFunctionPointers</a>());
+<a id="L730" href="#L730" class="br">730 </a>}
+<a id="L731" href="#L731" class="br">731 </a>
+<a id="L732" href="#L732" class="br">732 </a><span class="kwrd">class</span> <a href="derelict.cudnn7.d.html#L732" title="derelict.cudnn7.DerelictCuDNN7Loader" class="hid">DerelictCuDNN7Loader</a> : <span class="hid">SharedLibLoader</span>
+<a id="L733" href="#L733" class="br">733 </a>{
+<a id="L734" href="#L734" class="br">734 </a>    <span class="kwrd">public</span>
+<a id="L735" href="#L735" class="br">735 </a>    {
+<a id="L736" href="#L736" class="br">736 </a>        <span class="kwrd">this</span>()
+<a id="L737" href="#L737" class="br">737 </a>        {
+<a id="L738" href="#L738" class="br">738 </a>            <span class="kwrd">super</span>(<a href="derelict.cudnn7.d.html#L0" title="derelict.cudnn7.libNames" class="hid">libNames</a>);
+<a id="L739" href="#L739" class="br">739 </a>        }
+<a id="L740" href="#L740" class="br">740 </a>    }
+<a id="L741" href="#L741" class="br">741 </a>
+<a id="L742" href="#L742" class="br">742 </a>    <span class="kwrd">protected</span>
+<a id="L743" href="#L743" class="br">743 </a>    {
+<a id="L744" href="#L744" class="br">744 </a>        <span class="kwrd">override</span> <span class="type">void</span> <span class="hid">loadSymbols</span>()
+<a id="L745" href="#L745" class="br">745 </a>        {
+<a id="L746" href="#L746" class="br">746 </a>            <span class="hid">bindFunc</span>(<span class="kwrd">cast</span>(<span class="type">void</span>**)&amp;<a href="derelict.cudnn7.d.html#L727" title="derelict.cudnn7.cudnnGetErrorString" class="hid">cudnnGetErrorString</a>, <span class="str">&quot;cudnnGetErrorString&quot;</span>);
+<a id="L747" href="#L747" class="br">747 </a>
+<a id="L748" href="#L748" class="br">748 </a>            <span class="kwrd">mixin</span>(<a href="derelict.cudnn7.d.html#L397" title="derelict.cudnn7.generateFunctionBinds" class="hid">generateFunctionBinds</a>());
+<a id="L749" href="#L749" class="br">749 </a>        }
+<a id="L750" href="#L750" class="br">750 </a>    }
+<a id="L751" href="#L751" class="br">751 </a>}
+<a id="L752" href="#L752" class="br">752 </a>
+<a id="L753" href="#L753" class="br">753 </a><span class="kwrd">__gshared</span> <a href="derelict.cudnn7.d.html#L732" title="derelict.cudnn7.DerelictCuDNN7Loader" class="hid">DerelictCuDNN7Loader</a> <a href="derelict.cudnn7.d.html#L753" title="derelict.cudnn7.DerelictCuDNN7" class="hid">DerelictCuDNN7</a>;
+<a id="L754" href="#L754" class="br">754 </a>
+<a id="L755" href="#L755" class="br">755 </a><span class="kwrd">shared</span> <span class="kwrd">static</span> <span class="kwrd">this</span>()
+<a id="L756" href="#L756" class="br">756 </a>{
+<a id="L757" href="#L757" class="br">757 </a>    <a href="derelict.cudnn7.d.html#L753" title="derelict.cudnn7.DerelictCuDNN7" class="hid">DerelictCuDNN7</a> = <span class="kwrd">new</span> <a href="derelict.cudnn7.d.html#L732" title="derelict.cudnn7.DerelictCuDNN7Loader" class="hid">DerelictCuDNN7Loader</a>();
+<a id="L758" href="#L758" class="br">758 </a>}
+<a id="L759" href="#L759" class="br">759 </a>
+<a id="L760" href="#L760" class="br">760 </a><span class="kwrd">version</span> (<span class="hid">grain_cuda</span>) <span class="kwrd">unittest</span>
+<a id="L761" href="#L761" class="br">761 </a>{
+<a id="L762" href="#L762" class="br">762 </a>    <span class="kwrd">import</span> <span class="hid">std.conv</span> : <span class="hid">to</span>;
+<a id="L763" href="#L763" class="br">763 </a>    <span class="kwrd">import</span> <span class="hid">std.stdio</span> : <span class="hid">writeln</span>;
+<a id="L764" href="#L764" class="br">764 </a>
+<a id="L765" href="#L765" class="br">765 </a>    <span class="kwrd">try</span>
+<a id="L766" href="#L766" class="br">766 </a>    {
+<a id="L767" href="#L767" class="br">767 </a>        <a href="derelict.cudnn7.d.html#L753" title="derelict.cudnn7.DerelictCuDNN7" class="hid">DerelictCuDNN7.load</a>();
+<a id="L768" href="#L768" class="br">768 </a>        <span class="hid">writeln</span>(<span class="str">&quot;Successfully loaded cuDNN v7&quot;</span>);
+<a id="L769" href="#L769" class="br">769 </a>    }
+<a id="L770" href="#L770" class="br">770 </a>    <span class="kwrd">catch</span>(<span class="hid">Exception</span> <span class="hid">e</span>)
+<a id="L771" href="#L771" class="br">771 </a>    {
+<a id="L772" href="#L772" class="br">772 </a>        <span class="hid">writeln</span>(<span class="str">&quot;Could not load cuDNN v7&quot;</span>);
+<a id="L773" href="#L773" class="br">773 </a>    }
+<a id="L774" href="#L774" class="br">774 </a>}
+<a id="L775" href="#L775" class="br">775 </a>
+<a id="L776" href="#L776" class="br">776 </a>
+<a id="L777" href="#L777" class="br">777 </a><span class="com">/* Maximum supported number of tensor dimensions */</span>
+<a id="L778" href="#L778" class="br">778 </a><span class="kwrd">enum</span> <a href="derelict.cudnn7.d.html#L0" title="derelict.cudnn7.CUDNN_DIM_MAX" class="hid">CUDNN_DIM_MAX</a> = <span class="num">8</span>;</pre></div>
+        <div id="page-nav">
+        <div id="source-navigation"><div class="list-holder"><ul><li><a href="../derelict.cudnn7.html" class="docs">[Docs] </a><a href="#L1">derelict.cudnn7</a><ul><li><a href="#L8">derelict.cuda.runtimeapi</a></li><li><a href="#L9">derelict.util.loader</a></li><li><a href="#L13">derelict.util.system</a></li><li><a href="#L1">libNames</a></li><li><a href="#L1">libNames</a></li><li><a href="#L1">libNames</a></li><li><a href="#L1">functionTypes</a></li><li><a href="#L370">generateFunctionAliases</a></li><li><a href="#L385">generateFunctionPointers</a></li><li><a href="#L397">generateFunctionBinds</a></li><li><a href="#L410">cudnnContext</a></li><li><a href="#L411">cudnnHandle_t</a></li><li><a href="#L413">cudnnStatus_t</a></li><li><a href="#L414">CUDNN_STATUS_SUCCESS</a></li><li><a href="#L429">cudnnTensorStruct</a></li><li><a href="#L430">cudnnTensorDescriptor_t</a></li><li><a href="#L432">cudnnConvolutionStruct</a></li><li><a href="#L433">cudnnConvolutionDescriptor_t</a></li><li><a href="#L435">cudnnPoolingStruct</a></li><li><a href="#L436">cudnnPoolingDescriptor_t</a></li><li><a href="#L438">cudnnFilterStruct</a></li><li><a href="#L439">cudnnFilterDescriptor_t</a></li><li><a href="#L441">cudnnLRNStruct</a></li><li><a href="#L442">cudnnLRNDescriptor_t</a></li><li><a href="#L444">cudnnActivationStruct</a></li><li><a href="#L445">cudnnActivationDescriptor_t</a></li><li><a href="#L447">cudnnSpatialTransformerStruct</a></li><li><a href="#L448">cudnnSpatialTransformerDescriptor_t</a></li><li><a href="#L450">cudnnOpTensorStruct</a></li><li><a href="#L451">cudnnOpTensorDescriptor_t</a></li><li><a href="#L453">cudnnReduceTensorStruct</a></li><li><a href="#L454">cudnnReduceTensorDescriptor_t</a></li><li><a href="#L456">cudnnDataType_t</a></li><li><a href="#L457">CUDNN_DATA_FLOAT</a></li><li><a href="#L464">cudnnNanPropagation_t</a></li><li><a href="#L465">CUDNN_NOT_PROPAGATE_NAN</a></li><li><a href="#L471">cudnnDeterminism_t</a></li><li><a href="#L472">CUDNN_NON_DETERMINISTIC</a></li><li><a href="#L478">cudnnTensorFormat_t</a></li><li><a href="#L479">CUDNN_TENSOR_NCHW</a></li><li><a href="#L485">cudnnOpTensorOp_t</a></li><li><a href="#L486">CUDNN_OP_TENSOR_ADD</a></li><li><a href="../derelict.cudnn7.cudnnReduceTensorOp_t.html" class="docs">[Docs] </a><a href="#L497">cudnnReduceTensorOp_t</a></li><li><a href="#L498">CUDNN_REDUCE_TENSOR_ADD</a></li><li><a href="../derelict.cudnn7.cudnnReduceTensorIndices_t.html" class="docs">[Docs] </a><a href="#L514">cudnnReduceTensorIndices_t</a></li><li><a href="#L515">CUDNN_REDUCE_TENSOR_NO_INDICES</a></li><li><a href="../derelict.cudnn7.cudnnIndicesType_t.html" class="docs">[Docs] </a><a href="#L525">cudnnIndicesType_t</a></li><li><a href="#L526">CUDNN_32BIT_INDICES</a></li><li><a href="#L535">cudnnConvolutionMode_t</a></li><li><a href="#L536">CUDNN_CONVOLUTION</a></li><li><a href="#L542">cudnnConvolutionFwdPreference_t</a></li><li><a href="#L543">CUDNN_CONVOLUTION_FWD_NO_WORKSPACE</a></li><li><a href="#L550">cudnnConvolutionFwdAlgo_t</a></li><li><a href="#L551">CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM</a></li><li><a href="#L563">cudnnConvolutionFwdAlgoPerf_t</a><ul><li><a href="#L565">algo</a></li><li><a href="#L566">status</a></li><li><a href="#L567">time</a></li><li><a href="#L568">memory</a></li><li><a href="#L569">reserved</a></li></ul></li><li><a href="#L572">cudnnConvolutionBwdFilterPreference_t</a></li><li><a href="#L573">CUDNN_CONVOLUTION_BWD_FILTER_NO_WORKSPACE</a></li><li><a href="#L580">cudnnConvolutionBwdFilterAlgo_t</a></li><li><a href="#L581">CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0</a></li><li><a href="#L591">cudnnConvolutionBwdFilterAlgoPerf_t</a><ul><li><a href="#L593">algo</a></li><li><a href="#L594">status</a></li><li><a href="#L595">time</a></li><li><a href="#L596">memory</a></li><li><a href="#L597">reserved</a></li></ul></li><li><a href="#L600">cudnnConvolutionBwdDataPreference_t</a></li><li><a href="#L601">CUDNN_CONVOLUTION_BWD_DATA_NO_WORKSPACE</a></li><li><a href="#L608">cudnnConvolutionBwdDataAlgo_t</a></li><li><a href="#L609">CUDNN_CONVOLUTION_BWD_DATA_ALGO_0</a></li><li><a href="#L619">cudnnConvolutionBwdDataAlgoPerf_t</a><ul><li><a href="#L621">algo</a></li><li><a href="#L622">status</a></li><li><a href="#L623">time</a></li><li><a href="#L624">memory</a></li><li><a href="#L625">reserved</a></li></ul></li><li><a href="#L628">cudnnSoftmaxAlgorithm_t</a></li><li><a href="#L629">CUDNN_SOFTMAX_FAST</a></li><li><a href="#L636">cudnnSoftmaxMode_t</a></li><li><a href="#L637">CUDNN_SOFTMAX_MODE_INSTANCE</a></li><li><a href="#L643">cudnnPoolingMode_t</a></li><li><a href="#L644">CUDNN_POOLING_MAX</a></li><li><a href="#L652">cudnnActivationMode_t</a></li><li><a href="#L653">CUDNN_ACTIVATION_SIGMOID</a></li><li><a href="#L661">cudnnLRNMode_t</a></li><li><a href="#L662">CUDNN_LRN_CROSS_CHANNEL_DIM1</a></li><li><a href="#L667">cudnnDivNormMode_t</a></li><li><a href="#L668">CUDNN_DIVNORM_PRECOMPUTED_MEANS</a></li><li><a href="#L673">cudnnBatchNormMode_t</a></li><li><a href="#L674">CUDNN_BATCHNORM_PER_ACTIVATION</a></li><li><a href="#L683">cudnnSamplerType_t</a></li><li><a href="#L684">CUDNN_SAMPLER_BILINEAR</a></li><li><a href="#L689">cudnnDropoutStruct</a></li><li><a href="#L690">cudnnDropoutDescriptor_t</a></li><li><a href="#L692">cudnnRNNMode_t</a></li><li><a href="#L693">CUDNN_RNN_RELU</a></li><li><a href="#L701">cudnnDirectionMode_t</a></li><li><a href="#L702">CUDNN_UNIDIRECTIONAL</a></li><li><a href="#L708">cudnnRNNInputMode_t</a></li><li><a href="#L709">CUDNN_LINEAR_INPUT</a></li><li><a href="#L715">cudnnRNNStruct</a></li><li><a href="#L716">cudnnRNNDescriptor_t</a></li><li><a href="#L720">da_cudnnGetErrorString</a></li><li><a href="#L727">cudnnGetErrorString</a></li><li><a href="#L732">DerelictCuDNN7Loader</a><ul><li><a href="#L736">this</a></li><li><a href="#L744">loadSymbols</a></li></ul></li><li><a href="#L753">DerelictCuDNN7</a></li><li><a href="#L1">CUDNN_DIM_MAX</a></li></ul></li></ul></div></div></div>
+    </div>
+    <div id="page-footer">
+        Distributed under <a href="https://www.boost.org/users/license.html">BSL-1.0</a>.
+        Copyright <a href="https://shigekikarita.github.io">Shigeki Karita</a> 2018.
+        Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a>
+    </div>
+</body>
+</html>

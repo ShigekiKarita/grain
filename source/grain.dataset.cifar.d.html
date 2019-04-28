@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>grain.dataset.cifar source code</title>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+        <link rel="stylesheet" href="../style.css" />
+        <script type="text/javascript" src="../script.js"></script>
+
+    
+    <link rel="prefetch" href="../search-results.html" />
+</head>
+<body>
+    <div id="page-header">
+        <div id="logotype">
+        <span>Documentation</span>
+        <nav>
+            <a href="https://github.com/ShigekiKarita/grain">GitHub</a>
+            <a href="https://github.com/ShigekiKarita/grain/tree/master/example">Example</a>
+            <a href="http://dlang.org/">Dlang.org</a>
+        </nav>
+        </div>
+
+        <form action="search-docs.html" id="search">
+            <input type="search" placeholder="Find a symbol name..." name="searchTerm" />
+            <input type="submit" value="Go" />
+        </form>
+    </div>
+    <div id="page-body">
+        <div id="page-content">
+        <pre class="d_code highlighted with-line-wrappers"><a id="L1" href="#L1" class="br">1 </a><span class="com">/// CIFAR10/100 image recognition datasets</span>
+<a id="L2" href="#L2" class="br">2 </a><span class="kwrd">module</span> <span class="hid">grain.dataset.cifar</span>;
+<a id="L3" href="#L3" class="br">3 </a>
+<a id="L4" href="#L4" class="br">4 </a><span class="kwrd">import</span> <span class="hid">std.exception</span> : <span class="hid">enforce</span>;
+<a id="L5" href="#L5" class="br">5 </a>
+<a id="L6" href="#L6" class="br">6 </a><span class="com">///</span>
+<a id="L7" href="#L7" class="br">7 </a><span class="kwrd">struct</span> <a href="grain.dataset.cifar.d.html#L7" title="grain.dataset.cifar.Dataset" class="hid">Dataset</a> {
+<a id="L8" href="#L8" class="br">8 </a>    <span class="kwrd">import</span> <span class="hid">mir.ndslice</span> : <span class="hid">Slice</span>, <span class="hid">Contiguous</span>;
+<a id="L9" href="#L9" class="br">9 </a>
+<a id="L10" href="#L10" class="br">10 </a>    <span class="com">/// shape is [data, rgb, width, height]</span>
+<a id="L11" href="#L11" class="br">11 </a>    <span class="hid">Slice</span>!(<span class="type">float</span>*, <span class="num">4</span>) <span class="hid">inputs</span>;
+<a id="L12" href="#L12" class="br">12 </a>    <span class="hid">Slice</span>!(<span class="type">int</span>*, <span class="num">1</span>) <span class="hid">targets</span>;
+<a id="L13" href="#L13" class="br">13 </a>    <span class="hid">Slice</span>!(<span class="type">int</span>*, <span class="num">1</span>) <span class="hid">coarses</span>;
+<a id="L14" href="#L14" class="br">14 </a>
+<a id="L15" href="#L15" class="br">15 </a>    <span class="com">///</span>
+<a id="L16" href="#L16" class="br">16 </a>    <span class="kwrd">this</span>(<span class="type">string</span>[] <span class="hid">paths</span>) {
+<a id="L17" href="#L17" class="br">17 </a>        <span class="kwrd">import</span> <span class="hid">std.algorithm</span> : <span class="hid">sum</span>, <span class="hid">map</span>, <span class="hid">canFind</span>;
+<a id="L18" href="#L18" class="br">18 </a>        <span class="kwrd">import</span> <span class="hid">mir.ndslice</span> :  <span class="hid">sliced</span>, <span class="hid">flattened</span>, <span class="hid">universal</span>;
+<a id="L19" href="#L19" class="br">19 </a>        <span class="kwrd">import</span> <span class="hid">numir</span> : <span class="hid">empty</span>;
+<a id="L20" href="#L20" class="br">20 </a>        <span class="kwrd">import</span> <span class="hid">std.stdio</span> : <span class="hid">File</span>;
+<a id="L21" href="#L21" class="br">21 </a>
+<a id="L22" href="#L22" class="br">22 </a>        <span class="kwrd">immutable</span> <span class="hid">isCIFAR100</span> = <span class="hid">paths</span>[<span class="num">0</span>].<span class="hid">canFind</span>(<span class="str">&quot;cifar-100&quot;</span>);
+<a id="L23" href="#L23" class="br">23 </a>        <span class="kwrd">immutable</span> <span class="hid">dataSize</span> = <span class="hid">isCIFAR100</span> ? <span class="num">3074</span> : <span class="num">3073</span>;
+<a id="L24" href="#L24" class="br">24 </a>        <span class="kwrd">auto</span> <span class="hid">fileSize</span> = <span class="hid">paths.map</span>!(<span class="hid">p</span> =&gt; <span class="hid">File</span>(<span class="hid">p</span>, <span class="str">&quot;rb&quot;</span>).<span class="hid">size</span>).<span class="hid">sum</span>;
+<a id="L25" href="#L25" class="br">25 </a>        <span class="hid">enforce</span>(<span class="hid">fileSize</span> % <span class="hid">dataSize</span> == <span class="num">0</span>);
+<a id="L26" href="#L26" class="br">26 </a>        <span class="kwrd">auto</span> <span class="hid">numData</span> = <span class="hid">fileSize</span> / <span class="hid">dataSize</span>;
+<a id="L27" href="#L27" class="br">27 </a>        <span class="kwrd">this</span>.<span class="hid">inputs</span> = <span class="hid">empty</span>!<span class="type">float</span>(<span class="hid">numData</span>, <span class="num">3</span>, <span class="num">32</span>, <span class="num">32</span>);
+<a id="L28" href="#L28" class="br">28 </a>        <span class="kwrd">this</span>.<span class="hid">targets</span> = <span class="hid">empty</span>!<span class="type">int</span>(<span class="hid">numData</span>);
+<a id="L29" href="#L29" class="br">29 </a>        <span class="kwrd">if</span> (<span class="hid">isCIFAR100</span>) {
+<a id="L30" href="#L30" class="br">30 </a>            <span class="kwrd">this</span>.<span class="hid">coarses</span> = <span class="hid">empty</span>!<span class="type">int</span>(<span class="hid">numData</span>);
+<a id="L31" href="#L31" class="br">31 </a>        }
+<a id="L32" href="#L32" class="br">32 </a>
+<a id="L33" href="#L33" class="br">33 </a>        <span class="hid">size_t</span> <span class="hid">i</span> = <span class="num">0</span>;
+<a id="L34" href="#L34" class="br">34 </a>        <span class="kwrd">immutable</span> <span class="hid">imageOffset</span> = <span class="hid">isCIFAR100</span> ? <span class="num">2</span> : <span class="num">1</span>;
+<a id="L35" href="#L35" class="br">35 </a>        <span class="kwrd">foreach</span> (<span class="hid">p</span>; <span class="hid">paths</span>) {
+<a id="L36" href="#L36" class="br">36 </a>            <span class="kwrd">foreach</span> (<span class="hid">chunk</span>; <span class="hid">File</span>(<span class="hid">p</span>).<span class="hid">byChunk</span>(<span class="hid">dataSize</span>)) {
+<a id="L37" href="#L37" class="br">37 </a>                <span class="kwrd">if</span> (<span class="hid">isCIFAR100</span>) {
+<a id="L38" href="#L38" class="br">38 </a>                    <span class="kwrd">this</span>.<span class="hid">coarses</span>[<span class="hid">i</span>] = <span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">chunk</span>[<span class="num">0</span>];
+<a id="L39" href="#L39" class="br">39 </a>                    <span class="kwrd">this</span>.<span class="hid">targets</span>[<span class="hid">i</span>] = <span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">chunk</span>[<span class="num">1</span>];
+<a id="L40" href="#L40" class="br">40 </a>                } <span class="kwrd">else</span> {
+<a id="L41" href="#L41" class="br">41 </a>                    <span class="kwrd">this</span>.<span class="hid">targets</span>[<span class="hid">i</span>] = <span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">chunk</span>[<span class="num">0</span>];
+<a id="L42" href="#L42" class="br">42 </a>                }
+<a id="L43" href="#L43" class="br">43 </a>
+<a id="L44" href="#L44" class="br">44 </a>                <span class="hid">size_t</span> <span class="hid">n</span> = <span class="num">0</span>;
+<a id="L45" href="#L45" class="br">45 </a>                <span class="kwrd">foreach</span> (<span class="kwrd">ref</span> <span class="hid">inp</span>; <span class="kwrd">this</span>.<span class="hid">inputs</span>[<span class="hid">i</span>].<span class="hid">flattened</span>) {
+<a id="L46" href="#L46" class="br">46 </a>                    <span class="hid">inp</span> = <span class="kwrd">cast</span>(<span class="type">float</span>) <span class="hid">chunk</span>[<span class="hid">imageOffset</span> + <span class="hid">n</span>];
+<a id="L47" href="#L47" class="br">47 </a>                    ++<span class="hid">n</span>;
+<a id="L48" href="#L48" class="br">48 </a>                }
+<a id="L49" href="#L49" class="br">49 </a>                ++<span class="hid">i</span>;
+<a id="L50" href="#L50" class="br">50 </a>            }
+<a id="L51" href="#L51" class="br">51 </a>        }
+<a id="L52" href="#L52" class="br">52 </a>    }
+<a id="L53" href="#L53" class="br">53 </a>
+<a id="L54" href="#L54" class="br">54 </a>    <span class="com">///</span>
+<a id="L55" href="#L55" class="br">55 </a>    <span class="kwrd">auto</span> <span class="hid">makeBatch</span>(<span class="hid">size_t</span> <span class="hid">batchSize</span>) {
+<a id="L56" href="#L56" class="br">56 </a>        <span class="kwrd">import</span> <span class="hid">numir</span> : <span class="hid">view</span>;
+<a id="L57" href="#L57" class="br">57 </a>        <span class="kwrd">import</span> <span class="hid">std.typecons</span> : <span class="hid">tuple</span>;
+<a id="L58" href="#L58" class="br">58 </a>        <span class="kwrd">auto</span> <span class="hid">niter</span> = <span class="kwrd">this</span>.<span class="hid">inputs.length</span>!<span class="num">0</span> / <span class="hid">batchSize</span>; <span class="com">// omit last</span>
+<a id="L59" href="#L59" class="br">59 </a>        <span class="kwrd">auto</span> <span class="hid">ndata</span> = <span class="hid">batchSize</span> * <span class="hid">niter</span>;
+<a id="L60" href="#L60" class="br">60 </a>        <span class="kwrd">return</span> <span class="hid">tuple</span>!(<span class="str">&quot;niter&quot;</span>, <span class="str">&quot;inputs&quot;</span>, <span class="str">&quot;targets&quot;</span>)(
+<a id="L61" href="#L61" class="br">61 </a>            <span class="hid">niter</span>,
+<a id="L62" href="#L62" class="br">62 </a>            <span class="kwrd">this</span>.<span class="hid">inputs</span>[<span class="num">0</span>..<span class="hid">ndata</span>].<span class="hid">view</span>(<span class="hid">niter</span>, <span class="hid">batchSize</span>, <span class="num">3</span>, <span class="num">32</span>, <span class="num">32</span>),
+<a id="L63" href="#L63" class="br">63 </a>            <span class="kwrd">this</span>.<span class="hid">targets</span>[<span class="num">0</span>..<span class="hid">ndata</span>].<span class="hid">view</span>(<span class="hid">niter</span>, <span class="hid">batchSize</span>)
+<a id="L64" href="#L64" class="br">64 </a>            );
+<a id="L65" href="#L65" class="br">65 </a>    }
+<a id="L66" href="#L66" class="br">66 </a>}
+<a id="L67" href="#L67" class="br">67 </a>
+<a id="L68" href="#L68" class="br">68 </a><span class="com">///</span>
+<a id="L69" href="#L69" class="br">69 </a><span class="kwrd">auto</span> <a href="grain.dataset.cifar.d.html#L69" title="grain.dataset.cifar.prepareDataset" class="hid">prepareDataset</a>(<span class="type">string</span> <span class="hid">dataset</span>, <span class="type">string</span> <span class="hid">dir</span> = <span class="str">&quot;data&quot;</span>) {
+<a id="L70" href="#L70" class="br">70 </a>    <span class="kwrd">import</span> <span class="hid">std.stdio</span> : <span class="hid">writeln</span>;
+<a id="L71" href="#L71" class="br">71 </a>    <span class="kwrd">import</span> <span class="hid">std.typecons</span> : <span class="hid">tuple</span>;
+<a id="L72" href="#L72" class="br">72 </a>    <span class="kwrd">import</span> <span class="hid">std.array</span> : <span class="hid">array</span>;
+<a id="L73" href="#L73" class="br">73 </a>    <span class="kwrd">import</span> <span class="hid">std.format</span> : <span class="hid">format</span>;
+<a id="L74" href="#L74" class="br">74 </a>    <span class="kwrd">import</span> <span class="hid">std.algorithm</span> : <span class="hid">filter</span>, <span class="hid">canFind</span>, <span class="hid">map</span>;
+<a id="L75" href="#L75" class="br">75 </a>    <span class="kwrd">import</span> <span class="hid">std.</span>.<span class="type">string</span> : <span class="hid">replace</span>, <span class="hid">split</span>;
+<a id="L76" href="#L76" class="br">76 </a>    <span class="kwrd">import</span> <span class="hid">std.path</span> : <span class="hid">baseName</span>, <span class="hid">extension</span>, <span class="hid">dirName</span>;
+<a id="L77" href="#L77" class="br">77 </a>    <span class="kwrd">import</span> <span class="hid">std.file</span> : <span class="hid">exists</span>, <span class="hid">read</span>, <span class="hid">mkdirRecurse</span>, <span class="hid">dirEntries</span>, <span class="hid">SpanMode</span>, <span class="hid">readText</span>;
+<a id="L78" href="#L78" class="br">78 </a>    <span class="kwrd">import</span> <span class="hid">std.net.curl</span> : <span class="hid">download</span>, <span class="hid">HTTP</span>;
+<a id="L79" href="#L79" class="br">79 </a>    <span class="kwrd">import</span> <span class="hid">std.range</span> : <span class="hid">chunks</span>;
+<a id="L80" href="#L80" class="br">80 </a>    <span class="kwrd">import</span> <span class="hid">std.process</span> : <span class="hid">executeShell</span>;
+<a id="L81" href="#L81" class="br">81 </a>
+<a id="L82" href="#L82" class="br">82 </a>    <span class="kwrd">immutable</span> <span class="hid">url</span> = <span class="str">&quot;https://www.cs.toronto.edu/~kriz/%s-binary.tar.gz&quot;</span>.<span class="hid">format</span>(<span class="hid">dataset</span>);
+<a id="L83" href="#L83" class="br">83 </a>    <span class="kwrd">immutable</span> <span class="hid">root</span> = <span class="hid">dir</span> ~ <span class="str">&quot;/&quot;</span> ~ <span class="hid">url.baseName.replace</span>(<span class="str">&quot;.tar.gz&quot;</span>, <span class="str">&quot;&quot;</span>);
+<a id="L84" href="#L84" class="br">84 </a>    <span class="kwrd">if</span> (!<span class="hid">root.exists</span>) {
+<a id="L85" href="#L85" class="br">85 </a>        <span class="kwrd">immutable</span> <span class="hid">gz</span> = <span class="hid">dir</span> ~ <span class="str">&quot;/&quot;</span> ~ <span class="hid">url.baseName</span>;
+<a id="L86" href="#L86" class="br">86 </a>        <span class="kwrd">if</span> (!<span class="hid">gz.exists</span>) {
+<a id="L87" href="#L87" class="br">87 </a>            <span class="hid">writeln</span>(<span class="str">&quot;downloading &quot;</span>, <span class="hid">url</span>);
+<a id="L88" href="#L88" class="br">88 </a>            <span class="kwrd">auto</span> <span class="hid">conn</span> = <span class="hid">HTTP</span>(<span class="hid">url</span>);
+<a id="L89" href="#L89" class="br">89 </a>            <span class="hid">download</span>(<span class="hid">url</span>, <span class="hid">gz</span>, <span class="hid">conn</span>);
+<a id="L90" href="#L90" class="br">90 </a>            <span class="kwrd">auto</span> <span class="hid">code</span> = <span class="hid">conn.statusLine</span>().<span class="hid">code</span>;
+<a id="L91" href="#L91" class="br">91 </a>            <span class="com">// FIXME: does not work?</span>
+<a id="L92" href="#L92" class="br">92 </a>            <span class="hid">enforce</span>(<span class="hid">code</span> == <span class="num">200</span>, <span class="str">&quot;status code: %s&quot;</span>.<span class="hid">format</span>(<span class="hid">code</span>));
+<a id="L93" href="#L93" class="br">93 </a>        }
+<a id="L94" href="#L94" class="br">94 </a>        <span class="hid">mkdirRecurse</span>(<span class="hid">root</span>);
+<a id="L95" href="#L95" class="br">95 </a>        <span class="kwrd">auto</span> <span class="hid">cmd</span> = <span class="str">&quot;tar -xvf &quot;</span> ~ <span class="hid">gz</span> ~ <span class="str">&quot; -C &quot;</span> ~ <span class="hid">root</span>;
+<a id="L96" href="#L96" class="br">96 </a>        <span class="hid">writeln</span>(<span class="str">&quot;uncompressing &quot;</span>, <span class="hid">cmd</span>);
+<a id="L97" href="#L97" class="br">97 </a>        <span class="kwrd">auto</span> <span class="hid">ret</span> = <span class="hid">executeShell</span>(<span class="hid">cmd</span>);
+<a id="L98" href="#L98" class="br">98 </a>        <span class="hid">enforce</span>(<span class="hid">ret.status</span> == <span class="num">0</span>, <span class="hid">ret.output</span>);
+<a id="L99" href="#L99" class="br">99 </a>    }
+<a id="L100" href="#L100" class="br">100 </a>
+<a id="L101" href="#L101" class="br">101 </a>    <span class="kwrd">auto</span> <span class="hid">bins</span> = <span class="hid">root</span>
+<a id="L102" href="#L102" class="br">102 </a>        .<span class="hid">dirEntries</span>(<span class="str">&quot;*&quot;</span>, <span class="hid">SpanMode.depth</span>)
+<a id="L103" href="#L103" class="br">103 </a>        .<span class="hid">filter</span>!(<span class="hid">a</span> =&gt; <span class="hid">a.name.extension</span> == <span class="str">&quot;.bin&quot;</span>)
+<a id="L104" href="#L104" class="br">104 </a>        .<span class="hid">map</span>!<span class="str">&quot;a.name&quot;</span>.<span class="hid">array</span>;
+<a id="L105" href="#L105" class="br">105 </a>
+<a id="L106" href="#L106" class="br">106 </a>    <span class="kwrd">auto</span> <span class="hid">train</span> = <a href="grain.dataset.cifar.d.html#L7" title="grain.dataset.cifar.Dataset" class="hid">Dataset</a>(<span class="hid">bins.filter</span>!(<span class="hid">a</span> =&gt; !<span class="hid">a.canFind</span>(<span class="str">&quot;test&quot;</span>)).<span class="hid">array</span>);
+<a id="L107" href="#L107" class="br">107 </a>    <span class="kwrd">auto</span> <span class="hid">test</span> = <a href="grain.dataset.cifar.d.html#L7" title="grain.dataset.cifar.Dataset" class="hid">Dataset</a>(<span class="hid">bins.filter</span>!(<span class="hid">a</span> =&gt; <span class="hid">a.canFind</span>(<span class="str">&quot;test&quot;</span>)).<span class="hid">array</span>);
+<a id="L108" href="#L108" class="br">108 </a>    <span class="kwrd">auto</span> <span class="hid">meta</span> = <span class="hid">dataset</span> == <span class="str">&quot;cifar-10&quot;</span> ? <span class="str">&quot;batches.meta.txt&quot;</span> : <span class="str">&quot;fine_label_names.txt&quot;</span>;
+<a id="L109" href="#L109" class="br">109 </a>    <span class="kwrd">auto</span> <span class="hid">labels</span> = <span class="hid">readText</span>(<span class="hid">bins</span>[<span class="num">0</span>].<span class="hid">dirName</span> ~ <span class="str">&quot;/&quot;</span> ~ <span class="hid">meta</span>).<span class="hid">split</span>;
+<a id="L110" href="#L110" class="br">110 </a>
+<a id="L111" href="#L111" class="br">111 </a>    <span class="type">string</span>[] <span class="hid">coarseLabels</span>;
+<a id="L112" href="#L112" class="br">112 </a>    <span class="kwrd">if</span> (<span class="hid">dataset</span> == <span class="str">&quot;cifar-100&quot;</span>) {
+<a id="L113" href="#L113" class="br">113 </a>        <span class="hid">coarseLabels</span> = <span class="hid">readText</span>(<span class="hid">bins</span>[<span class="num">0</span>].<span class="hid">dirName</span> ~ <span class="str">&quot;/&quot;</span> ~ <span class="str">&quot;coarse_label_names.txt&quot;</span>).<span class="hid">split</span>;
+<a id="L114" href="#L114" class="br">114 </a>    }
+<a id="L115" href="#L115" class="br">115 </a>    <span class="kwrd">return</span> <span class="hid">tuple</span>!(<span class="str">&quot;train&quot;</span>, <span class="str">&quot;test&quot;</span>, <span class="str">&quot;labels&quot;</span>, <span class="str">&quot;coarses&quot;</span>)(<span class="hid">train</span>, <span class="hid">test</span>, <span class="hid">labels</span>, <span class="hid">coarseLabels</span>);
+<a id="L116" href="#L116" class="br">116 </a>}</pre></div>
+        <div id="page-nav">
+        <div id="source-navigation"><div class="list-holder"><ul><li><a href="../grain.dataset.cifar.html" class="docs">[Docs] </a><a href="#L1">grain.dataset.cifar</a><ul><li><a href="#L4">std.exception</a></li><li><a href="../grain.dataset.cifar.Dataset.html" class="docs">[Docs] </a><a href="#L7">Dataset</a><ul><li><a href="#L8">mir.ndslice</a></li><li><a href="../grain.dataset.cifar.Dataset.inputs.html" class="docs">[Docs] </a><a href="#L11">inputs</a></li><li><a href="#L12">targets</a></li><li><a href="#L13">coarses</a></li><li><a href="../grain.dataset.cifar.Dataset.this.html" class="docs">[Docs] </a><a href="#L16">this</a></li><li><a href="../grain.dataset.cifar.Dataset.makeBatch.html" class="docs">[Docs] </a><a href="#L55">makeBatch</a></li></ul></li><li><a href="../grain.dataset.cifar.prepareDataset.html" class="docs">[Docs] </a><a href="#L69">prepareDataset</a></li></ul></li></ul></div></div></div>
+    </div>
+    <div id="page-footer">
+        Distributed under <a href="https://www.boost.org/users/license.html">BSL-1.0</a>.
+        Copyright <a href="https://shigekikarita.github.io">Shigeki Karita</a> 2018.
+        Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>grain.functions.common (grain.functions.common)</title>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+        <link rel="stylesheet" href="style.css" />
+        <script type="text/javascript" src="script.js"></script>
+
+    
+    <link rel="prefetch" href="search-results.html" />
+</head>
+<body>
+    <div id="page-header">
+        <div id="logotype">
+        <span>Documentation</span>
+        <nav>
+            <a href="https://github.com/ShigekiKarita/grain">GitHub</a>
+            <a href="https://github.com/ShigekiKarita/grain/tree/master/example">Example</a>
+            <a href="http://dlang.org/">Dlang.org</a>
+        </nav>
+        </div>
+
+        <form action="search-docs.html" id="search">
+            <input type="search" placeholder="Find a symbol name..." name="searchTerm" />
+            <input type="submit" value="Go" />
+        </form>
+    </div>
+    <div id="page-body">
+        <div id="page-content">
+        <h1>grain.functions.common</h1><div class="breadcrumbs"><a href="grain.html" class="breadcrumb">grain</a><a href="grain.functions.html" class="breadcrumb">functions</a></div><div><div class="documentation-comment synopsis"><div><p>Common components for autograd function object</p></div></div></div><div class="annotated-prototype"></div><h2 id="members"><a href="#members" class="header-anchor">Members</a></h2><h3 id="function" class="member-list-header hide-from-toc"><a href="#function" class="header-anchor">Functions</a></h3><dl class="member-list native"><dt><a href="grain.functions.common.broadcast.html">broadcast</a><div style="max-width: 31ch;" class="simplified-prototype"><span class="lang-feature">auto</span>  <span class="name">broadcast</span><tt class="highlighted">(<span class="hid">S1</span> <span class="hid">a0</span>, <span class="hid">S2</span> <span class="hid">b0</span>)</tt></div></dt><dd><div></div></dd><dt><a href="grain.functions.common.broadcastable.html">broadcastable</a><div style="max-width: 86ch;" class="simplified-prototype"><span class="lang-feature">auto</span>  <span class="name">broadcastable</span><tt class="highlighted">(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">a</span>, <span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">b</span>)</tt></div></dt><dd><div><p>check if broadcastable</p></div></dd><dt><a href="grain.functions.common.expand.html">expand</a><div style="max-width: 29ch;" class="simplified-prototype"><span class="lang-feature">auto</span>  <span class="name">expand</span><tt class="highlighted">(<span class="hid">S</span> <span class="hid">s</span>, <span class="hid">size_t</span> <span class="hid">n</span>)</tt></div></dt><dd><div><p>expand dimension i.e. repeat n time on dim</p></div></dd><dt><a href="grain.functions.common.maybeExpand.html">maybeExpand</a><div style="max-width: 35ch;" class="simplified-prototype"><span class="lang-feature">auto</span>  <span class="name">maybeExpand</span><tt class="highlighted">(<span class="hid">S</span> <span class="hid">s</span>, <span class="hid">size_t</span> <span class="hid">n</span>)</tt></div></dt><dd><div><p>exapand dimension if s.length!dim == 1 else do nothing but type in the same expressions of repeat/unpack/swapped/index[0]</p></div></dd><dt><a href="grain.functions.common.reduceShape.html">reduceShape</a><div style="max-width: 50ch;" class="simplified-prototype"><span class="lang-feature">auto</span>  <span class="name">reduceShape</span><tt class="highlighted">(<span class="hid">S</span> <span class="hid">s0</span>, <span class="hid">size_t</span>[<span class="hid">N</span>] <span class="hid">targetShape</span>)</tt></div></dt><dd><div><p>reduce slice into targetShape, TODO @nogc</p></div></dd></dl><h3 id="mixin template" class="member-list-header hide-from-toc"><a href="#mixin template" class="header-anchor">Mixin templates</a></h3><dl class="member-list native"><dt><a href="grain.functions.common.FunctionCommon.html">FunctionCommon</a><div style="max-width: 34ch;" class="simplified-prototype"><span class="builtin-type">mixin template</span> <span class="name">FunctionCommon</span><span class="template-params">()</span></div></dt><dd><div><p>common components (typecheck and backprop wrappers) for autograd functions</p></div></dd><dt><a href="grain.functions.common.TypeChecker.html">TypeChecker</a><div style="max-width: 62ch;" class="simplified-prototype"><span class="builtin-type">mixin template</span> <span class="name">TypeChecker</span><span class="template-params">(alias forward, alias backward)</span></div></dt><dd><div><p>a simple type check of forward/backward functions compatibility</p></div></dd></dl><h3 id="variable" class="member-list-header hide-from-toc"><a href="#variable" class="header-anchor">Variables</a></h3><dl class="member-list native"><dt><a href="grain.functions.common.isFunction.html">isFunction</a><div style="max-width: 26ch;" class="simplified-prototype"><tt class="highlighted"><span class="kwrd">enum</span></tt> <tt class="highlighted"><span class="type">bool</span></tt> <span class="name">isFunction</span><tt class="highlighted">(<span class="hid">T</span>)</tt>;</div></dt><dd><div><p>a trait to identify autograd functions</p></div></dd></dl><div><h2 id="meta"><a href="#meta" class="header-anchor">Meta</a></h2><div class="documentation-comment source-section other-section"><h3 id="source"><a href="#source" class="header-anchor">Source</a></h3><div><p><a href="source/grain.functions.common.d.html">See Source File</a><br /></p></div></div></div></div>
+        <div id="page-nav"><a href="grain.html" class="parent">grain</a><a href="grain.functions.html" class="parent">functions</a>
+        <span class="type-separator">modules</span><ul><li><a href="grain.functions.binary.html" class="module">binary</a></li><li><a href="grain.functions.common.html" class="module current">common</a></li><li><a href="grain.functions.loss.html" class="module">loss</a></li><li><a href="grain.functions.random.html" class="module">random</a></li><li><a href="grain.functions.unary.html" class="module">unary</a></li></ul></div>
+    </div>
+    <div id="page-footer">
+        Distributed under <a href="https://www.boost.org/users/license.html">BSL-1.0</a>.
+        Copyright <a href="https://shigekikarita.github.io">Shigeki Karita</a> 2018.
+        Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a>
+    </div>
+</body>
+</html>

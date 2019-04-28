@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>grain.hdf5 source code</title>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+        <link rel="stylesheet" href="../style.css" />
+        <script type="text/javascript" src="../script.js"></script>
+
+    
+    <link rel="prefetch" href="../search-results.html" />
+</head>
+<body>
+    <div id="page-header">
+        <div id="logotype">
+        <span>Documentation</span>
+        <nav>
+            <a href="https://github.com/ShigekiKarita/grain">GitHub</a>
+            <a href="https://github.com/ShigekiKarita/grain/tree/master/example">Example</a>
+            <a href="http://dlang.org/">Dlang.org</a>
+        </nav>
+        </div>
+
+        <form action="search-docs.html" id="search">
+            <input type="search" placeholder="Find a symbol name..." name="searchTerm" />
+            <input type="submit" value="Go" />
+        </form>
+    </div>
+    <div id="page-body">
+        <div id="page-content">
+        <pre class="d_code highlighted with-line-wrappers"><a id="L1" href="#L1" class="br">1 </a><span class="com">/**
+<a id="L2" href="#L2" class="br">2 </a>  HDF5 bindings
+<a id="L3" href="#L3" class="br">3 </a>
+<a id="L4" href="#L4" class="br">4 </a>  This file is part of HDF5.  The full HDF5 copyright notice, including     *
+<a id="L5" href="#L5" class="br">5 </a>  terms governing use, modification, and redistribution, is contained in    *
+<a id="L6" href="#L6" class="br">6 </a>  the files COPYING and Copyright.html.  COPYING can be found at the root   *
+<a id="L7" href="#L7" class="br">7 </a>  of the source code distribution tree; Copyright.html can be found at the  *
+<a id="L8" href="#L8" class="br">8 </a>  root level of an installed copy of the electronic HDF5 document set and   *
+<a id="L9" href="#L9" class="br">9 </a>  is linked from the top-level documents page.  It can also be found at     *
+<a id="L10" href="#L10" class="br">10 </a>  http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
+<a id="L11" href="#L11" class="br">11 </a>  access to either file, you may request a copy from help@hdfgroup.org.     *
+<a id="L12" href="#L12" class="br">12 </a>  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+<a id="L13" href="#L13" class="br">13 </a>  Ported to D by Laeeth Isharc 2014
+<a id="L14" href="#L14" class="br">14 </a>  Borrowed heavily in terms of C API declarations from https://github.com/SFrijters/hdf5-d
+<a id="L15" href="#L15" class="br">15 </a>  Stefan Frijters bindings for D
+<a id="L16" href="#L16" class="br">16 </a>
+<a id="L17" href="#L17" class="br">17 </a>  Bindings probably not yet complete or bug-free.
+<a id="L18" href="#L18" class="br">18 </a>
+<a id="L19" href="#L19" class="br">19 </a>  Consider this not even alpha stage.  It probably isn't so far away from being useful though.
+<a id="L20" href="#L20" class="br">20 </a>  This is written for Linux and will need modification to work on other platforms.
+<a id="L21" href="#L21" class="br">21 </a>
+<a id="L22" href="#L22" class="br">22 </a>  Modified by Shigeki Karita 2018
+<a id="L23" href="#L23" class="br">23 </a> */</span>
+<a id="L24" href="#L24" class="br">24 </a><span class="kwrd">module</span> <span class="hid">grain.hdf5</span>;
+<a id="L25" href="#L25" class="br">25 </a>
+<a id="L26" href="#L26" class="br">26 </a><span class="kwrd">extern</span> (<span class="hid">C</span>):
+<a id="L27" href="#L27" class="br">27 </a>
+<a id="L28" href="#L28" class="br">28 </a><span class="com">/// NOTE: changed from int to int64_t at 1.10.0</span>
+<a id="L29" href="#L29" class="br">29 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> = <span class="type">long</span>;
+<a id="L30" href="#L30" class="br">30 </a><span class="com">///</span>
+<a id="L31" href="#L31" class="br">31 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L31" title="grain.hdf5.hsize_t" class="hid">hsize_t</a> = <span class="type">ulong</span>;
+<a id="L32" href="#L32" class="br">32 </a><span class="com">///</span>
+<a id="L33" href="#L33" class="br">33 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L33" title="grain.hdf5.hssize_t" class="hid">hssize_t</a> = <span class="type">long</span>;
+<a id="L34" href="#L34" class="br">34 </a><span class="com">///</span>
+<a id="L35" href="#L35" class="br">35 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L35" title="grain.hdf5.herr_t" class="hid">herr_t</a> = <span class="type">int</span>;
+<a id="L36" href="#L36" class="br">36 </a>
+<a id="L37" href="#L37" class="br">37 </a><span class="com">/** Define atomic datatypes */</span>
+<a id="L38" href="#L38" class="br">38 </a><span class="kwrd">enum</span> <a href="grain.hdf5.d.html#L0" title="grain.hdf5.H5S_ALL" class="hid">H5S_ALL</a> = <span class="num">0</span>;
+<a id="L39" href="#L39" class="br">39 </a><span class="com">///</span>
+<a id="L40" href="#L40" class="br">40 </a><span class="kwrd">enum</span> <a href="grain.hdf5.d.html#L0" title="grain.hdf5.H5S_UNLIMITED" class="hid">H5S_UNLIMITED</a> = (<span class="kwrd">cast</span>(<a href="grain.hdf5.d.html#L31" title="grain.hdf5.hsize_t" class="hid">hsize_t</a>) <span class="kwrd">cast</span>(<a href="grain.hdf5.d.html#L33" title="grain.hdf5.hssize_t" class="hid">hssize_t</a>)(-<span class="num">1</span>));
+<a id="L41" href="#L41" class="br">41 </a><span class="com">/** Define user-level maximum number of dimensions */</span>
+<a id="L42" href="#L42" class="br">42 </a><span class="kwrd">enum</span> <a href="grain.hdf5.d.html#L0" title="grain.hdf5.H5S_MAX_RANK" class="hid">H5S_MAX_RANK</a> = <span class="num">32</span>;
+<a id="L43" href="#L43" class="br">43 </a>
+<a id="L44" href="#L44" class="br">44 </a><span class="com">// this ddoc make adrdox die</span>
+<a id="L45" href="#L45" class="br">45 </a>
+<a id="L46" href="#L46" class="br">46 </a><span class="com">// absence of rdwr =&gt; rd-only</span>
+<a id="L47" href="#L47" class="br">47 </a><span class="kwrd">enum</span> <a href="grain.hdf5.d.html#L0" title="grain.hdf5.H5F_ACC_RDONLY" class="hid">H5F_ACC_RDONLY</a> = <span class="num">0x0000u</span>;
+<a id="L48" href="#L48" class="br">48 </a><span class="com">// open for read and write</span>
+<a id="L49" href="#L49" class="br">49 </a><span class="kwrd">enum</span> <a href="grain.hdf5.d.html#L0" title="grain.hdf5.H5F_ACC_RDWR" class="hid">H5F_ACC_RDWR</a> = <span class="num">0x0001u</span>;
+<a id="L50" href="#L50" class="br">50 </a><span class="com">// overwrite existing files</span>
+<a id="L51" href="#L51" class="br">51 </a><span class="kwrd">enum</span> <a href="grain.hdf5.d.html#L0" title="grain.hdf5.H5F_ACC_TRUNC" class="hid">H5F_ACC_TRUNC</a> = <span class="num">0x0002u</span>;
+<a id="L52" href="#L52" class="br">52 </a><span class="com">// fail if file already exists</span>
+<a id="L53" href="#L53" class="br">53 </a><span class="kwrd">enum</span> <a href="grain.hdf5.d.html#L0" title="grain.hdf5.H5F_ACC_EXCL" class="hid">H5F_ACC_EXCL</a> = <span class="num">0x0004u</span>;
+<a id="L54" href="#L54" class="br">54 </a><span class="com">// print debug info</span>
+<a id="L55" href="#L55" class="br">55 </a><span class="kwrd">enum</span> <a href="grain.hdf5.d.html#L0" title="grain.hdf5.H5F_ACC_DEBUG" class="hid">H5F_ACC_DEBUG</a> = <span class="num">0x0008u</span>;
+<a id="L56" href="#L56" class="br">56 </a><span class="com">// create non-existing files</span>
+<a id="L57" href="#L57" class="br">57 </a><span class="kwrd">enum</span> <a href="grain.hdf5.d.html#L0" title="grain.hdf5.H5F_ACC_CREAT" class="hid">H5F_ACC_CREAT</a> = <span class="num">0x0010u</span>;
+<a id="L58" href="#L58" class="br">58 </a>
+<a id="L59" href="#L59" class="br">59 </a><span class="com">// Value passed to H5Pset_elink_acc_flags to cause flags to be taken from the parent file.</span>
+<a id="L60" href="#L60" class="br">60 </a><span class="kwrd">enum</span> <a href="grain.hdf5.d.html#L0" title="grain.hdf5.H5F_ACC_DEFAULT" class="hid">H5F_ACC_DEFAULT</a> = <span class="num">0xffffu</span>; <span class="com">/*ignore setting on lapl     */</span>
+<a id="L61" href="#L61" class="br">61 </a>
+<a id="L62" href="#L62" class="br">62 </a><span class="com">// Default value for all property list classes </span>
+<a id="L63" href="#L63" class="br">63 </a><span class="kwrd">enum</span> <a href="grain.hdf5.d.html#L0" title="grain.hdf5.H5P_DEFAULT" class="hid">H5P_DEFAULT</a> = <span class="num">0</span>;
+<a id="L64" href="#L64" class="br">64 </a>
+<a id="L65" href="#L65" class="br">65 </a><span class="com">/* The IEEE floating point types in various byte orders. */</span>
+<a id="L66" href="#L66" class="br">66 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L66" title="grain.hdf5.H5T_IEEE_F32BE" class="hid">H5T_IEEE_F32BE</a> = <a href="grain.hdf5.d.html#L70" title="grain.hdf5.H5T_IEEE_F32BE_g" class="hid">H5T_IEEE_F32BE_g</a>;
+<a id="L67" href="#L67" class="br">67 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L67" title="grain.hdf5.H5T_IEEE_F32LE" class="hid">H5T_IEEE_F32LE</a> = <a href="grain.hdf5.d.html#L71" title="grain.hdf5.H5T_IEEE_F32LE_g" class="hid">H5T_IEEE_F32LE_g</a>;
+<a id="L68" href="#L68" class="br">68 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L68" title="grain.hdf5.H5T_IEEE_F64BE" class="hid">H5T_IEEE_F64BE</a> = <a href="grain.hdf5.d.html#L72" title="grain.hdf5.H5T_IEEE_F64BE_g" class="hid">H5T_IEEE_F64BE_g</a>;
+<a id="L69" href="#L69" class="br">69 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L69" title="grain.hdf5.H5T_IEEE_F64LE" class="hid">H5T_IEEE_F64LE</a> = <a href="grain.hdf5.d.html#L73" title="grain.hdf5.H5T_IEEE_F64LE_g" class="hid">H5T_IEEE_F64LE_g</a>;
+<a id="L70" href="#L70" class="br">70 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L70" title="grain.hdf5.H5T_IEEE_F32BE_g" class="hid">H5T_IEEE_F32BE_g</a>;
+<a id="L71" href="#L71" class="br">71 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L71" title="grain.hdf5.H5T_IEEE_F32LE_g" class="hid">H5T_IEEE_F32LE_g</a>;
+<a id="L72" href="#L72" class="br">72 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L72" title="grain.hdf5.H5T_IEEE_F64BE_g" class="hid">H5T_IEEE_F64BE_g</a>;
+<a id="L73" href="#L73" class="br">73 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L73" title="grain.hdf5.H5T_IEEE_F64LE_g" class="hid">H5T_IEEE_F64LE_g</a>;
+<a id="L74" href="#L74" class="br">74 </a>
+<a id="L75" href="#L75" class="br">75 </a><span class="com">/*
+<a id="L76" href="#L76" class="br">76 </a> * These are &quot;standard&quot; types.  For instance, signed (2's complement) and
+<a id="L77" href="#L77" class="br">77 </a> * unsigned integers of various sizes and byte orders.
+<a id="L78" href="#L78" class="br">78 </a> */</span>
+<a id="L79" href="#L79" class="br">79 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L79" title="grain.hdf5.H5T_STD_I8BE" class="hid">H5T_STD_I8BE</a> = <a href="grain.hdf5.d.html#L105" title="grain.hdf5.H5T_STD_I8BE_g" class="hid">H5T_STD_I8BE_g</a>;
+<a id="L80" href="#L80" class="br">80 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L80" title="grain.hdf5.H5T_STD_I8LE" class="hid">H5T_STD_I8LE</a> = <a href="grain.hdf5.d.html#L106" title="grain.hdf5.H5T_STD_I8LE_g" class="hid">H5T_STD_I8LE_g</a>;
+<a id="L81" href="#L81" class="br">81 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L81" title="grain.hdf5.H5T_STD_I16BE" class="hid">H5T_STD_I16BE</a> = <a href="grain.hdf5.d.html#L107" title="grain.hdf5.H5T_STD_I16BE_g" class="hid">H5T_STD_I16BE_g</a>;
+<a id="L82" href="#L82" class="br">82 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L82" title="grain.hdf5.H5T_STD_I16LE" class="hid">H5T_STD_I16LE</a> = <a href="grain.hdf5.d.html#L108" title="grain.hdf5.H5T_STD_I16LE_g" class="hid">H5T_STD_I16LE_g</a>;
+<a id="L83" href="#L83" class="br">83 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L83" title="grain.hdf5.H5T_STD_I32BE" class="hid">H5T_STD_I32BE</a> = <a href="grain.hdf5.d.html#L109" title="grain.hdf5.H5T_STD_I32BE_g" class="hid">H5T_STD_I32BE_g</a>;
+<a id="L84" href="#L84" class="br">84 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L84" title="grain.hdf5.H5T_STD_I32LE" class="hid">H5T_STD_I32LE</a> = <a href="grain.hdf5.d.html#L110" title="grain.hdf5.H5T_STD_I32LE_g" class="hid">H5T_STD_I32LE_g</a>;
+<a id="L85" href="#L85" class="br">85 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L85" title="grain.hdf5.H5T_STD_I64BE" class="hid">H5T_STD_I64BE</a> = <a href="grain.hdf5.d.html#L111" title="grain.hdf5.H5T_STD_I64BE_g" class="hid">H5T_STD_I64BE_g</a>;
+<a id="L86" href="#L86" class="br">86 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L86" title="grain.hdf5.H5T_STD_I64LE" class="hid">H5T_STD_I64LE</a> = <a href="grain.hdf5.d.html#L112" title="grain.hdf5.H5T_STD_I64LE_g" class="hid">H5T_STD_I64LE_g</a>;
+<a id="L87" href="#L87" class="br">87 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L87" title="grain.hdf5.H5T_STD_U8BE" class="hid">H5T_STD_U8BE</a> = <a href="grain.hdf5.d.html#L113" title="grain.hdf5.H5T_STD_U8BE_g" class="hid">H5T_STD_U8BE_g</a>;
+<a id="L88" href="#L88" class="br">88 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L88" title="grain.hdf5.H5T_STD_U8LE" class="hid">H5T_STD_U8LE</a> = <a href="grain.hdf5.d.html#L114" title="grain.hdf5.H5T_STD_U8LE_g" class="hid">H5T_STD_U8LE_g</a>;
+<a id="L89" href="#L89" class="br">89 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L89" title="grain.hdf5.H5T_STD_U16BE" class="hid">H5T_STD_U16BE</a> = <a href="grain.hdf5.d.html#L115" title="grain.hdf5.H5T_STD_U16BE_g" class="hid">H5T_STD_U16BE_g</a>;
+<a id="L90" href="#L90" class="br">90 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L90" title="grain.hdf5.H5T_STD_U16LE" class="hid">H5T_STD_U16LE</a> = <a href="grain.hdf5.d.html#L116" title="grain.hdf5.H5T_STD_U16LE_g" class="hid">H5T_STD_U16LE_g</a>;
+<a id="L91" href="#L91" class="br">91 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L91" title="grain.hdf5.H5T_STD_U32BE" class="hid">H5T_STD_U32BE</a> = <a href="grain.hdf5.d.html#L117" title="grain.hdf5.H5T_STD_U32BE_g" class="hid">H5T_STD_U32BE_g</a>;
+<a id="L92" href="#L92" class="br">92 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L92" title="grain.hdf5.H5T_STD_U32LE" class="hid">H5T_STD_U32LE</a> = <a href="grain.hdf5.d.html#L118" title="grain.hdf5.H5T_STD_U32LE_g" class="hid">H5T_STD_U32LE_g</a>;
+<a id="L93" href="#L93" class="br">93 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L93" title="grain.hdf5.H5T_STD_U64BE" class="hid">H5T_STD_U64BE</a> = <a href="grain.hdf5.d.html#L119" title="grain.hdf5.H5T_STD_U64BE_g" class="hid">H5T_STD_U64BE_g</a>;
+<a id="L94" href="#L94" class="br">94 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L94" title="grain.hdf5.H5T_STD_U64LE" class="hid">H5T_STD_U64LE</a> = <a href="grain.hdf5.d.html#L120" title="grain.hdf5.H5T_STD_U64LE_g" class="hid">H5T_STD_U64LE_g</a>;
+<a id="L95" href="#L95" class="br">95 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L95" title="grain.hdf5.H5T_STD_B8BE" class="hid">H5T_STD_B8BE</a> = <a href="grain.hdf5.d.html#L121" title="grain.hdf5.H5T_STD_B8BE_g" class="hid">H5T_STD_B8BE_g</a>;
+<a id="L96" href="#L96" class="br">96 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L96" title="grain.hdf5.H5T_STD_B8LE" class="hid">H5T_STD_B8LE</a> = <a href="grain.hdf5.d.html#L122" title="grain.hdf5.H5T_STD_B8LE_g" class="hid">H5T_STD_B8LE_g</a>;
+<a id="L97" href="#L97" class="br">97 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L97" title="grain.hdf5.H5T_STD_B16BE" class="hid">H5T_STD_B16BE</a> = <a href="grain.hdf5.d.html#L123" title="grain.hdf5.H5T_STD_B16BE_g" class="hid">H5T_STD_B16BE_g</a>;
+<a id="L98" href="#L98" class="br">98 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L98" title="grain.hdf5.H5T_STD_B16LE" class="hid">H5T_STD_B16LE</a> = <a href="grain.hdf5.d.html#L124" title="grain.hdf5.H5T_STD_B16LE_g" class="hid">H5T_STD_B16LE_g</a>;
+<a id="L99" href="#L99" class="br">99 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L99" title="grain.hdf5.H5T_STD_B32BE" class="hid">H5T_STD_B32BE</a> = <a href="grain.hdf5.d.html#L125" title="grain.hdf5.H5T_STD_B32BE_g" class="hid">H5T_STD_B32BE_g</a>;
+<a id="L100" href="#L100" class="br">100 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L100" title="grain.hdf5.H5T_STD_B32LE" class="hid">H5T_STD_B32LE</a> = <a href="grain.hdf5.d.html#L126" title="grain.hdf5.H5T_STD_B32LE_g" class="hid">H5T_STD_B32LE_g</a>;
+<a id="L101" href="#L101" class="br">101 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L101" title="grain.hdf5.H5T_STD_B64BE" class="hid">H5T_STD_B64BE</a> = <a href="grain.hdf5.d.html#L127" title="grain.hdf5.H5T_STD_B64BE_g" class="hid">H5T_STD_B64BE_g</a>;
+<a id="L102" href="#L102" class="br">102 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L102" title="grain.hdf5.H5T_STD_B64LE" class="hid">H5T_STD_B64LE</a> = <a href="grain.hdf5.d.html#L128" title="grain.hdf5.H5T_STD_B64LE_g" class="hid">H5T_STD_B64LE_g</a>;
+<a id="L103" href="#L103" class="br">103 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L103" title="grain.hdf5.H5T_STD_REF_OBJ" class="hid">H5T_STD_REF_OBJ</a> = <a href="grain.hdf5.d.html#L129" title="grain.hdf5.H5T_STD_REF_OBJ_g" class="hid">H5T_STD_REF_OBJ_g</a>;
+<a id="L104" href="#L104" class="br">104 </a><span class="kwrd">alias</span> <a href="grain.hdf5.d.html#L104" title="grain.hdf5.H5T_STD_REF_DSETREG" class="hid">H5T_STD_REF_DSETREG</a> = <a href="grain.hdf5.d.html#L130" title="grain.hdf5.H5T_STD_REF_DSETREG_g" class="hid">H5T_STD_REF_DSETREG_g</a>;
+<a id="L105" href="#L105" class="br">105 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L105" title="grain.hdf5.H5T_STD_I8BE_g" class="hid">H5T_STD_I8BE_g</a>;
+<a id="L106" href="#L106" class="br">106 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L106" title="grain.hdf5.H5T_STD_I8LE_g" class="hid">H5T_STD_I8LE_g</a>;
+<a id="L107" href="#L107" class="br">107 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L107" title="grain.hdf5.H5T_STD_I16BE_g" class="hid">H5T_STD_I16BE_g</a>;
+<a id="L108" href="#L108" class="br">108 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L108" title="grain.hdf5.H5T_STD_I16LE_g" class="hid">H5T_STD_I16LE_g</a>;
+<a id="L109" href="#L109" class="br">109 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L109" title="grain.hdf5.H5T_STD_I32BE_g" class="hid">H5T_STD_I32BE_g</a>;
+<a id="L110" href="#L110" class="br">110 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L110" title="grain.hdf5.H5T_STD_I32LE_g" class="hid">H5T_STD_I32LE_g</a>;
+<a id="L111" href="#L111" class="br">111 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L111" title="grain.hdf5.H5T_STD_I64BE_g" class="hid">H5T_STD_I64BE_g</a>;
+<a id="L112" href="#L112" class="br">112 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L112" title="grain.hdf5.H5T_STD_I64LE_g" class="hid">H5T_STD_I64LE_g</a>;
+<a id="L113" href="#L113" class="br">113 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L113" title="grain.hdf5.H5T_STD_U8BE_g" class="hid">H5T_STD_U8BE_g</a>;
+<a id="L114" href="#L114" class="br">114 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L114" title="grain.hdf5.H5T_STD_U8LE_g" class="hid">H5T_STD_U8LE_g</a>;
+<a id="L115" href="#L115" class="br">115 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L115" title="grain.hdf5.H5T_STD_U16BE_g" class="hid">H5T_STD_U16BE_g</a>;
+<a id="L116" href="#L116" class="br">116 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L116" title="grain.hdf5.H5T_STD_U16LE_g" class="hid">H5T_STD_U16LE_g</a>;
+<a id="L117" href="#L117" class="br">117 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L117" title="grain.hdf5.H5T_STD_U32BE_g" class="hid">H5T_STD_U32BE_g</a>;
+<a id="L118" href="#L118" class="br">118 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L118" title="grain.hdf5.H5T_STD_U32LE_g" class="hid">H5T_STD_U32LE_g</a>;
+<a id="L119" href="#L119" class="br">119 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L119" title="grain.hdf5.H5T_STD_U64BE_g" class="hid">H5T_STD_U64BE_g</a>;
+<a id="L120" href="#L120" class="br">120 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L120" title="grain.hdf5.H5T_STD_U64LE_g" class="hid">H5T_STD_U64LE_g</a>;
+<a id="L121" href="#L121" class="br">121 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L121" title="grain.hdf5.H5T_STD_B8BE_g" class="hid">H5T_STD_B8BE_g</a>;
+<a id="L122" href="#L122" class="br">122 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L122" title="grain.hdf5.H5T_STD_B8LE_g" class="hid">H5T_STD_B8LE_g</a>;
+<a id="L123" href="#L123" class="br">123 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L123" title="grain.hdf5.H5T_STD_B16BE_g" class="hid">H5T_STD_B16BE_g</a>;
+<a id="L124" href="#L124" class="br">124 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L124" title="grain.hdf5.H5T_STD_B16LE_g" class="hid">H5T_STD_B16LE_g</a>;
+<a id="L125" href="#L125" class="br">125 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L125" title="grain.hdf5.H5T_STD_B32BE_g" class="hid">H5T_STD_B32BE_g</a>;
+<a id="L126" href="#L126" class="br">126 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L126" title="grain.hdf5.H5T_STD_B32LE_g" class="hid">H5T_STD_B32LE_g</a>;
+<a id="L127" href="#L127" class="br">127 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L127" title="grain.hdf5.H5T_STD_B64BE_g" class="hid">H5T_STD_B64BE_g</a>;
+<a id="L128" href="#L128" class="br">128 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L128" title="grain.hdf5.H5T_STD_B64LE_g" class="hid">H5T_STD_B64LE_g</a>;
+<a id="L129" href="#L129" class="br">129 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L129" title="grain.hdf5.H5T_STD_REF_OBJ_g" class="hid">H5T_STD_REF_OBJ_g</a>;
+<a id="L130" href="#L130" class="br">130 </a><span class="kwrd">extern</span> <span class="kwrd">__gshared</span> <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L130" title="grain.hdf5.H5T_STD_REF_DSETREG_g" class="hid">H5T_STD_REF_DSETREG_g</a>;
+<a id="L131" href="#L131" class="br">131 </a>
+<a id="L132" href="#L132" class="br">132 </a><span class="com">///</span>
+<a id="L133" href="#L133" class="br">133 </a><a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L133" title="grain.hdf5.H5Fcreate" class="hid">H5Fcreate</a>(<span class="kwrd">const</span> <span class="type">char</span>* <span class="hid">filename</span>, <span class="type">uint</span> <span class="hid">flags</span>, <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <span class="hid">create_plist</span>, <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <span class="hid">access_plist</span>);
+<a id="L134" href="#L134" class="br">134 </a><span class="com">///</span>
+<a id="L135" href="#L135" class="br">135 </a><a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L135" title="grain.hdf5.H5Fopen" class="hid">H5Fopen</a>(<span class="kwrd">const</span> <span class="type">char</span>* <span class="hid">filename</span>, <span class="type">uint</span> <span class="hid">flags</span>, <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <span class="hid">access_plist</span>);
+<a id="L136" href="#L136" class="br">136 </a><span class="com">///</span>
+<a id="L137" href="#L137" class="br">137 </a><a href="grain.hdf5.d.html#L35" title="grain.hdf5.herr_t" class="hid">herr_t</a> <a href="grain.hdf5.d.html#L137" title="grain.hdf5.H5Fclose" class="hid">H5Fclose</a>(<a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <span class="hid">file_id</span>);
+<a id="L138" href="#L138" class="br">138 </a>
+<a id="L139" href="#L139" class="br">139 </a><span class="com">///</span>
+<a id="L140" href="#L140" class="br">140 </a><a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L140" title="grain.hdf5.H5Screate_simple" class="hid">H5Screate_simple</a>(<span class="type">int</span> <span class="hid">rank</span>, <span class="kwrd">const</span> <a href="grain.hdf5.d.html#L31" title="grain.hdf5.hsize_t" class="hid">hsize_t</a>* <span class="hid">dims</span>, <span class="kwrd">const</span> <a href="grain.hdf5.d.html#L31" title="grain.hdf5.hsize_t" class="hid">hsize_t</a>* <span class="hid">maxdims</span>);
+<a id="L141" href="#L141" class="br">141 </a><span class="com">///</span>
+<a id="L142" href="#L142" class="br">142 </a><a href="grain.hdf5.d.html#L35" title="grain.hdf5.herr_t" class="hid">herr_t</a> <a href="grain.hdf5.d.html#L142" title="grain.hdf5.H5Sclose" class="hid">H5Sclose</a>(<a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <span class="hid">space_id</span>);
+<a id="L143" href="#L143" class="br">143 </a>
+<a id="L144" href="#L144" class="br">144 </a><span class="com">///</span>
+<a id="L145" href="#L145" class="br">145 </a><a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L145" title="grain.hdf5.H5Dopen2" class="hid">H5Dopen2</a>(<a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <span class="hid">file_id</span>, <span class="kwrd">const</span> <span class="type">char</span>* <span class="hid">name</span>, <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <span class="hid">dapl_id</span>);
+<a id="L146" href="#L146" class="br">146 </a><span class="com">///</span>
+<a id="L147" href="#L147" class="br">147 </a><a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <a href="grain.hdf5.d.html#L147" title="grain.hdf5.H5Dcreate2" class="hid">H5Dcreate2</a>(<a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <span class="hid">loc_id</span>, <span class="kwrd">const</span> <span class="type">char</span>* <span class="hid">name</span>, <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <span class="hid">type_id</span>, <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <span class="hid">space_id</span>,
+<a id="L148" href="#L148" class="br">148 </a>        <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <span class="hid">lcpl_id</span>, <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <span class="hid">dcpl_id</span>, <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <span class="hid">dapl_id</span>); <span class="com">//</span>
+<a id="L149" href="#L149" class="br">149 </a><span class="com">///</span>
+<a id="L150" href="#L150" class="br">150 </a><a href="grain.hdf5.d.html#L35" title="grain.hdf5.herr_t" class="hid">herr_t</a> <a href="grain.hdf5.d.html#L150" title="grain.hdf5.H5Dclose" class="hid">H5Dclose</a>(<a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <span class="hid">dset_id</span>);
+<a id="L151" href="#L151" class="br">151 </a><span class="com">///</span>
+<a id="L152" href="#L152" class="br">152 </a><a href="grain.hdf5.d.html#L35" title="grain.hdf5.herr_t" class="hid">herr_t</a> <a href="grain.hdf5.d.html#L152" title="grain.hdf5.H5Dread" class="hid">H5Dread</a>(<a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <span class="hid">dset_id</span>, <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <span class="hid">mem_type_id</span>, <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <span class="hid">mem_space_id</span>,
+<a id="L153" href="#L153" class="br">153 </a>        <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <span class="hid">file_space_id</span>, <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <span class="hid">plist_id</span>, <span class="type">void</span>* <span class="hid">buf</span> <span class="com">/*out*/</span> );
+<a id="L154" href="#L154" class="br">154 </a><span class="com">///</span>
+<a id="L155" href="#L155" class="br">155 </a><a href="grain.hdf5.d.html#L35" title="grain.hdf5.herr_t" class="hid">herr_t</a> <a href="grain.hdf5.d.html#L155" title="grain.hdf5.H5Dwrite" class="hid">H5Dwrite</a>(<a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <span class="hid">dset_id</span>, <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <span class="hid">mem_type_id</span>, <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <span class="hid">mem_space_id</span>,
+<a id="L156" href="#L156" class="br">156 </a>        <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <span class="hid">file_space_id</span>, <a href="grain.hdf5.d.html#L29" title="grain.hdf5.hid_t" class="hid">hid_t</a> <span class="hid">plist_id</span>, <span class="kwrd">const</span> <span class="type">void</span>* <span class="hid">buf</span>);
+<a id="L157" href="#L157" class="br">157 </a>
+<a id="L158" href="#L158" class="br">158 </a><span class="type">void</span> <a href="grain.hdf5.d.html#L158" title="grain.hdf5.H5open" class="hid">H5open</a>();
+<a id="L159" href="#L159" class="br">159 </a>
+<a id="L160" href="#L160" class="br">160 </a><span class="kwrd">shared</span> <span class="kwrd">static</span> <span class="kwrd">this</span>() {
+<a id="L161" href="#L161" class="br">161 </a>    <a href="grain.hdf5.d.html#L158" title="grain.hdf5.H5open" class="hid">H5open</a>();
+<a id="L162" href="#L162" class="br">162 </a>}</pre></div>
+        <div id="page-nav">
+        <div id="source-navigation"><div class="list-holder"><ul><li><a href="../grain.hdf5.html" class="docs">[Docs] </a><a href="#L1">grain.hdf5</a><ul><li><a href="../grain.hdf5.hid_t.html" class="docs">[Docs] </a><a href="#L29">hid_t</a></li><li><a href="../grain.hdf5.hsize_t.html" class="docs">[Docs] </a><a href="#L31">hsize_t</a></li><li><a href="../grain.hdf5.hssize_t.html" class="docs">[Docs] </a><a href="#L33">hssize_t</a></li><li><a href="../grain.hdf5.herr_t.html" class="docs">[Docs] </a><a href="#L35">herr_t</a></li><li><a href="../grain.hdf5.H5S_ALL.html" class="docs">[Docs] </a><a href="#L1">H5S_ALL</a></li><li><a href="../grain.hdf5.H5S_UNLIMITED.html" class="docs">[Docs] </a><a href="#L1">H5S_UNLIMITED</a></li><li><a href="../grain.hdf5.H5S_MAX_RANK.html" class="docs">[Docs] </a><a href="#L1">H5S_MAX_RANK</a></li><li><a href="#L1">H5F_ACC_RDONLY</a></li><li><a href="#L1">H5F_ACC_RDWR</a></li><li><a href="#L1">H5F_ACC_TRUNC</a></li><li><a href="#L1">H5F_ACC_EXCL</a></li><li><a href="#L1">H5F_ACC_DEBUG</a></li><li><a href="#L1">H5F_ACC_CREAT</a></li><li><a href="#L1">H5F_ACC_DEFAULT</a></li><li><a href="#L1">H5P_DEFAULT</a></li><li><a href="#L66">H5T_IEEE_F32BE</a></li><li><a href="#L67">H5T_IEEE_F32LE</a></li><li><a href="#L68">H5T_IEEE_F64BE</a></li><li><a href="#L69">H5T_IEEE_F64LE</a></li><li><a href="#L70">H5T_IEEE_F32BE_g</a></li><li><a href="#L71">H5T_IEEE_F32LE_g</a></li><li><a href="#L72">H5T_IEEE_F64BE_g</a></li><li><a href="#L73">H5T_IEEE_F64LE_g</a></li><li><a href="#L79">H5T_STD_I8BE</a></li><li><a href="#L80">H5T_STD_I8LE</a></li><li><a href="#L81">H5T_STD_I16BE</a></li><li><a href="#L82">H5T_STD_I16LE</a></li><li><a href="#L83">H5T_STD_I32BE</a></li><li><a href="#L84">H5T_STD_I32LE</a></li><li><a href="#L85">H5T_STD_I64BE</a></li><li><a href="#L86">H5T_STD_I64LE</a></li><li><a href="#L87">H5T_STD_U8BE</a></li><li><a href="#L88">H5T_STD_U8LE</a></li><li><a href="#L89">H5T_STD_U16BE</a></li><li><a href="#L90">H5T_STD_U16LE</a></li><li><a href="#L91">H5T_STD_U32BE</a></li><li><a href="#L92">H5T_STD_U32LE</a></li><li><a href="#L93">H5T_STD_U64BE</a></li><li><a href="#L94">H5T_STD_U64LE</a></li><li><a href="#L95">H5T_STD_B8BE</a></li><li><a href="#L96">H5T_STD_B8LE</a></li><li><a href="#L97">H5T_STD_B16BE</a></li><li><a href="#L98">H5T_STD_B16LE</a></li><li><a href="#L99">H5T_STD_B32BE</a></li><li><a href="#L100">H5T_STD_B32LE</a></li><li><a href="#L101">H5T_STD_B64BE</a></li><li><a href="#L102">H5T_STD_B64LE</a></li><li><a href="#L103">H5T_STD_REF_OBJ</a></li><li><a href="#L104">H5T_STD_REF_DSETREG</a></li><li><a href="#L105">H5T_STD_I8BE_g</a></li><li><a href="#L106">H5T_STD_I8LE_g</a></li><li><a href="#L107">H5T_STD_I16BE_g</a></li><li><a href="#L108">H5T_STD_I16LE_g</a></li><li><a href="#L109">H5T_STD_I32BE_g</a></li><li><a href="#L110">H5T_STD_I32LE_g</a></li><li><a href="#L111">H5T_STD_I64BE_g</a></li><li><a href="#L112">H5T_STD_I64LE_g</a></li><li><a href="#L113">H5T_STD_U8BE_g</a></li><li><a href="#L114">H5T_STD_U8LE_g</a></li><li><a href="#L115">H5T_STD_U16BE_g</a></li><li><a href="#L116">H5T_STD_U16LE_g</a></li><li><a href="#L117">H5T_STD_U32BE_g</a></li><li><a href="#L118">H5T_STD_U32LE_g</a></li><li><a href="#L119">H5T_STD_U64BE_g</a></li><li><a href="#L120">H5T_STD_U64LE_g</a></li><li><a href="#L121">H5T_STD_B8BE_g</a></li><li><a href="#L122">H5T_STD_B8LE_g</a></li><li><a href="#L123">H5T_STD_B16BE_g</a></li><li><a href="#L124">H5T_STD_B16LE_g</a></li><li><a href="#L125">H5T_STD_B32BE_g</a></li><li><a href="#L126">H5T_STD_B32LE_g</a></li><li><a href="#L127">H5T_STD_B64BE_g</a></li><li><a href="#L128">H5T_STD_B64LE_g</a></li><li><a href="#L129">H5T_STD_REF_OBJ_g</a></li><li><a href="#L130">H5T_STD_REF_DSETREG_g</a></li><li><a href="../grain.hdf5.H5Fcreate.html" class="docs">[Docs] </a><a href="#L133">H5Fcreate</a></li><li><a href="../grain.hdf5.H5Fopen.html" class="docs">[Docs] </a><a href="#L135">H5Fopen</a></li><li><a href="../grain.hdf5.H5Fclose.html" class="docs">[Docs] </a><a href="#L137">H5Fclose</a></li><li><a href="../grain.hdf5.H5Screate_simple.html" class="docs">[Docs] </a><a href="#L140">H5Screate_simple</a></li><li><a href="../grain.hdf5.H5Sclose.html" class="docs">[Docs] </a><a href="#L142">H5Sclose</a></li><li><a href="../grain.hdf5.H5Dopen2.html" class="docs">[Docs] </a><a href="#L145">H5Dopen2</a></li><li><a href="../grain.hdf5.H5Dcreate2.html" class="docs">[Docs] </a><a href="#L147">H5Dcreate2</a></li><li><a href="../grain.hdf5.H5Dclose.html" class="docs">[Docs] </a><a href="#L150">H5Dclose</a></li><li><a href="../grain.hdf5.H5Dread.html" class="docs">[Docs] </a><a href="#L152">H5Dread</a></li><li><a href="../grain.hdf5.H5Dwrite.html" class="docs">[Docs] </a><a href="#L155">H5Dwrite</a></li><li><a href="#L158">H5open</a></li></ul></li></ul></div></div></div>
+    </div>
+    <div id="page-footer">
+        Distributed under <a href="https://www.boost.org/users/license.html">BSL-1.0</a>.
+        Copyright <a href="https://shigekikarita.github.io">Shigeki Karita</a> 2018.
+        Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a>
+    </div>
+</body>
+</html>

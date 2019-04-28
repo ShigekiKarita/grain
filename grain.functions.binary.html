@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>grain.functions.binary (grain.functions.binary)</title>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+        <link rel="stylesheet" href="style.css" />
+        <script type="text/javascript" src="script.js"></script>
+
+    
+    <link rel="prefetch" href="search-results.html" />
+</head>
+<body>
+    <div id="page-header">
+        <div id="logotype">
+        <span>Documentation</span>
+        <nav>
+            <a href="https://github.com/ShigekiKarita/grain">GitHub</a>
+            <a href="https://github.com/ShigekiKarita/grain/tree/master/example">Example</a>
+            <a href="http://dlang.org/">Dlang.org</a>
+        </nav>
+        </div>
+
+        <form action="search-docs.html" id="search">
+            <input type="search" placeholder="Find a symbol name..." name="searchTerm" />
+            <input type="submit" value="Go" />
+        </form>
+    </div>
+    <div id="page-body">
+        <div id="page-content">
+        <h1>grain.functions.binary</h1><div class="breadcrumbs"><a href="grain.html" class="breadcrumb">grain</a><a href="grain.functions.html" class="breadcrumb">functions</a></div><div><div class="documentation-comment synopsis"><div><p>A module for binary autograd functions.</p><p>TODO:
+   - support add tensor with cudnnAddTensor and mir.ndslice
+   - support opBinary(add, mul, min, max) cudnnOpTensor
+   - convolution
+   - batchnorm</p></div></div></div><div class="annotated-prototype"></div><h2 id="members"><a href="#members" class="header-anchor">Members</a></h2><h3 id="function" class="member-list-header hide-from-toc"><a href="#function" class="header-anchor">Functions</a></h3><dl class="member-list native"><dt><a href="grain.functions.binary.lin2dim.html">lin2dim</a><div style="max-width: 82ch;" class="simplified-prototype"><tt class="highlighted"><span class="type">void</span></tt> <span class="name">lin2dim</span><tt class="highlighted">(<span class="type">int</span> <span class="hid">id</span>, <span class="kwrd">scope</span> <span class="kwrd">ref</span> <span class="type">int</span>[<span class="hid">length</span>] <span class="hid">ids</span>, <span class="kwrd">const</span> <span class="kwrd">ref</span> <span class="type">int</span>[<span class="hid">length</span>] <span class="hid">dims</span>)</tt></div></dt><dd><div><p>Convert a linear index
+i = d_1 s_1 ... s_n + d_2 s_2 ... s_n + d_n-1 s_n + d_n
+into a multidimensional index
+(d_1, d_2, ..., d_n)</p></div></dd></dl><h3 id="struct" class="member-list-header hide-from-toc"><a href="#struct" class="header-anchor">Structs</a></h3><dl class="member-list native"><dt><a href="grain.functions.binary.AddBias.html">AddBias</a><div style="max-width: 18ch;" class="simplified-prototype"><span class="builtin-type">struct</span> <span class="name">AddBias</span><span class="template-params">(T)</span></div></dt><dd><div><p>Add bias vector to matrix used inside grain.chain.Linear
+   TODO: generalize to broadcastable addition (use cudnnAddTensor)</p></div></dd><dt><a href="grain.functions.binary.Convolution.html">Convolution</a><div style="max-width: 84ch;" class="simplified-prototype"><span class="builtin-type">struct</span> <span class="name">Convolution</span><span class="template-params">(T, size_t imDims, bool isConv = false, bool isNchw = true)</span></div></dt><dd><div><p>Convolution/Cross-correration function</p></div></dd><dt><a href="grain.functions.binary.ConvolutionRefImpl.html">ConvolutionRefImpl</a><div style="max-width: 92ch;" class="simplified-prototype"><span class="builtin-type">struct</span> <span class="name">ConvolutionRefImpl</span><span class="template-params">(T, size_t imDims, bool isConv = false, bool isNchw = true)</span></div></dt><dd><div><p>Reference CPU implementation of Convolution function</p></div></dd><dt><a href="grain.functions.binary.Embedding.html">Embedding</a><div style="max-width: 20ch;" class="simplified-prototype"><span class="builtin-type">struct</span> <span class="name">Embedding</span><span class="template-params">(T)</span></div></dt><dd><div><p>Emebedding ID into vector. TODO: support N-dim input. support sparse weight matrix</p></div></dd><dt><a href="grain.functions.binary.MatMul.html">MatMul</a><div style="max-width: 17ch;" class="simplified-prototype"><span class="builtin-type">struct</span> <span class="name">MatMul</span><span class="template-params">(T)</span></div></dt><dd><div><p>Matrix-Matrix multiplication (using cuBLAS)</p></div></dd><dt><a href="grain.functions.binary.OpBinary.html">OpBinary</a><div style="max-width: 46ch;" class="simplified-prototype"><span class="builtin-type">struct</span> <span class="name">OpBinary</span><span class="template-params">(T, size_t dim, string ops)</span></div></dt><dd><div><p>c = op(alpha1 * a + alpha2 * b) + beta * c;</p></div></dd></dl><div><h2 id="meta"><a href="#meta" class="header-anchor">Meta</a></h2><div class="documentation-comment source-section other-section"><h3 id="source"><a href="#source" class="header-anchor">Source</a></h3><div><p><a href="source/grain.functions.binary.d.html">See Source File</a><br /></p></div></div></div></div>
+        <div id="page-nav"><a href="grain.html" class="parent">grain</a><a href="grain.functions.html" class="parent">functions</a>
+        <span class="type-separator">modules</span><ul><li><a href="grain.functions.binary.html" class="module current">binary</a></li><li><a href="grain.functions.common.html" class="module">common</a></li><li><a href="grain.functions.loss.html" class="module">loss</a></li><li><a href="grain.functions.random.html" class="module">random</a></li><li><a href="grain.functions.unary.html" class="module">unary</a></li></ul></div>
+    </div>
+    <div id="page-footer">
+        Distributed under <a href="https://www.boost.org/users/license.html">BSL-1.0</a>.
+        Copyright <a href="https://shigekikarita.github.io">Shigeki Karita</a> 2018.
+        Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pool (grain.functions.unary.Pool)</title>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+        <link rel="stylesheet" href="style.css" />
+        <script type="text/javascript" src="script.js"></script>
+
+    
+    <link rel="prefetch" href="search-results.html" />
+</head>
+<body>
+    <div id="page-header">
+        <div id="logotype">
+        <span>Documentation</span>
+        <nav>
+            <a href="https://github.com/ShigekiKarita/grain">GitHub</a>
+            <a href="https://github.com/ShigekiKarita/grain/tree/master/example">Example</a>
+            <a href="http://dlang.org/">Dlang.org</a>
+        </nav>
+        </div>
+
+        <form action="search-docs.html" id="search">
+            <input type="search" placeholder="Find a symbol name..." name="searchTerm" />
+            <input type="submit" value="Go" />
+        </form>
+    </div>
+    <div id="page-body">
+        <div id="page-content">
+        <h1>Pool</h1><div class="breadcrumbs"><a href="grain.html" class="breadcrumb">grain</a><a href="grain.functions.html" class="breadcrumb">functions</a><a href="grain.functions.unary.html" class="breadcrumb">unary</a></div><div><div class="documentation-comment synopsis"><div><p>max pooling function</p></div></div></div><div class="annotated-prototype"><div class="aggregate-prototype"><div class="attributes"></div><span class="builtin-type">struct</span> Pool (<div class="parameters-list toplevel"><div class="template-parameter-item parameter-item">	<span><span class="builtin-type">bool</span> <span data-ident="isMax" class="name">isMax</span></span></div><div class="template-parameter-item parameter-item">	<span><span data-ident="T" class="name">T</span></span></div><div class="template-parameter-item parameter-item">	<span><span data-ident="size_t" class="name">size_t</span> <span data-ident="poolDims" class="name">poolDims</span></span></div></div>) {<div class="aggregate-member"><span class="builtin-type">enum</span> <span class="name">dim</span>;</div><div class="aggregate-member"><tt class="highlighted"><span class="type">int</span>[<span class="hid">poolDims</span>]</tt> <span class="name">window</span>;</div><div class="aggregate-member"><tt class="highlighted"><span class="type">int</span>[<span class="hid">poolDims</span>]</tt> <span class="name">pad</span>;</div><div class="aggregate-member"><tt class="highlighted"><span class="type">int</span>[<span class="hid">poolDims</span>]</tt> <span class="name">stride</span>;</div><div class="aggregate-member"><tt class="highlighted"><span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">HostStorage</span>)</tt> <span class="name">hx</span>;</div><div class="aggregate-member"><tt class="highlighted"><span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">HostStorage</span>)</tt> <span class="name">hy</span>;</div><div class="aggregate-member"><tt class="highlighted"><span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">DeviceStorage</span>)</tt> <span class="name">dx</span>;</div><div class="aggregate-member"><tt class="highlighted"><span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">DeviceStorage</span>)</tt> <span class="name">dy</span>;</div>}</div></div><div><h2 id="meta"><a href="#meta" class="header-anchor">Meta</a></h2><div class="documentation-comment source-section other-section"><h3 id="source"><a href="#source" class="header-anchor">Source</a></h3><div><p><a href="source/grain.functions.unary.d.html#L1422">See Implementation</a><br /></p></div></div></div></div>
+        <div id="page-nav"><a href="grain.html" class="parent">grain</a><a href="grain.functions.html" class="parent">functions</a><a href="grain.functions.unary.html" class="parent">unary</a>
+        <span class="type-separator">functions</span><ul><li><a href="grain.functions.unary.ndStrided.html" class="function">ndStrided</a></li><li><a href="grain.functions.unary.unaryFunc.html" class="function">unaryFunc</a></li><li><a href="grain.functions.unary.unaryPow.html" class="function">unaryPow</a></li><li><a href="grain.functions.unary.unpad.html" class="function">unpad</a></li></ul><span class="type-separator">manifest constants</span><ul><li><a href="grain.functions.unary.CUDNN_ACTIVATION_IMPL_MIXIN.html" class="manifest-constant">CUDNN_ACTIVATION_IMPL_MIXIN</a></li></ul><span class="type-separator">structs</span><ul><li><a href="grain.functions.unary.Abs.html" class="struct">Abs</a></li><li><a href="grain.functions.unary.Cos.html" class="struct">Cos</a></li><li><a href="grain.functions.unary.Exp.html" class="struct">Exp</a></li><li><a href="grain.functions.unary.Log.html" class="struct">Log</a></li><li><a href="grain.functions.unary.LogSoftmax.html" class="struct">LogSoftmax</a></li><li><a href="grain.functions.unary.Neg.html" class="struct">Neg</a></li><li><a href="grain.functions.unary.Pool.html" class="struct current">Pool</a></li><li><a href="grain.functions.unary.PoolRefImpl.html" class="struct">PoolRefImpl</a></li><li><a href="grain.functions.unary.Pow.html" class="struct">Pow</a></li><li><a href="grain.functions.unary.ReLU.html" class="struct">ReLU</a></li><li><a href="grain.functions.unary.Reciprocal.html" class="struct">Reciprocal</a></li><li><a href="grain.functions.unary.Scale.html" class="struct">Scale</a></li><li><a href="grain.functions.unary.Sigmoid.html" class="struct">Sigmoid</a></li><li><a href="grain.functions.unary.Sin.html" class="struct">Sin</a></li><li><a href="grain.functions.unary.Tan.html" class="struct">Tan</a></li><li><a href="grain.functions.unary.Tanh.html" class="struct">Tanh</a></li></ul></div>
+    </div>
+    <div id="page-footer">
+        Distributed under <a href="https://www.boost.org/users/license.html">BSL-1.0</a>.
+        Copyright <a href="https://shigekikarita.github.io">Shigeki Karita</a> 2018.
+        Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a>
+    </div>
+</body>
+</html>

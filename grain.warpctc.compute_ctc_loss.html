@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>compute_ctc_loss (grain.warpctc.compute_ctc_loss)</title>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+        <link rel="stylesheet" href="style.css" />
+        <script type="text/javascript" src="script.js"></script>
+
+    
+    <link rel="prefetch" href="search-results.html" />
+</head>
+<body>
+    <div id="page-header">
+        <div id="logotype">
+        <span>Documentation</span>
+        <nav>
+            <a href="https://github.com/ShigekiKarita/grain">GitHub</a>
+            <a href="https://github.com/ShigekiKarita/grain/tree/master/example">Example</a>
+            <a href="http://dlang.org/">Dlang.org</a>
+        </nav>
+        </div>
+
+        <form action="search-docs.html" id="search">
+            <input type="search" placeholder="Find a symbol name..." name="searchTerm" />
+            <input type="submit" value="Go" />
+        </form>
+    </div>
+    <div id="page-body">
+        <div id="page-content">
+        <h1>compute_ctc_loss</h1><div class="breadcrumbs"><a href="grain.html" class="breadcrumb">grain</a><a href="grain.warpctc.html" class="breadcrumb">warpctc</a></div><div><div class="documentation-comment synopsis"><div><p>Compute the connectionist temporal classification loss between a sequence
+of probabilities and a ground truth labeling.  Optionally compute the
+gradient with respect to the inputs.
+\param <a href="in.html" class="xref">in</a> activations pointer to the activations in either CPU or GPU
+           addressable memory, depending on info.  We assume a fixed
+           memory layout for this 3 dimensional tensor, which has dimension
+           (t, n, p), where t is the time index, n is the minibatch index,
+           and p indexes over probabilities of each symbol in the alphabet.
+           The memory layout is (t, n, p) in C order (slowest to fastest changing
+           index, aka row-major), or (p, n, t) in Fortran order (fastest to slowest
+           changing index, aka column-major). We also assume strides are equal to
+           dimensions - there is no padding between dimensions.
+           More precisely, element (t, n, p), for a problem with mini_batch examples
+           in the mini batch, and alphabet_size symbols in the alphabet, is located at:
+           activations[(t * mini_batch + n) * alphabet_size + p]
+\param <a href="out.html" class="xref">out</a> gradients if not NULL, then gradients are computed.  Should be
+            allocated in the same memory space as probs and memory
+            ordering is identical.
+\param <a href="in.html" class="xref">in</a>  flat_labels Always in CPU memory.  A concatenation
+            of all the labels for the minibatch.
+\param <a href="in.html" class="xref">in</a>  label_lengths Always in CPU memory. The length of each label
+            for each example in the minibatch.
+\param <a href="in.html" class="xref">in</a>  input_lengths Always in CPU memory.  The number of time steps
+            for each sequence in the minibatch.
+\param <a href="in.html" class="xref">in</a>  alphabet_size The number of possible output symbols.  There
+            should be this many probabilities for each time step.
+\param <a href="in.html" class="xref">in</a>  mini_batch How many examples in a minibatch.
+\param <a href="out.html" class="xref">out</a> costs Always in CPU memory.  The cost of each example in the
+            minibatch.
+\param [in,out] workspace In same memory space as probs. Should be of
+               size requested by get_workspace_size.
+\param <a href="in.html" class="xref">in</a>  options see struct ctcOptions</p><p>\return Status information</p></div></div></div><div class="annotated-prototype"><div class="function-prototype"><div class="attributes">extern (<span data-ident="C" class="name">C</span>) </div><div class="return-type"><span data-ident="ctcStatus_t" class="name">ctcStatus_t</span></div><div class="function-name">compute_ctc_loss</div><div class="template-parameters"></div><div class="runtime-parameters">(<div class="parameters-list toplevel"><div class="runtime-parameter-item parameter-item"><span class="parameter-type-holder"><span class="parameter-type"><span class="type-constructor">const</span>(<span class="builtin-type">float</span>)*</span></span> <span data-ident="activations" class="parameter-name name"><a href="#param-activations">activations</a></span></div><span class="comma">,</span><div class="runtime-parameter-item parameter-item"><span class="parameter-type-holder"><span class="parameter-type"><span class="builtin-type">float</span>*</span></span> <span data-ident="gradients" class="parameter-name name"><a href="#param-gradients">gradients</a></span></div><span class="comma">,</span><div class="runtime-parameter-item parameter-item"><span class="parameter-type-holder"><span class="parameter-type"><span class="type-constructor">const</span>(<span class="builtin-type">int</span>)*</span></span> <span data-ident="flat_labels" class="parameter-name name"><a href="#param-flat_labels">flat_labels</a></span></div><span class="comma">,</span><div class="runtime-parameter-item parameter-item"><span class="parameter-type-holder"><span class="parameter-type"><span class="type-constructor">const</span>(<span class="builtin-type">int</span>)*</span></span> <span data-ident="label_lengths" class="parameter-name name"><a href="#param-label_lengths">label_lengths</a></span></div><span class="comma">,</span><div class="runtime-parameter-item parameter-item"><span class="parameter-type-holder"><span class="parameter-type"><span class="type-constructor">const</span>(<span class="builtin-type">int</span>)*</span></span> <span data-ident="input_lengths" class="parameter-name name"><a href="#param-input_lengths">input_lengths</a></span></div><span class="comma">,</span><div class="runtime-parameter-item parameter-item"><span class="parameter-type-holder"><span class="parameter-type"><span class="builtin-type">int</span></span></span> <span data-ident="alphabet_size" class="parameter-name name"><a href="#param-alphabet_size">alphabet_size</a></span></div><span class="comma">,</span><div class="runtime-parameter-item parameter-item"><span class="parameter-type-holder"><span class="parameter-type"><span class="builtin-type">int</span></span></span> <span data-ident="minibatch" class="parameter-name name"><a href="#param-minibatch">minibatch</a></span></div><span class="comma">,</span><div class="runtime-parameter-item parameter-item"><span class="parameter-type-holder"><span class="parameter-type"><span class="builtin-type">float</span>*</span></span> <span data-ident="costs" class="parameter-name name"><a href="#param-costs">costs</a></span></div><span class="comma">,</span><div class="runtime-parameter-item parameter-item"><span class="parameter-type-holder"><span class="parameter-type"><span class="builtin-type">void</span>*</span></span> <span data-ident="workspace" class="parameter-name name"><a href="#param-workspace">workspace</a></span></div><span class="comma">,</span><div class="runtime-parameter-item parameter-item"><span class="parameter-type-holder"><span class="parameter-type"><a data-ident="ctcOptions" href="grain.warpctc.ctcOptions.html" title="grain.warpctc.ctcOptions" class="name">ctcOptions</a></span></span> <span data-ident="options" class="parameter-name name"><a href="#param-options">options</a></span></div></div>)</div></div></div><div><h2 id="meta"><a href="#meta" class="header-anchor">Meta</a></h2><div class="documentation-comment source-section other-section"><h3 id="source"><a href="#source" class="header-anchor">Source</a></h3><div><p><a href="source/grain.warpctc.d.html#L101">See Implementation</a><br /></p></div></div></div></div>
+        <div id="page-nav"><a href="grain.html" class="parent">grain</a><a href="grain.warpctc.html" class="parent">warpctc</a>
+        <span class="type-separator">functions</span><ul><li><a href="grain.warpctc.compute_ctc_loss.html" class="function current">compute_ctc_loss</a></li><li><a href="grain.warpctc.ctcGetStatusString.html" class="function">ctcGetStatusString</a></li><li><a href="grain.warpctc.get_warpctc_version.html" class="function">get_warpctc_version</a></li><li><a href="grain.warpctc.get_workspace_size.html" class="function">get_workspace_size</a></li></ul><span class="type-separator">structs</span><ul><li><a href="grain.warpctc.ctcOptions.html" class="struct">ctcOptions</a></li></ul></div>
+    </div>
+    <div id="page-footer">
+        Distributed under <a href="https://www.boost.org/users/license.html">BSL-1.0</a>.
+        Copyright <a href="https://shigekikarita.github.io">Shigeki Karita</a> 2018.
+        Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a>
+    </div>
+</body>
+</html>

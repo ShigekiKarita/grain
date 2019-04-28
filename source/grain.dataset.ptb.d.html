@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>grain.dataset.ptb source code</title>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+        <link rel="stylesheet" href="../style.css" />
+        <script type="text/javascript" src="../script.js"></script>
+
+    
+    <link rel="prefetch" href="../search-results.html" />
+</head>
+<body>
+    <div id="page-header">
+        <div id="logotype">
+        <span>Documentation</span>
+        <nav>
+            <a href="https://github.com/ShigekiKarita/grain">GitHub</a>
+            <a href="https://github.com/ShigekiKarita/grain/tree/master/example">Example</a>
+            <a href="http://dlang.org/">Dlang.org</a>
+        </nav>
+        </div>
+
+        <form action="search-docs.html" id="search">
+            <input type="search" placeholder="Find a symbol name..." name="searchTerm" />
+            <input type="submit" value="Go" />
+        </form>
+    </div>
+    <div id="page-body">
+        <div id="page-content">
+        <pre class="d_code highlighted with-line-wrappers"><a id="L1" href="#L1" class="br">1 </a><span class="com">/// PTB language modeling dataset</span>
+<a id="L2" href="#L2" class="br">2 </a><span class="kwrd">module</span> <span class="hid">grain.dataset.ptb</span>;
+<a id="L3" href="#L3" class="br">3 </a>
+<a id="L4" href="#L4" class="br">4 </a><span class="kwrd">import</span> <span class="hid">std.array</span>;
+<a id="L5" href="#L5" class="br">5 </a><span class="kwrd">import</span> <span class="hid">std.algorithm</span> : <span class="hid">splitter</span>;
+<a id="L6" href="#L6" class="br">6 </a><span class="kwrd">import</span> <span class="hid">std.stdio</span> : <span class="hid">File</span>;
+<a id="L7" href="#L7" class="br">7 </a><span class="kwrd">import</span> <span class="hid">mir.ndslice</span>;
+<a id="L8" href="#L8" class="br">8 </a><span class="kwrd">import</span> <span class="hid">mir.random.variable</span> : <span class="hid">UniformVariable</span>;
+<a id="L9" href="#L9" class="br">9 </a>
+<a id="L10" href="#L10" class="br">10 </a><span class="kwrd">import</span> <a href="grain.dataset.ptb.d.html#L10" title="grain.dataset.ptb.numir" class="hid">numir</a>;
+<a id="L11" href="#L11" class="br">11 </a>
+<a id="L12" href="#L12" class="br">12 </a><span class="com">///</span>
+<a id="L13" href="#L13" class="br">13 </a><span class="kwrd">auto</span> <a href="grain.dataset.ptb.d.html#L13" title="grain.dataset.ptb.prepareDataset" class="hid">prepareDataset</a>() {
+<a id="L14" href="#L14" class="br">14 </a>    <span class="kwrd">import</span> <span class="hid">std.format</span>;
+<a id="L15" href="#L15" class="br">15 </a>    <span class="kwrd">import</span> <span class="hid">std.file</span> : <span class="hid">exists</span>, <span class="hid">read</span>, <span class="hid">mkdir</span>;
+<a id="L16" href="#L16" class="br">16 </a>    <span class="kwrd">import</span> <span class="hid">std.net.curl</span> : <span class="hid">download</span>;
+<a id="L17" href="#L17" class="br">17 </a>
+<a id="L18" href="#L18" class="br">18 </a>    <span class="kwrd">if</span> (!<span class="hid">exists</span>(<span class="str">&quot;data&quot;</span>)) {
+<a id="L19" href="#L19" class="br">19 </a>        <span class="hid">mkdir</span>(<span class="str">&quot;data&quot;</span>);
+<a id="L20" href="#L20" class="br">20 </a>    }
+<a id="L21" href="#L21" class="br">21 </a>    <span class="kwrd">enum</span> <span class="hid">root</span> = <span class="str">&quot;https://github.com/tomsercu/lstm/raw/master/&quot;</span>;
+<a id="L22" href="#L22" class="br">22 </a>    <span class="kwrd">foreach</span> (<span class="hid">f</span>; [<span class="str">&quot;train&quot;</span>, <span class="str">&quot;valid&quot;</span>, <span class="str">&quot;test&quot;</span>]) {
+<a id="L23" href="#L23" class="br">23 </a>        <span class="kwrd">auto</span> <span class="hid">dst</span> = <span class="hid">format</span>!<span class="str">&quot;data/ptb.%s.txt&quot;</span>(<span class="hid">f</span>);
+<a id="L24" href="#L24" class="br">24 </a>        <span class="kwrd">if</span> (!<span class="hid">exists</span>(<span class="hid">dst</span>))<span class="hid">download</span>(<span class="hid">root</span> ~ <span class="hid">dst</span>, <span class="hid">dst</span>);
+<a id="L25" href="#L25" class="br">25 </a>    }
+<a id="L26" href="#L26" class="br">26 </a>
+<a id="L27" href="#L27" class="br">27 </a>    <a href="grain.dataset.ptb.d.html#L55" title="grain.dataset.ptb.Corpus" class="hid">Corpus</a> <span class="hid">corpus</span>;
+<a id="L28" href="#L28" class="br">28 </a>    <span class="kwrd">foreach</span> (<span class="hid">name</span>; [<span class="str">&quot;train&quot;</span>, <span class="str">&quot;valid&quot;</span>, <span class="str">&quot;test&quot;</span>]) {
+<a id="L29" href="#L29" class="br">29 </a>        <span class="hid">corpus.register</span>(<span class="str">&quot;data/ptb.&quot;</span> ~ <span class="hid">name</span> ~ <span class="str">&quot;.txt&quot;</span>, <span class="hid">name</span>);
+<a id="L30" href="#L30" class="br">30 </a>    }
+<a id="L31" href="#L31" class="br">31 </a>    <span class="kwrd">return</span> <span class="hid">corpus</span>;
+<a id="L32" href="#L32" class="br">32 </a>}
+<a id="L33" href="#L33" class="br">33 </a>
+<a id="L34" href="#L34" class="br">34 </a><span class="com">///</span>
+<a id="L35" href="#L35" class="br">35 </a><span class="kwrd">struct</span> <a href="grain.dataset.ptb.d.html#L35" title="grain.dataset.ptb.Dictionary" class="hid">Dictionary</a> {
+<a id="L36" href="#L36" class="br">36 </a>    <span class="kwrd">enum</span> <span class="hid">eos</span> = <span class="str">&quot;&lt;eos&gt;&quot;</span>;
+<a id="L37" href="#L37" class="br">37 </a>    <span class="kwrd">enum</span> <span class="hid">eosId</span> = <span class="num">0</span>;
+<a id="L38" href="#L38" class="br">38 </a>    <span class="type">string</span>[] <span class="hid">idx2word</span>;
+<a id="L39" href="#L39" class="br">39 </a>    <span class="type">int</span>[<span class="type">string</span>] <span class="hid">word2idx</span>;
+<a id="L40" href="#L40" class="br">40 </a>
+<a id="L41" href="#L41" class="br">41 </a>    <span class="type">void</span> <span class="hid">register</span>(<span class="type">string</span> <span class="hid">word</span>) {
+<a id="L42" href="#L42" class="br">42 </a>        <span class="kwrd">assert</span>(<span class="type">int</span>.<span class="hid">max</span> &gt; <span class="kwrd">this</span>.<span class="hid">idx2word.length</span>);
+<a id="L43" href="#L43" class="br">43 </a>        <span class="kwrd">if</span> (<span class="kwrd">this</span>.<span class="hid">idx2word.empty</span>) { <span class="com">// init</span>
+<a id="L44" href="#L44" class="br">44 </a>            <span class="kwrd">this</span>.<span class="hid">idx2word</span> = [<span class="hid">eos</span>];
+<a id="L45" href="#L45" class="br">45 </a>            <span class="kwrd">this</span>.<span class="hid">word2idx</span>[<span class="hid">eos</span>] = <span class="num">0</span>;
+<a id="L46" href="#L46" class="br">46 </a>        }
+<a id="L47" href="#L47" class="br">47 </a>        <span class="kwrd">if</span> (<span class="hid">word</span> !<span class="kwrd">in</span> <span class="kwrd">this</span>.<span class="hid">word2idx</span>) {
+<a id="L48" href="#L48" class="br">48 </a>            <span class="kwrd">this</span>.<span class="hid">word2idx</span>[<span class="hid">word</span>] = <span class="kwrd">cast</span>(<span class="type">int</span>) <span class="kwrd">this</span>.<span class="hid">idx2word.length</span>;
+<a id="L49" href="#L49" class="br">49 </a>            <span class="kwrd">this</span>.<span class="hid">idx2word</span> ~= <span class="hid">word</span>;
+<a id="L50" href="#L50" class="br">50 </a>        }
+<a id="L51" href="#L51" class="br">51 </a>    }
+<a id="L52" href="#L52" class="br">52 </a>}
+<a id="L53" href="#L53" class="br">53 </a>
+<a id="L54" href="#L54" class="br">54 </a><span class="com">///</span>
+<a id="L55" href="#L55" class="br">55 </a><span class="kwrd">struct</span> <a href="grain.dataset.ptb.d.html#L55" title="grain.dataset.ptb.Corpus" class="hid">Corpus</a> {
+<a id="L56" href="#L56" class="br">56 </a>    <a href="grain.dataset.ptb.d.html#L35" title="grain.dataset.ptb.Dictionary" class="hid">Dictionary</a> <span class="hid">dict</span>;
+<a id="L57" href="#L57" class="br">57 </a>    <span class="type">int</span>[][<span class="type">string</span>] <span class="hid">dataset</span>;
+<a id="L58" href="#L58" class="br">58 </a>    <span class="hid">size_t</span> <span class="hid">batchSize</span> = <span class="num">20</span>;
+<a id="L59" href="#L59" class="br">59 </a>
+<a id="L60" href="#L60" class="br">60 </a>    <span class="type">void</span> <span class="hid">register</span>(<span class="type">string</span> <span class="hid">path</span>, <span class="type">string</span> <span class="hid">name</span>) {
+<a id="L61" href="#L61" class="br">61 </a>        <span class="kwrd">import</span> <span class="hid">std.</span>.<span class="type">string</span> : <span class="hid">strip</span>;
+<a id="L62" href="#L62" class="br">62 </a>        <span class="type">int</span>[] <span class="hid">data</span>;
+<a id="L63" href="#L63" class="br">63 </a>        <span class="kwrd">foreach</span> (<span class="hid">line</span>; <span class="hid">File</span>(<span class="hid">path</span>).<span class="hid">byLine</span>) {
+<a id="L64" href="#L64" class="br">64 </a>            <span class="kwrd">foreach</span> (<span class="hid">word</span>; <span class="hid">line.strip.splitter</span>(<span class="str">' '</span>)) {
+<a id="L65" href="#L65" class="br">65 </a>                <span class="kwrd">this</span>.<span class="hid">dict.register</span>(<span class="hid">word.idup</span>);
+<a id="L66" href="#L66" class="br">66 </a>                <span class="hid">data</span> ~= <span class="kwrd">this</span>.<span class="hid">dict.word2idx</span>[<span class="hid">word</span>];
+<a id="L67" href="#L67" class="br">67 </a>            }
+<a id="L68" href="#L68" class="br">68 </a>            <span class="hid">data</span> ~= <a href="grain.dataset.ptb.d.html#L0" title="grain.dataset.ptb.Dictionary.eosId" class="hid">Dictionary.eosId</a>;
+<a id="L69" href="#L69" class="br">69 </a>        }
+<a id="L70" href="#L70" class="br">70 </a>        <span class="hid">dataset</span>[<span class="hid">name</span>] = <span class="hid">data</span>;
+<a id="L71" href="#L71" class="br">71 </a>    }
+<a id="L72" href="#L72" class="br">72 </a>
+<a id="L73" href="#L73" class="br">73 </a>    <span class="com">/// returns word-id 2d slice shaped (seqlen, batchsize)</span>
+<a id="L74" href="#L74" class="br">74 </a>    <span class="kwrd">auto</span> <span class="hid">batchfy</span>(<span class="type">string</span> <span class="hid">name</span>) {
+<a id="L75" href="#L75" class="br">75 </a>        <span class="kwrd">import</span> <a href="grain.dataset.ptb.d.html#L10" title="grain.dataset.ptb.numir" class="hid">numir</a>;
+<a id="L76" href="#L76" class="br">76 </a>        <span class="kwrd">auto</span> <span class="hid">data</span> = <span class="kwrd">this</span>.<span class="hid">dataset</span>[<span class="hid">name</span>];
+<a id="L77" href="#L77" class="br">77 </a>        <span class="kwrd">const</span> <span class="hid">len</span> = <span class="hid">data.length</span> / <span class="kwrd">this</span>.<span class="hid">batchSize</span>;
+<a id="L78" href="#L78" class="br">78 </a>        <span class="kwrd">return</span> <span class="hid">data</span>[<span class="num">0</span> .. <span class="hid">len</span> * <span class="kwrd">this</span>.<span class="hid">batchSize</span>].<span class="hid">sliced.view</span>(<span class="kwrd">this</span>.<span class="hid">batchSize</span>, <span class="hid">len</span>).<span class="hid">transposed.slice</span>;
+<a id="L79" href="#L79" class="br">79 </a>    }
+<a id="L80" href="#L80" class="br">80 </a>
+<a id="L81" href="#L81" class="br">81 </a>    <span class="kwrd">auto</span> <span class="hid">vocabSize</span>() {
+<a id="L82" href="#L82" class="br">82 </a>        <span class="kwrd">return</span> <span class="kwrd">cast</span>(<span class="type">int</span>) <span class="kwrd">this</span>.<span class="hid">dict.idx2word.length</span>;
+<a id="L83" href="#L83" class="br">83 </a>    }
+<a id="L84" href="#L84" class="br">84 </a>}</pre></div>
+        <div id="page-nav">
+        <div id="source-navigation"><div class="list-holder"><ul><li><a href="../grain.dataset.ptb.html" class="docs">[Docs] </a><a href="#L1">grain.dataset.ptb</a><ul><li><a href="#L4">std.array</a></li><li><a href="#L5">std.algorithm</a></li><li><a href="#L6">std.stdio</a></li><li><a href="#L7">mir.ndslice</a></li><li><a href="#L8">mir.random.variable</a></li><li><a href="#L10">numir</a></li><li><a href="../grain.dataset.ptb.prepareDataset.html" class="docs">[Docs] </a><a href="#L13">prepareDataset</a></li><li><a href="../grain.dataset.ptb.Dictionary.html" class="docs">[Docs] </a><a href="#L35">Dictionary</a><ul><li><a href="#L1">eos</a></li><li><a href="#L1">eosId</a></li><li><a href="#L38">idx2word</a></li><li><a href="#L39">word2idx</a></li><li><a href="#L41">register</a></li></ul></li><li><a href="../grain.dataset.ptb.Corpus.html" class="docs">[Docs] </a><a href="#L55">Corpus</a><ul><li><a href="#L56">dict</a></li><li><a href="#L57">dataset</a></li><li><a href="#L58">batchSize</a></li><li><a href="#L60">register</a></li><li><a href="../grain.dataset.ptb.Corpus.batchfy.html" class="docs">[Docs] </a><a href="#L74">batchfy</a></li><li><a href="#L81">vocabSize</a></li></ul></li></ul></li></ul></div></div></div>
+    </div>
+    <div id="page-footer">
+        Distributed under <a href="https://www.boost.org/users/license.html">BSL-1.0</a>.
+        Copyright <a href="https://shigekikarita.github.io">Shigeki Karita</a> 2018.
+        Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a>
+    </div>
+</body>
+</html>

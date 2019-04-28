@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>grain.utility source code</title>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+        <link rel="stylesheet" href="../style.css" />
+        <script type="text/javascript" src="../script.js"></script>
+
+    
+    <link rel="prefetch" href="../search-results.html" />
+</head>
+<body>
+    <div id="page-header">
+        <div id="logotype">
+        <span>Documentation</span>
+        <nav>
+            <a href="https://github.com/ShigekiKarita/grain">GitHub</a>
+            <a href="https://github.com/ShigekiKarita/grain/tree/master/example">Example</a>
+            <a href="http://dlang.org/">Dlang.org</a>
+        </nav>
+        </div>
+
+        <form action="search-docs.html" id="search">
+            <input type="search" placeholder="Find a symbol name..." name="searchTerm" />
+            <input type="submit" value="Go" />
+        </form>
+    </div>
+    <div id="page-body">
+        <div id="page-content">
+        <pre class="d_code highlighted with-line-wrappers"><a id="L1" href="#L1" class="br">1 </a><span class="com">/**
+<a id="L2" href="#L2" class="br">2 </a>   A module of utility functions
+<a id="L3" href="#L3" class="br">3 </a> */</span>
+<a id="L4" href="#L4" class="br">4 </a><span class="kwrd">module</span> <span class="hid">grain.utility</span>;
+<a id="L5" href="#L5" class="br">5 </a>
+<a id="L6" href="#L6" class="br">6 </a><span class="kwrd">import</span> <span class="hid">std.typecons</span>  : <span class="hid">isTuple</span>, <span class="hid">tuple</span>;
+<a id="L7" href="#L7" class="br">7 </a>
+<a id="L8" href="#L8" class="br">8 </a><span class="com">/// non-tuple to tuple. tuple to tuple</span>
+<a id="L9" href="#L9" class="br">9 </a><span class="kwrd">auto</span> <a href="grain.utility.d.html#L9" title="grain.utility.toTuple" class="hid">toTuple</a>(<span class="hid">T</span>)(<span class="hid">T</span> <span class="hid">t</span>) {
+<a id="L10" href="#L10" class="br">10 </a>    <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="hid">isTuple</span>!<span class="hid">T</span>) {
+<a id="L11" href="#L11" class="br">11 </a>        <span class="kwrd">return</span> <span class="hid">t</span>;
+<a id="L12" href="#L12" class="br">12 </a>    } <span class="kwrd">else</span> {
+<a id="L13" href="#L13" class="br">13 </a>        <span class="kwrd">return</span> <span class="hid">tuple</span>(<span class="hid">t</span>);
+<a id="L14" href="#L14" class="br">14 </a>    }
+<a id="L15" href="#L15" class="br">15 </a>}
+<a id="L16" href="#L16" class="br">16 </a>
+<a id="L17" href="#L17" class="br">17 </a><span class="com">/// single element tuple to element. the other tuple to tuple</span>
+<a id="L18" href="#L18" class="br">18 </a><span class="kwrd">auto</span> <a href="grain.utility.d.html#L18" title="grain.utility.fromTuple" class="hid">fromTuple</a>(<span class="hid">T</span>)(<span class="hid">T</span> <span class="hid">t</span>) {
+<a id="L19" href="#L19" class="br">19 </a>    <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="hid">t.length</span> == <span class="num">0</span>) {
+<a id="L20" href="#L20" class="br">20 </a>        <span class="kwrd">return</span> <span class="hid">t</span>[<span class="num">0</span>];
+<a id="L21" href="#L21" class="br">21 </a>    } <span class="kwrd">else</span> {
+<a id="L22" href="#L22" class="br">22 </a>        <span class="kwrd">return</span> <span class="hid">t</span>;
+<a id="L23" href="#L23" class="br">23 </a>    }
+<a id="L24" href="#L24" class="br">24 </a>}
+<a id="L25" href="#L25" class="br">25 </a>
+<a id="L26" href="#L26" class="br">26 </a><span class="com">/// unsafe cast of array (e.g., int[] -&gt; size_t[])</span>
+<a id="L27" href="#L27" class="br">27 </a><span class="hid">Dst</span>[<span class="hid">N</span>] <a href="grain.utility.d.html#L27" title="grain.utility.castArray" class="hid">castArray</a>(<span class="hid">Dst</span>, <span class="hid">Src</span>, <span class="hid">size_t</span> <span class="hid">N</span>)(<span class="hid">Src</span>[<span class="hid">N</span>] <span class="hid">src</span>) {
+<a id="L28" href="#L28" class="br">28 </a>    <span class="hid">Dst</span>[<span class="hid">N</span>] <span class="hid">dst</span>;
+<a id="L29" href="#L29" class="br">29 </a>    <span class="kwrd">static</span> <span class="kwrd">foreach</span> (<span class="hid">i</span>; <span class="num">0</span> .. <span class="hid">N</span>) {
+<a id="L30" href="#L30" class="br">30 </a>        <span class="hid">dst</span>[<span class="hid">i</span>] = <span class="kwrd">cast</span>(<span class="hid">Dst</span>) <span class="hid">src</span>[<span class="hid">i</span>];
+<a id="L31" href="#L31" class="br">31 </a>    }
+<a id="L32" href="#L32" class="br">32 </a>    <span class="kwrd">return</span> <span class="hid">dst</span>;
+<a id="L33" href="#L33" class="br">33 </a>}
+<a id="L34" href="#L34" class="br">34 </a>
+<a id="L35" href="#L35" class="br">35 </a><span class="kwrd">version</span> (<span class="hid">LDC</span>) {
+<a id="L36" href="#L36" class="br">36 </a>    <span class="kwrd">public</span> <span class="kwrd">import</span> <span class="hid">ldc.attributes</span> : <a href="grain.utility.d.html#L39" title="grain.utility.optStrategy" class="hid">optStrategy</a>;
+<a id="L37" href="#L37" class="br">37 </a>} <span class="kwrd">else</span> {
+<a id="L38" href="#L38" class="br">38 </a>    <span class="com">/// usage @optStrategy(&quot;none&quot;)</span>
+<a id="L39" href="#L39" class="br">39 </a>    <span class="kwrd">struct</span> <a href="grain.utility.d.html#L39" title="grain.utility.optStrategy" class="hid">optStrategy</a> {
+<a id="L40" href="#L40" class="br">40 </a>        <span class="type">string</span> <span class="hid">s</span>;
+<a id="L41" href="#L41" class="br">41 </a>    }
+<a id="L42" href="#L42" class="br">42 </a>}</pre></div>
+        <div id="page-nav">
+        <div id="source-navigation"><div class="list-holder"><ul><li><a href="../grain.utility.html" class="docs">[Docs] </a><a href="#L1">grain.utility</a><ul><li><a href="#L6">std.typecons</a></li><li><a href="../grain.utility.toTuple.html" class="docs">[Docs] </a><a href="#L9">toTuple</a></li><li><a href="../grain.utility.fromTuple.html" class="docs">[Docs] </a><a href="#L18">fromTuple</a></li><li><a href="../grain.utility.castArray.html" class="docs">[Docs] </a><a href="#L27">castArray</a></li><li><a href="../ldc.attributes.html" class="docs">[Docs] </a><a href="#L36">ldc.attributes</a></li><li><a href="../grain.utility.optStrategy.html" class="docs">[Docs] </a><a href="#L39">optStrategy</a><ul><li><a href="#L40">s</a></li></ul></li></ul></li></ul></div></div></div>
+    </div>
+    <div id="page-footer">
+        Distributed under <a href="https://www.boost.org/users/license.html">BSL-1.0</a>.
+        Copyright <a href="https://shigekikarita.github.io">Shigeki Karita</a> 2018.
+        Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a>
+    </div>
+</body>
+</html>
