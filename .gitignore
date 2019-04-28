@@ -9,6 +9,7 @@
 !*.md
 !*.cu
 !*.sh
+!*.awk
 !.travis.yml
 !dub.json
 !tmp/*.ptx

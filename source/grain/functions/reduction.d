@@ -1,3 +1,6 @@
+/**
+   A module for reductions functions
+*/
 module grain.functions.reduction;
 
 import grain.autograd;
@@ -5,6 +8,7 @@ import grain.cuda;
 import grain.functions.common;
 import grain.utility : toTuple, fromTuple, castArray;
 
+/// sum to scalar. mode is similar to mir.math.sum
 struct Sum(string mode = "fast", T, size_t dim) {
     import std.traits : isFloatingPoint;
     static assert(isFloatingPoint!T, "currently only float point is supported.");
@@ -50,7 +54,7 @@ struct Sum(string mode = "fast", T, size_t dim) {
     mixin FunctionCommon;
 }
 
-
+///
 unittest {
     import mir.ndslice;
     import mir.math;

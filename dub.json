@@ -203,7 +203,11 @@
             "subConfigurations": {
                 "linenoise": "vendored"
             }
-        }
+        },
+        {
+			      "name": "makedeps",
+			      "dflags": ["-deps=deps.txt"]
+		    }
     ],
     "-ddoxTool": "scod",
     "-ddoxFilterArgs": [
