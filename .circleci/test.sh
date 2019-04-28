@@ -23,7 +23,6 @@ if [ "$DC" = dmd ]; then
     dub build --build=release --config=jupyterd;
 
     make doc;
-    mv generated-docs docs;
     bash <(curl -s https://codecov.io/bash) -s "source-grain-*.lst";
 else
     echo "skipping make repl jupyterd in ${DC}";
