@@ -128,4 +128,5 @@ deps.dot: deps-lock.txt
 	dub run ddeps -- --focus=grain -i deps-lock.txt -o deps.dot -e std -e core -e mir -e numir -e ldc
 
 generated-docs/grain.svg: deps.dot
+	mkdir -p generated-docs
 	awk -f ./tool/add_url.awk deps.dot | dot -Tsvg | sed 's/xlink:href/target="_blank" xlink:href/g' > $@
