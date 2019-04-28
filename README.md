@@ -3,6 +3,7 @@
 </p>
 
 # grain
+[![CircleCI](https://circleci.com/gh/ShigekiKarita/grain.svg?style=svg)](https://circleci.com/gh/ShigekiKarita/grain)
 [![Build Status](https://travis-ci.org/ShigekiKarita/grain.svg?branch=master)](https://travis-ci.org/ShigekiKarita/grain)
 [![codecov](https://codecov.io/gh/ShigekiKarita/grain/branch/master/graph/badge.svg)](https://codecov.io/gh/ShigekiKarita/grain)
 [![Dub version](https://img.shields.io/dub/v/grain.svg)](https://code.dlang.org/packages/grain)

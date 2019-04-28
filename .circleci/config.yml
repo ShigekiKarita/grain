@@ -5,6 +5,8 @@ workflows:
     jobs:
       - test-dmd
       - test-ldc
+      - test-dmd-xenial
+      - test-ldc-xenial
       - docs-deploy:
           requires:
             - test-dmd
