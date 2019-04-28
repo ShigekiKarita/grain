@@ -102,11 +102,11 @@
 <a id="L72" href="#L72" class="br">72 </a>    <span class="hid">ptrdiff_t</span>[<span class="hid">targetDim</span>] <span class="hid">targetShape</span>;
 <a id="L73" href="#L73" class="br">73 </a>    <span class="hid">ptrdiff_t</span>[<span class="hid">sourceDim</span>] <span class="hid">sourceShape</span>;
 <a id="L74" href="#L74" class="br">74 </a>
-<a id="L75" href="#L75" class="br">75 </a>    <span class="kwrd">auto</span> <span class="hid">forward</span>(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">sourceDim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
+<a id="L75" href="#L75" class="br">75 </a>    <span class="kwrd">auto</span> <span class="hid">forward</span>(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">sourceDim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
 <a id="L76" href="#L76" class="br">76 </a>        <span class="com">// assert(x.shape[].prod == targetShape[].prod);</span>
 <a id="L77" href="#L77" class="br">77 </a>        <span class="kwrd">this</span>.<span class="hid">sourceShape</span> = <span class="hid">x.shape.castArray</span>!<span class="hid">ptrdiff_t</span>; <span class="com">// TODO if train</span>
 <a id="L78" href="#L78" class="br">78 </a>        <span class="kwrd">auto</span> <span class="hid">y</span> = <span class="hid">x.sliced.view</span>(<span class="hid">targetShape</span>);
-<a id="L79" href="#L79" class="br">79 </a>        <span class="kwrd">return</span> <a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">targetDim</span>, <span class="hid">Storage</span>)(
+<a id="L79" href="#L79" class="br">79 </a>        <span class="kwrd">return</span> <span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">targetDim</span>, <span class="hid">Storage</span>)(
 <a id="L80" href="#L80" class="br">80 </a>            <span class="hid">x.requiresGrad</span>,
 <a id="L81" href="#L81" class="br">81 </a>            <span class="hid">y.shape.castArray</span>!<span class="type">uint</span>,
 <a id="L82" href="#L82" class="br">82 </a>            <span class="hid">y.strides.castArray</span>!<span class="type">int</span>,
@@ -114,9 +114,9 @@
 <a id="L84" href="#L84" class="br">84 </a>            );
 <a id="L85" href="#L85" class="br">85 </a>    }
 <a id="L86" href="#L86" class="br">86 </a>
-<a id="L87" href="#L87" class="br">87 </a>    <span class="kwrd">auto</span> <span class="hid">backward</span>(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">targetDim</span>, <span class="hid">Storage</span>) <span class="hid">gy</span>) {
+<a id="L87" href="#L87" class="br">87 </a>    <span class="kwrd">auto</span> <span class="hid">backward</span>(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">targetDim</span>, <span class="hid">Storage</span>) <span class="hid">gy</span>) {
 <a id="L88" href="#L88" class="br">88 </a>        <span class="kwrd">auto</span> <span class="hid">gx</span> = <span class="hid">gy.sliced.view</span>(<span class="kwrd">this</span>.<span class="hid">sourceShape</span>);
-<a id="L89" href="#L89" class="br">89 </a>        <span class="kwrd">return</span> <a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">sourceDim</span>, <span class="hid">Storage</span>)(
+<a id="L89" href="#L89" class="br">89 </a>        <span class="kwrd">return</span> <span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">sourceDim</span>, <span class="hid">Storage</span>)(
 <a id="L90" href="#L90" class="br">90 </a>            <span class="hid">gy.requiresGrad</span>,
 <a id="L91" href="#L91" class="br">91 </a>            <span class="hid">gx.shape.castArray</span>!<span class="type">uint</span>,
 <a id="L92" href="#L92" class="br">92 </a>            <span class="hid">gx.strides.castArray</span>!<span class="type">int</span>,
@@ -129,7 +129,7 @@
 <a id="L99" href="#L99" class="br">99 </a>
 <a id="L100" href="#L100" class="br">100 </a><span class="com">///</span>
 <a id="L101" href="#L101" class="br">101 </a><span class="kwrd">unittest</span> {
-<a id="L102" href="#L102" class="br">102 </a>    <span class="kwrd">auto</span> <span class="hid">f</span> = <a href="grain.functions.topology.d.html#L70" title="grain.functions.topology.View" class="hid">View</a>!(<span class="type">float</span>, <span class="num">3</span>, <span class="num">2</span>, <a href="grain.autograd.d.html#L22" title="grain.autograd.HostStorage" class="hid">HostStorage</a>)([<span class="num">3</span>, -<span class="num">1</span>]);
+<a id="L102" href="#L102" class="br">102 </a>    <span class="kwrd">auto</span> <span class="hid">f</span> = <a href="grain.functions.topology.d.html#L70" title="grain.functions.topology.View" class="hid">View</a>!(<span class="type">float</span>, <span class="num">3</span>, <span class="num">2</span>, <span class="hid">HostStorage</span>)([<span class="num">3</span>, -<span class="num">1</span>]);
 <a id="L103" href="#L103" class="br">103 </a>    <span class="kwrd">auto</span> <span class="hid">x</span> = <span class="hid">iota</span>(<span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>).<span class="hid">as</span>!<span class="type">float</span>.<span class="hid">slice.variable</span>;
 <a id="L104" href="#L104" class="br">104 </a>    <span class="kwrd">auto</span> <span class="hid">y</span> = <span class="hid">f.forward</span>(<span class="hid">x</span>);
 <a id="L105" href="#L105" class="br">105 </a>    <span class="kwrd">assert</span>(<span class="hid">y.sliced</span> == <span class="hid">iota</span>(<span class="num">3</span>, <span class="num">20</span>));
@@ -139,10 +139,10 @@
 <a id="L109" href="#L109" class="br">109 </a>    <span class="com">// gradCheck(f, x, hgy);</span>
 <a id="L110" href="#L110" class="br">110 </a>
 <a id="L111" href="#L111" class="br">111 </a>    <span class="kwrd">version</span> (<span class="hid">grain_cuda</span>) {
-<a id="L112" href="#L112" class="br">112 </a>        <span class="kwrd">auto</span> <span class="hid">df</span> = <a href="grain.functions.topology.d.html#L70" title="grain.functions.topology.View" class="hid">View</a>!(<span class="type">float</span>, <span class="num">3</span>, <span class="num">2</span>, <a href="grain.autograd.d.html#L91" title="grain.autograd.DeviceStorage" class="hid">DeviceStorage</a>)([<span class="num">3</span>, -<span class="num">1</span>]);
-<a id="L113" href="#L113" class="br">113 </a>        <span class="kwrd">auto</span> <span class="hid">dy</span> = <span class="hid">df.forward</span>(<span class="hid">x.to</span>!<a href="grain.autograd.d.html#L91" title="grain.autograd.DeviceStorage" class="hid">DeviceStorage</a>);
-<a id="L114" href="#L114" class="br">114 </a>        <span class="kwrd">assert</span>(<span class="hid">dy.to</span>!<a href="grain.autograd.d.html#L22" title="grain.autograd.HostStorage" class="hid">HostStorage.sliced</a> == <span class="hid">iota</span>(<span class="num">3</span>, <span class="num">20</span>));
-<a id="L115" href="#L115" class="br">115 </a>        <span class="kwrd">auto</span> <span class="hid">dgx</span> = <span class="hid">df.backward</span>(<span class="hid">hgy.to</span>!<a href="grain.autograd.d.html#L91" title="grain.autograd.DeviceStorage" class="hid">DeviceStorage</a>);
+<a id="L112" href="#L112" class="br">112 </a>        <span class="kwrd">auto</span> <span class="hid">df</span> = <a href="grain.functions.topology.d.html#L70" title="grain.functions.topology.View" class="hid">View</a>!(<span class="type">float</span>, <span class="num">3</span>, <span class="num">2</span>, <span class="hid">DeviceStorage</span>)([<span class="num">3</span>, -<span class="num">1</span>]);
+<a id="L113" href="#L113" class="br">113 </a>        <span class="kwrd">auto</span> <span class="hid">dy</span> = <span class="hid">df.forward</span>(<span class="hid">x.to</span>!<span class="hid">DeviceStorage</span>);
+<a id="L114" href="#L114" class="br">114 </a>        <span class="kwrd">assert</span>(<span class="hid">dy.to</span>!<span class="hid">HostStorage.sliced</span> == <span class="hid">iota</span>(<span class="num">3</span>, <span class="num">20</span>));
+<a id="L115" href="#L115" class="br">115 </a>        <span class="kwrd">auto</span> <span class="hid">dgx</span> = <span class="hid">df.backward</span>(<span class="hid">hgy.to</span>!<span class="hid">DeviceStorage</span>);
 <a id="L116" href="#L116" class="br">116 </a>        <span class="kwrd">assert</span>(<span class="hid">dgx.to</span>!<span class="hid">HostStorage.sliced.view</span>(<span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>) == <span class="hid">hgx.sliced</span>);
 <a id="L117" href="#L117" class="br">117 </a>    }
 <a id="L118" href="#L118" class="br">118 </a>}
