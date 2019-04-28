@@ -37,7 +37,7 @@
 <a id="L7" href="#L7" class="br">7 </a>
 <a id="L8" href="#L8" class="br">8 </a><span class="kwrd">version</span> (<span class="hid">grain_cuda</span>):
 <a id="L9" href="#L9" class="br">9 </a>
-<a id="L10" href="#L10" class="br">10 </a><span class="kwrd">public</span> <span class="kwrd">import</span> <span class="hid">grain.cuda</span> : <a href="grain.cuda.d.html#L23" title="grain.cuda.cudnnHandle" class="hid">cudnnHandle</a>, <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>, <a href="grain.cuda.d.html#L264" title="grain.cuda.CuPtr" class="hid">CuPtr</a>, <a href="grain.cuda.d.html#L316" title="grain.cuda.CuArray" class="hid">CuArray</a>, <a href="grain.cuda.d.html#L209" title="grain.cuda.isDeviceMemory" class="hid">isDeviceMemory</a>;
+<a id="L10" href="#L10" class="br">10 </a><span class="kwrd">public</span> <span class="kwrd">import</span> <span class="hid">grain.cuda</span> : <span class="hid">cudnnHandle</span>, <span class="hid">checkCUDNN</span>, <span class="hid">CuPtr</span>, <span class="hid">CuArray</span>, <span class="hid">isDeviceMemory</span>;
 <a id="L11" href="#L11" class="br">11 </a><span class="kwrd">import</span> <span class="hid">grain.autograd</span>; <span class="com">//  : Variable, DeviceStorage;</span>
 <a id="L12" href="#L12" class="br">12 </a><span class="kwrd">import</span> <span class="hid">grain.utility</span> : <span class="hid">castArray</span>;
 <a id="L13" href="#L13" class="br">13 </a><span class="kwrd">public</span> <span class="kwrd">import</span> <span class="hid">derelict.cuda</span>;
@@ -78,7 +78,7 @@
 <a id="L48" href="#L48" class="br">48 </a>    @<span class="hid">disable</span> <span class="kwrd">new</span>(<span class="hid">size_t</span>);
 <a id="L49" href="#L49" class="br">49 </a>
 <a id="L50" href="#L50" class="br">50 </a>    ~<span class="kwrd">this</span>() {
-<a id="L51" href="#L51" class="br">51 </a>        <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnDestroyTensorDescriptor</span>(<span class="hid">desc</span>) );
+<a id="L51" href="#L51" class="br">51 </a>        <span class="hid">checkCUDNN</span>( <span class="hid">cudnnDestroyTensorDescriptor</span>(<span class="hid">desc</span>) );
 <a id="L52" href="#L52" class="br">52 </a>    }
 <a id="L53" href="#L53" class="br">53 </a>}
 <a id="L54" href="#L54" class="br">54 </a>
@@ -109,8 +109,8 @@
 <a id="L79" href="#L79" class="br">79 </a>
 <a id="L80" href="#L80" class="br">80 </a>    <a href="grain.cudnn.d.html#L40" title="grain.cudnn.TensorDesc" class="hid">TensorDesc</a> <span class="hid">tdesc</span>;
 <a id="L81" href="#L81" class="br">81 </a>    <span class="hid">tdesc.ptr</span> = <span class="hid">x.data.ptr</span>;
-<a id="L82" href="#L82" class="br">82 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>(<span class="hid">cudnnCreateTensorDescriptor</span>(&amp;<span class="hid">tdesc.desc</span>));
-<a id="L83" href="#L83" class="br">83 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>(<span class="hid">cudnnSetTensorNdDescriptor</span>(<span class="hid">tdesc.desc</span>,
+<a id="L82" href="#L82" class="br">82 </a>    <span class="hid">checkCUDNN</span>(<span class="hid">cudnnCreateTensorDescriptor</span>(&amp;<span class="hid">tdesc.desc</span>));
+<a id="L83" href="#L83" class="br">83 </a>    <span class="hid">checkCUDNN</span>(<span class="hid">cudnnSetTensorNdDescriptor</span>(<span class="hid">tdesc.desc</span>,
 <a id="L84" href="#L84" class="br">84 </a>                                          <a href="grain.cudnn.d.html#L32" title="grain.cudnn.cudnnDataType" class="hid">cudnnDataType</a>!<span class="hid">T</span>,
 <a id="L85" href="#L85" class="br">85 </a>                                          <span class="hid">ddim</span>,
 <a id="L86" href="#L86" class="br">86 </a>                                          <span class="hid">shape.ptr</span>,
@@ -119,17 +119,17 @@
 <a id="L89" href="#L89" class="br">89 </a>}
 <a id="L90" href="#L90" class="br">90 </a>
 <a id="L91" href="#L91" class="br">91 </a><span class="com">/// convert contiguous cuda storage to 1-D tensor disc</span>
-<a id="L92" href="#L92" class="br">92 </a><span class="kwrd">auto</span> <a href="grain.cudnn.d.html#L56" title="grain.cudnn.makeCudnnTensor" class="hid">makeCudnnTensor</a>(<span class="hid">T</span>)(<span class="kwrd">ref</span> <span class="hid">T</span> <span class="hid">storage</span>) <span class="kwrd">if</span> (<a href="grain.cuda.d.html#L209" title="grain.cuda.isDeviceMemory" class="hid">isDeviceMemory</a>!<span class="hid">T</span>) {
-<a id="L93" href="#L93" class="br">93 </a>    <span class="kwrd">import</span> <span class="hid">grain.cuda</span> : <a href="grain.cuda.d.html#L200" title="grain.cuda.CudaElementType" class="hid">CudaElementType</a>;
+<a id="L92" href="#L92" class="br">92 </a><span class="kwrd">auto</span> <a href="grain.cudnn.d.html#L56" title="grain.cudnn.makeCudnnTensor" class="hid">makeCudnnTensor</a>(<span class="hid">T</span>)(<span class="kwrd">ref</span> <span class="hid">T</span> <span class="hid">storage</span>) <span class="kwrd">if</span> (<span class="hid">isDeviceMemory</span>!<span class="hid">T</span>) {
+<a id="L93" href="#L93" class="br">93 </a>    <span class="kwrd">import</span> <span class="hid">grain.cuda</span> : <span class="hid">CudaElementType</span>;
 <a id="L94" href="#L94" class="br">94 </a>    <span class="kwrd">assert</span>(<span class="hid">storage.length</span> &lt;= <span class="type">int</span>.<span class="hid">max</span>);
 <a id="L95" href="#L95" class="br">95 </a>    <span class="type">int</span>[<span class="num">1</span>] <span class="hid">shape</span> = [<span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">storage.length</span>];
 <a id="L96" href="#L96" class="br">96 </a>    <span class="type">int</span>[<span class="num">1</span>] <span class="hid">strides</span> = [<span class="num">1</span>];
 <a id="L97" href="#L97" class="br">97 </a>    <span class="type">int</span> <span class="hid">ddim</span> = <span class="num">1</span>;
 <a id="L98" href="#L98" class="br">98 </a>    <a href="grain.cudnn.d.html#L40" title="grain.cudnn.TensorDesc" class="hid">TensorDesc</a> <span class="hid">tdesc</span>;
 <a id="L99" href="#L99" class="br">99 </a>    <span class="hid">tdesc.ptr</span> = <span class="hid">storage.ptr</span>;
-<a id="L100" href="#L100" class="br">100 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>(<span class="hid">cudnnCreateTensorDescriptor</span>(&amp;<span class="hid">tdesc.desc</span>));
-<a id="L101" href="#L101" class="br">101 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>(<span class="hid">cudnnSetTensorNdDescriptor</span>(<span class="hid">tdesc.desc</span>,
-<a id="L102" href="#L102" class="br">102 </a>                                          <a href="grain.cudnn.d.html#L32" title="grain.cudnn.cudnnDataType" class="hid">cudnnDataType</a>!(<a href="grain.cuda.d.html#L200" title="grain.cuda.CudaElementType" class="hid">CudaElementType</a>!<span class="hid">T</span>),
+<a id="L100" href="#L100" class="br">100 </a>    <span class="hid">checkCUDNN</span>(<span class="hid">cudnnCreateTensorDescriptor</span>(&amp;<span class="hid">tdesc.desc</span>));
+<a id="L101" href="#L101" class="br">101 </a>    <span class="hid">checkCUDNN</span>(<span class="hid">cudnnSetTensorNdDescriptor</span>(<span class="hid">tdesc.desc</span>,
+<a id="L102" href="#L102" class="br">102 </a>                                          <a href="grain.cudnn.d.html#L32" title="grain.cudnn.cudnnDataType" class="hid">cudnnDataType</a>!(<span class="hid">CudaElementType</span>!<span class="hid">T</span>),
 <a id="L103" href="#L103" class="br">103 </a>                                          <span class="hid">ddim</span>,
 <a id="L104" href="#L104" class="br">104 </a>                                          <span class="hid">shape.ptr</span>,
 <a id="L105" href="#L105" class="br">105 </a>                                          <span class="hid">strides.ptr</span>));
@@ -144,15 +144,15 @@
 <a id="L114" href="#L114" class="br">114 </a>    <span class="kwrd">static</span> <span class="kwrd">assert</span>(<span class="hid">dim</span> &lt;= <span class="num">5</span>, <span class="str">&quot;cuDNN only supports &lt;= 5 dim tensors. and pack dim is not supported yet.&quot;</span>);
 <a id="L115" href="#L115" class="br">115 </a>    <span class="com">// init descriptors</span>
 <a id="L116" href="#L116" class="br">116 </a>    <a href="derelict.cudnn7.d.html#L445" title="derelict.cudnn7.cudnnActivationDescriptor_t" class="hid">cudnnActivationDescriptor_t</a>  <span class="hid">activDesc</span>;
-<a id="L117" href="#L117" class="br">117 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnCreateActivationDescriptor</span>(&amp;<span class="hid">activDesc</span>) );
-<a id="L118" href="#L118" class="br">118 </a>    <span class="kwrd">scope</span>(<span class="hid">exit</span>) <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnCreateActivationDescriptor</span>(&amp;<span class="hid">activDesc</span>) );
-<a id="L119" href="#L119" class="br">119 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnSetActivationDescriptor</span>(<span class="hid">activDesc</span>,
+<a id="L117" href="#L117" class="br">117 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnCreateActivationDescriptor</span>(&amp;<span class="hid">activDesc</span>) );
+<a id="L118" href="#L118" class="br">118 </a>    <span class="kwrd">scope</span>(<span class="hid">exit</span>) <span class="hid">checkCUDNN</span>( <span class="hid">cudnnCreateActivationDescriptor</span>(&amp;<span class="hid">activDesc</span>) );
+<a id="L119" href="#L119" class="br">119 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnSetActivationDescriptor</span>(<span class="hid">activDesc</span>,
 <a id="L120" href="#L120" class="br">120 </a>                                             <span class="hid">A</span>, <span class="com">// CUDNN_ACTIVATION_RELU,</span>
 <a id="L121" href="#L121" class="br">121 </a>                                             <span class="hid">CUDNN_PROPAGATE_NAN</span>,
 <a id="L122" href="#L122" class="br">122 </a>                                             <span class="hid">coeff</span>) );
 <a id="L123" href="#L123" class="br">123 </a>    <span class="kwrd">auto</span> <span class="hid">tx</span> = <span class="hid">x.makeCudnnTensor</span>;
 <a id="L124" href="#L124" class="br">124 </a>    <span class="kwrd">auto</span> <span class="hid">ty</span> = <span class="hid">y.makeCudnnTensor</span>;
-<a id="L125" href="#L125" class="br">125 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnActivationForward</span>(<a href="grain.cuda.d.html#L23" title="grain.cuda.cudnnHandle" class="hid">cudnnHandle</a>,
+<a id="L125" href="#L125" class="br">125 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnActivationForward</span>(<span class="hid">cudnnHandle</span>,
 <a id="L126" href="#L126" class="br">126 </a>                                       <span class="hid">activDesc</span>,
 <a id="L127" href="#L127" class="br">127 </a>                                       &amp;<span class="hid">alpha</span>,
 <a id="L128" href="#L128" class="br">128 </a>                                       <span class="hid">tx</span>,
@@ -170,9 +170,9 @@
 <a id="L140" href="#L140" class="br">140 </a>    <span class="kwrd">static</span> <span class="kwrd">assert</span>(<span class="hid">dim</span> &lt;= <span class="num">5</span>, <span class="str">&quot;cuDNN only supports &lt;= 5 dim tensors. and pack dim is not supported yet.&quot;</span>);
 <a id="L141" href="#L141" class="br">141 </a>    <span class="com">// init descriptors</span>
 <a id="L142" href="#L142" class="br">142 </a>    <a href="derelict.cudnn7.d.html#L445" title="derelict.cudnn7.cudnnActivationDescriptor_t" class="hid">cudnnActivationDescriptor_t</a>  <span class="hid">activDesc</span>;
-<a id="L143" href="#L143" class="br">143 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnCreateActivationDescriptor</span>(&amp;<span class="hid">activDesc</span>) );
-<a id="L144" href="#L144" class="br">144 </a>    <span class="kwrd">scope</span>(<span class="hid">exit</span>) <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnCreateActivationDescriptor</span>(&amp;<span class="hid">activDesc</span>) );
-<a id="L145" href="#L145" class="br">145 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnSetActivationDescriptor</span>(<span class="hid">activDesc</span>,
+<a id="L143" href="#L143" class="br">143 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnCreateActivationDescriptor</span>(&amp;<span class="hid">activDesc</span>) );
+<a id="L144" href="#L144" class="br">144 </a>    <span class="kwrd">scope</span>(<span class="hid">exit</span>) <span class="hid">checkCUDNN</span>( <span class="hid">cudnnCreateActivationDescriptor</span>(&amp;<span class="hid">activDesc</span>) );
+<a id="L145" href="#L145" class="br">145 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnSetActivationDescriptor</span>(<span class="hid">activDesc</span>,
 <a id="L146" href="#L146" class="br">146 </a>                                             <span class="hid">A</span>, <span class="com">// CUDNN_ACTIVATION_RELU,</span>
 <a id="L147" href="#L147" class="br">147 </a>                                             <a href="grain.cudnn.d.html#L26" title="grain.cudnn.isNanProp" class="hid">isNanProp</a>(), <span class="com">// CUDNN_PROPAGATE_NAN,</span>
 <a id="L148" href="#L148" class="br">148 </a>                                             <span class="hid">coeff</span>) );
@@ -180,7 +180,7 @@
 <a id="L150" href="#L150" class="br">150 </a>    <span class="kwrd">auto</span> <span class="hid">tgy</span> = <span class="hid">gy.makeCudnnTensor</span>;
 <a id="L151" href="#L151" class="br">151 </a>    <span class="kwrd">auto</span> <span class="hid">tx</span> = <span class="hid">x.makeCudnnTensor</span>;
 <a id="L152" href="#L152" class="br">152 </a>    <span class="kwrd">auto</span> <span class="hid">ty</span> = <span class="hid">y.makeCudnnTensor</span>;
-<a id="L153" href="#L153" class="br">153 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnActivationBackward</span>(<a href="grain.cuda.d.html#L23" title="grain.cuda.cudnnHandle" class="hid">cudnnHandle</a>,
+<a id="L153" href="#L153" class="br">153 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnActivationBackward</span>(<span class="hid">cudnnHandle</span>,
 <a id="L154" href="#L154" class="br">154 </a>                                        <span class="hid">activDesc</span>,
 <a id="L155" href="#L155" class="br">155 </a>                                        &amp;<span class="hid">alpha</span>,
 <a id="L156" href="#L156" class="br">156 </a>                                        <span class="hid">ty</span>,
@@ -199,7 +199,7 @@
 <a id="L169" href="#L169" class="br">169 </a><span class="type">void</span> <a href="grain.cudnn.d.html#L169" title="grain.cudnn.softmaxForward" class="hid">softmaxForward</a>(<a href="derelict.cudnn7.d.html#L628" title="derelict.cudnn7.cudnnSoftmaxAlgorithm_t" class="hid">cudnnSoftmaxAlgorithm_t</a> <span class="hid">A</span>, <span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>)(
 <a id="L170" href="#L170" class="br">170 </a>    <span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">DeviceStorage</span>) <span class="hid">x</span>, <span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">DeviceStorage</span>) <span class="hid">y</span>, <span class="hid">T</span> <span class="hid">alpha</span>=<span class="num">1.0</span>, <span class="hid">T</span> <span class="hid">beta</span>=<span class="num">0.0</span>) {
 <a id="L171" href="#L171" class="br">171 </a>    <span class="kwrd">static</span> <span class="kwrd">assert</span>(<span class="hid">dim</span> &lt;= <span class="num">4</span>, <span class="str">&quot;cuDNN only supports &lt;= 4 dim tensors. and pack dim is not supported yet.&quot;</span>);
-<a id="L172" href="#L172" class="br">172 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnSoftmaxForward</span>(<a href="grain.cuda.d.html#L23" title="grain.cuda.cudnnHandle" class="hid">cudnnHandle</a>,
+<a id="L172" href="#L172" class="br">172 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnSoftmaxForward</span>(<span class="hid">cudnnHandle</span>,
 <a id="L173" href="#L173" class="br">173 </a>                                    <span class="hid">A</span>,
 <a id="L174" href="#L174" class="br">174 </a>                                    <span class="hid">CUDNN_SOFTMAX_MODE_CHANNEL</span>,
 <a id="L175" href="#L175" class="br">175 </a>                                    &amp;<span class="hid">alpha</span>,
@@ -215,7 +215,7 @@
 <a id="L185" href="#L185" class="br">185 </a>    <span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">DeviceStorage</span>) <span class="hid">gx</span>, <span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">DeviceStorage</span>) <span class="hid">gy</span>,
 <a id="L186" href="#L186" class="br">186 </a>    <span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">DeviceStorage</span>) <span class="hid">y</span>, <span class="hid">T</span> <span class="hid">alpha</span>=<span class="num">1.0</span>, <span class="hid">T</span> <span class="hid">beta</span>=<span class="num">0.0</span>) {
 <a id="L187" href="#L187" class="br">187 </a>    <span class="kwrd">static</span> <span class="kwrd">assert</span>(<span class="hid">dim</span> &lt;= <span class="num">4</span>, <span class="str">&quot;cuDNN only supports &lt;= 4 dim tensors. and pack dim is not supported yet.&quot;</span>);
-<a id="L188" href="#L188" class="br">188 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnSoftmaxBackward</span>(<a href="grain.cuda.d.html#L23" title="grain.cuda.cudnnHandle" class="hid">cudnnHandle</a>,
+<a id="L188" href="#L188" class="br">188 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnSoftmaxBackward</span>(<span class="hid">cudnnHandle</span>,
 <a id="L189" href="#L189" class="br">189 </a>                                     <span class="hid">A</span>,
 <a id="L190" href="#L190" class="br">190 </a>                                     <span class="hid">CUDNN_SOFTMAX_MODE_CHANNEL</span>,
 <a id="L191" href="#L191" class="br">191 </a>                                     &amp;<span class="hid">alpha</span>,
@@ -249,10 +249,10 @@
 <a id="L219" href="#L219" class="br">219 </a>    <span class="kwrd">import</span> <span class="hid">grain.functions.common</span> : <span class="hid">broadcastable</span>;
 <a id="L220" href="#L220" class="br">220 </a>    <span class="kwrd">assert</span>(<span class="hid">broadcastable</span>(<span class="hid">a</span>, <span class="hid">b</span>).<span class="hid">ok</span>);
 <a id="L221" href="#L221" class="br">221 </a>    <a href="derelict.cudnn7.d.html#L451" title="derelict.cudnn7.cudnnOpTensorDescriptor_t" class="hid">cudnnOpTensorDescriptor_t</a> <span class="hid">opDisc</span>;
-<a id="L222" href="#L222" class="br">222 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnCreateOpTensorDescriptor</span>(&amp;<span class="hid">opDisc</span>) );
+<a id="L222" href="#L222" class="br">222 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnCreateOpTensorDescriptor</span>(&amp;<span class="hid">opDisc</span>) );
 <a id="L223" href="#L223" class="br">223 </a>    <span class="kwrd">scope</span>(<span class="hid">exit</span>) <span class="hid">cudnnDestroyOpTensorDescriptor</span>(<span class="hid">opDisc</span>);
-<a id="L224" href="#L224" class="br">224 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnSetOpTensorDescriptor</span>(<span class="hid">opDisc</span>, <span class="hid">op</span>, <a href="grain.cudnn.d.html#L32" title="grain.cudnn.cudnnDataType" class="hid">cudnnDataType</a>!<span class="hid">T</span>, <a href="grain.cudnn.d.html#L26" title="grain.cudnn.isNanProp" class="hid">isNanProp</a>()) );
-<a id="L225" href="#L225" class="br">225 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnOpTensor</span>(<a href="grain.cuda.d.html#L23" title="grain.cuda.cudnnHandle" class="hid">cudnnHandle</a>, <span class="hid">opDisc</span>,
+<a id="L224" href="#L224" class="br">224 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnSetOpTensorDescriptor</span>(<span class="hid">opDisc</span>, <span class="hid">op</span>, <a href="grain.cudnn.d.html#L32" title="grain.cudnn.cudnnDataType" class="hid">cudnnDataType</a>!<span class="hid">T</span>, <a href="grain.cudnn.d.html#L26" title="grain.cudnn.isNanProp" class="hid">isNanProp</a>()) );
+<a id="L225" href="#L225" class="br">225 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnOpTensor</span>(<span class="hid">cudnnHandle</span>, <span class="hid">opDisc</span>,
 <a id="L226" href="#L226" class="br">226 </a>                              &amp;<span class="hid">alpha1</span>, <span class="hid">a.makeCudnnTensor</span>, <span class="kwrd">cast</span>(<span class="kwrd">const</span> <span class="type">void</span>*) <span class="hid">a.data.ptr</span>,
 <a id="L227" href="#L227" class="br">227 </a>                              &amp;<span class="hid">alpha2</span>, <span class="hid">b.makeCudnnTensor</span>, <span class="kwrd">cast</span>(<span class="kwrd">const</span> <span class="type">void</span>*) <span class="hid">b.data.ptr</span>,
 <a id="L228" href="#L228" class="br">228 </a>                              &amp;<span class="hid">beta</span>, <span class="hid">c.makeCudnnTensor</span>, <span class="kwrd">cast</span>(<span class="type">void</span>*) <span class="hid">c.data.ptr</span>) );
@@ -260,7 +260,7 @@
 <a id="L230" href="#L230" class="br">230 </a>
 <a id="L231" href="#L231" class="br">231 </a><span class="com">/// x = alpha x</span>
 <a id="L232" href="#L232" class="br">232 </a><span class="type">void</span> <a href="grain.cudnn.d.html#L232" title="grain.cudnn.scale" class="hid">scale</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>)(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">DeviceStorage</span>) <span class="hid">x</span>, <span class="hid">T</span> <span class="hid">alpha</span>) {
-<a id="L233" href="#L233" class="br">233 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnScaleTensor</span>(<a href="grain.cuda.d.html#L23" title="grain.cuda.cudnnHandle" class="hid">cudnnHandle</a>, <span class="hid">x.makeCudnnTensor</span>, <span class="kwrd">cast</span>(<span class="type">void</span>*) <span class="hid">x.data.ptr</span>, &amp;<span class="hid">alpha</span>) );
+<a id="L233" href="#L233" class="br">233 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnScaleTensor</span>(<span class="hid">cudnnHandle</span>, <span class="hid">x.makeCudnnTensor</span>, <span class="kwrd">cast</span>(<span class="type">void</span>*) <span class="hid">x.data.ptr</span>, &amp;<span class="hid">alpha</span>) );
 <a id="L234" href="#L234" class="br">234 </a>}
 <a id="L235" href="#L235" class="br">235 </a>
 <a id="L236" href="#L236" class="br">236 </a><span class="com">/**
@@ -290,9 +290,9 @@
 <a id="L260" href="#L260" class="br">260 </a>
 <a id="L261" href="#L261" class="br">261 </a>    <span class="com">// create descriptor</span>
 <a id="L262" href="#L262" class="br">262 </a>    <a href="derelict.cudnn7.d.html#L454" title="derelict.cudnn7.cudnnReduceTensorDescriptor_t" class="hid">cudnnReduceTensorDescriptor_t</a> <span class="hid">opDesc</span>;
-<a id="L263" href="#L263" class="br">263 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnCreateReduceTensorDescriptor</span>(&amp;<span class="hid">opDesc</span>) );
+<a id="L263" href="#L263" class="br">263 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnCreateReduceTensorDescriptor</span>(&amp;<span class="hid">opDesc</span>) );
 <a id="L264" href="#L264" class="br">264 </a>    <span class="kwrd">scope</span>(<span class="hid">exit</span>) <span class="hid">cudnnDestroyReduceTensorDescriptor</span>(<span class="hid">opDesc</span>);
-<a id="L265" href="#L265" class="br">265 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnSetReduceTensorDescriptor</span>(
+<a id="L265" href="#L265" class="br">265 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnSetReduceTensorDescriptor</span>(
 <a id="L266" href="#L266" class="br">266 </a>                    <span class="hid">opDesc</span>, <span class="hid">op</span>, <a href="grain.cudnn.d.html#L32" title="grain.cudnn.cudnnDataType" class="hid">cudnnDataType</a>!<span class="hid">T</span>, <a href="grain.cudnn.d.html#L26" title="grain.cudnn.isNanProp" class="hid">isNanProp</a>(),
 <a id="L267" href="#L267" class="br">267 </a>                    <a href="derelict.cudnn7.d.html#L515" title="derelict.cudnn7.CUDNN_REDUCE_TENSOR_NO_INDICES" class="hid">CUDNN_REDUCE_TENSOR_NO_INDICES</a>, <span class="com">// CUDNN_REDUCE_TENSOR_FLATTENED_INDICES for backprop?</span>
 <a id="L268" href="#L268" class="br">268 </a>                    <a href="derelict.cudnn7.d.html#L526" title="derelict.cudnn7.CUDNN_32BIT_INDICES" class="hid">CUDNN_32BIT_INDICES</a> <span class="com">// only uint is supported in cudnn7</span>
@@ -300,16 +300,16 @@
 <a id="L270" href="#L270" class="br">270 </a>
 <a id="L271" href="#L271" class="br">271 </a>    <span class="com">// create indices (for backprop???)</span>
 <a id="L272" href="#L272" class="br">272 </a>    <span class="hid">size_t</span> <span class="hid">indicesBytes</span>;
-<a id="L273" href="#L273" class="br">273 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnGetReductionIndicesSize</span>(<a href="grain.cuda.d.html#L23" title="grain.cuda.cudnnHandle" class="hid">cudnnHandle</a>, <span class="hid">opDesc</span>, <span class="hid">srcDesc</span>, <span class="hid">dstDesc</span>, &amp;<span class="hid">indicesBytes</span>) );
-<a id="L274" href="#L274" class="br">274 </a>    <span class="kwrd">auto</span> <span class="hid">indices</span> = <a href="grain.cuda.d.html#L264" title="grain.cuda.CuPtr" class="hid">CuPtr</a>!<span class="type">uint</span>(<span class="hid">indicesBytes</span> / <span class="type">uint</span>.<span class="hid">sizeof</span>);
+<a id="L273" href="#L273" class="br">273 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnGetReductionIndicesSize</span>(<span class="hid">cudnnHandle</span>, <span class="hid">opDesc</span>, <span class="hid">srcDesc</span>, <span class="hid">dstDesc</span>, &amp;<span class="hid">indicesBytes</span>) );
+<a id="L274" href="#L274" class="br">274 </a>    <span class="kwrd">auto</span> <span class="hid">indices</span> = <span class="hid">CuPtr</span>!<span class="type">uint</span>(<span class="hid">indicesBytes</span> / <span class="type">uint</span>.<span class="hid">sizeof</span>);
 <a id="L275" href="#L275" class="br">275 </a>
 <a id="L276" href="#L276" class="br">276 </a>    <span class="com">// create workspace</span>
 <a id="L277" href="#L277" class="br">277 </a>    <span class="hid">size_t</span> <span class="hid">workspaceBytes</span>;
-<a id="L278" href="#L278" class="br">278 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnGetReductionWorkspaceSize</span>(<a href="grain.cuda.d.html#L23" title="grain.cuda.cudnnHandle" class="hid">cudnnHandle</a>, <span class="hid">opDesc</span>, <span class="hid">srcDesc</span>, <span class="hid">dstDesc</span>, &amp;<span class="hid">workspaceBytes</span>) );
-<a id="L279" href="#L279" class="br">279 </a>    <span class="kwrd">auto</span> <span class="hid">workspace</span> = <a href="grain.cuda.d.html#L264" title="grain.cuda.CuPtr" class="hid">CuPtr</a>!<span class="type">byte</span>(<span class="hid">workspaceBytes</span>);
+<a id="L278" href="#L278" class="br">278 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnGetReductionWorkspaceSize</span>(<span class="hid">cudnnHandle</span>, <span class="hid">opDesc</span>, <span class="hid">srcDesc</span>, <span class="hid">dstDesc</span>, &amp;<span class="hid">workspaceBytes</span>) );
+<a id="L279" href="#L279" class="br">279 </a>    <span class="kwrd">auto</span> <span class="hid">workspace</span> = <span class="hid">CuPtr</span>!<span class="type">byte</span>(<span class="hid">workspaceBytes</span>);
 <a id="L280" href="#L280" class="br">280 </a>
-<a id="L281" href="#L281" class="br">281 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnReduceTensor</span>(
-<a id="L282" href="#L282" class="br">282 </a>                    <a href="grain.cuda.d.html#L23" title="grain.cuda.cudnnHandle" class="hid">cudnnHandle</a>, <span class="hid">opDesc</span>,
+<a id="L281" href="#L281" class="br">281 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnReduceTensor</span>(
+<a id="L282" href="#L282" class="br">282 </a>                    <span class="hid">cudnnHandle</span>, <span class="hid">opDesc</span>,
 <a id="L283" href="#L283" class="br">283 </a>                    <span class="kwrd">cast</span>(<span class="type">void</span>*) <span class="hid">indices.ptr</span>, <span class="hid">indicesBytes</span>,
 <a id="L284" href="#L284" class="br">284 </a>                    <span class="kwrd">cast</span>(<span class="type">void</span>*) <span class="hid">workspace.ptr</span>, <span class="hid">workspaceBytes</span>,
 <a id="L285" href="#L285" class="br">285 </a>                    <span class="kwrd">cast</span>(<span class="kwrd">const</span> <span class="type">void</span>*) &amp;<span class="hid">alpha</span>, <span class="hid">srcDesc</span>, <span class="kwrd">cast</span>(<span class="kwrd">const</span> <span class="type">void</span>*) <span class="hid">srcDesc.ptr</span>,
@@ -319,7 +319,7 @@
 <a id="L289" href="#L289" class="br">289 </a>
 <a id="L290" href="#L290" class="br">290 </a><span class="com">/// x[] = value (WARNING: not tested)</span>
 <a id="L291" href="#L291" class="br">291 </a><span class="type">void</span> <a href="grain.cudnn.d.html#L291" title="grain.cudnn.fill" class="hid">fill</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>)(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">DeviceStorage</span>) <span class="hid">x</span>, <span class="hid">T</span> <span class="hid">value</span>) {
-<a id="L292" href="#L292" class="br">292 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnSetTensor</span>(<a href="grain.cuda.d.html#L23" title="grain.cuda.cudnnHandle" class="hid">cudnnHandle</a>, <span class="hid">x.makeCudnnTensor</span>, <span class="kwrd">cast</span>(<span class="type">void</span>*) <span class="hid">x.data.ptr</span>, <span class="kwrd">cast</span>(<span class="kwrd">const</span> <span class="type">void</span>*) &amp;<span class="hid">value</span>) );
+<a id="L292" href="#L292" class="br">292 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnSetTensor</span>(<span class="hid">cudnnHandle</span>, <span class="hid">x.makeCudnnTensor</span>, <span class="kwrd">cast</span>(<span class="type">void</span>*) <span class="hid">x.data.ptr</span>, <span class="kwrd">cast</span>(<span class="kwrd">const</span> <span class="type">void</span>*) &amp;<span class="hid">value</span>) );
 <a id="L293" href="#L293" class="br">293 </a>}
 <a id="L294" href="#L294" class="br">294 </a>
 <a id="L295" href="#L295" class="br">295 </a><span class="com">/// WIP</span>
@@ -354,14 +354,14 @@
 <a id="L324" href="#L324" class="br">324 </a>    <span class="kwrd">assert</span>(<span class="hid">src.shape</span> == <span class="hid">dst.shape</span>);
 <a id="L325" href="#L325" class="br">325 </a>
 <a id="L326" href="#L326" class="br">326 </a>    <span class="kwrd">if</span> (<span class="hid">src.isContiguous</span> &amp;&amp; <span class="hid">dst.isContiguous</span> &amp;&amp; <span class="hid">beta</span> == <span class="num">1</span>) {
-<a id="L327" href="#L327" class="br">327 </a>        <span class="kwrd">import</span> <span class="hid">grain.cuda</span> : <a href="grain.cuda.d.html#L531" title="grain.cuda.axpy" class="hid">axpy</a>;
-<a id="L328" href="#L328" class="br">328 </a>        <a href="grain.cuda.d.html#L531" title="grain.cuda.axpy" class="hid">axpy</a>(<span class="hid">src.data</span>, <span class="hid">dst.data</span>, <span class="hid">alpha</span>);
+<a id="L327" href="#L327" class="br">327 </a>        <span class="kwrd">import</span> <span class="hid">grain.cuda</span> : <span class="hid">axpy</span>;
+<a id="L328" href="#L328" class="br">328 </a>        <span class="hid">axpy</span>(<span class="hid">src.data</span>, <span class="hid">dst.data</span>, <span class="hid">alpha</span>);
 <a id="L329" href="#L329" class="br">329 </a>        <span class="kwrd">return</span>;
 <a id="L330" href="#L330" class="br">330 </a>    }
 <a id="L331" href="#L331" class="br">331 </a>
-<a id="L332" href="#L332" class="br">332 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>(
+<a id="L332" href="#L332" class="br">332 </a>    <span class="hid">checkCUDNN</span>(
 <a id="L333" href="#L333" class="br">333 </a>        <span class="hid">cudnnTransformTensor</span>(
-<a id="L334" href="#L334" class="br">334 </a>            <a href="grain.cuda.d.html#L23" title="grain.cuda.cudnnHandle" class="hid">cudnnHandle</a>,
+<a id="L334" href="#L334" class="br">334 </a>            <span class="hid">cudnnHandle</span>,
 <a id="L335" href="#L335" class="br">335 </a>            <span class="kwrd">cast</span>(<span class="kwrd">const</span> <span class="type">void</span>*) &amp;<span class="hid">alpha</span>, <span class="hid">src.makeCudnnTensor</span>, <span class="kwrd">cast</span>(<span class="kwrd">const</span> <span class="type">void</span>*) <span class="hid">src.data.ptr</span>,
 <a id="L336" href="#L336" class="br">336 </a>            <span class="kwrd">cast</span>(<span class="kwrd">const</span> <span class="type">void</span>*) &amp;<span class="hid">beta</span>, <span class="hid">dst.makeCudnnTensor</span>, <span class="kwrd">cast</span>(<span class="type">void</span>*) <span class="hid">dst.data.ptr</span>
 <a id="L337" href="#L337" class="br">337 </a>            ) );
@@ -496,17 +496,17 @@
 <a id="L466" href="#L466" class="br">466 </a>
 <a id="L467" href="#L467" class="br">467 </a>    <span class="com">// TODO cache these?</span>
 <a id="L468" href="#L468" class="br">468 </a>    <a href="derelict.cudnn7.d.html#L439" title="derelict.cudnn7.cudnnFilterDescriptor_t" class="hid">cudnnFilterDescriptor_t</a> <span class="hid">cudnnFdesc</span>;
-<a id="L469" href="#L469" class="br">469 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnCreateFilterDescriptor</span>(&amp;<span class="hid">cudnnFdesc</span>) );
+<a id="L469" href="#L469" class="br">469 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnCreateFilterDescriptor</span>(&amp;<span class="hid">cudnnFdesc</span>) );
 <a id="L470" href="#L470" class="br">470 </a>    <span class="kwrd">scope</span>(<span class="hid">exit</span>) <span class="hid">cudnnDestroyFilterDescriptor</span>(<span class="hid">cudnnFdesc</span>);
-<a id="L471" href="#L471" class="br">471 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnSetFilterNdDescriptor</span>(<span class="hid">cudnnFdesc</span>, <a href="grain.cudnn.d.html#L32" title="grain.cudnn.cudnnDataType" class="hid">cudnnDataType</a>!<span class="hid">T</span>, <span class="hid">format</span>,
+<a id="L471" href="#L471" class="br">471 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnSetFilterNdDescriptor</span>(<span class="hid">cudnnFdesc</span>, <a href="grain.cudnn.d.html#L32" title="grain.cudnn.cudnnDataType" class="hid">cudnnDataType</a>!<span class="hid">T</span>, <span class="hid">format</span>,
 <a id="L472" href="#L472" class="br">472 </a>                                           <span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">nbDim_</span>, <span class="hid">fshape_.ptr</span>
 <a id="L473" href="#L473" class="br">473 </a>                                           ) );
 <a id="L474" href="#L474" class="br">474 </a>
 <a id="L475" href="#L475" class="br">475 </a>    <a href="derelict.cudnn7.d.html#L433" title="derelict.cudnn7.cudnnConvolutionDescriptor_t" class="hid">cudnnConvolutionDescriptor_t</a> <span class="hid">cudnnConvDesc</span>;
-<a id="L476" href="#L476" class="br">476 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnCreateConvolutionDescriptor</span>(&amp;<span class="hid">cudnnConvDesc</span>) );
+<a id="L476" href="#L476" class="br">476 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnCreateConvolutionDescriptor</span>(&amp;<span class="hid">cudnnConvDesc</span>) );
 <a id="L477" href="#L477" class="br">477 </a>    <span class="kwrd">scope</span>(<span class="hid">exit</span>) <span class="hid">cudnnDestroyConvolutionDescriptor</span>(<span class="hid">cudnnConvDesc</span>);
-<a id="L478" href="#L478" class="br">478 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnSetConvolutionGroupCount</span>(<span class="hid">cudnnConvDesc</span>, <span class="hid">ngroup</span>) );
-<a id="L479" href="#L479" class="br">479 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnSetConvolutionNdDescriptor</span>(<span class="hid">cudnnConvDesc</span>, <span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">imDim_</span>,
+<a id="L478" href="#L478" class="br">478 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnSetConvolutionGroupCount</span>(<span class="hid">cudnnConvDesc</span>, <span class="hid">ngroup</span>) );
+<a id="L479" href="#L479" class="br">479 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnSetConvolutionNdDescriptor</span>(<span class="hid">cudnnConvDesc</span>, <span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">imDim_</span>,
 <a id="L480" href="#L480" class="br">480 </a>                                                <span class="hid">pad_.ptr</span>, <span class="hid">stride_.ptr</span>, <span class="hid">dilation_.ptr</span>,
 <a id="L481" href="#L481" class="br">481 </a>                                                <span class="hid">mode</span>, <a href="grain.cudnn.d.html#L32" title="grain.cudnn.cudnnDataType" class="hid">cudnnDataType</a>!<span class="hid">T</span>
 <a id="L482" href="#L482" class="br">482 </a>                                                ) );
@@ -514,12 +514,12 @@
 <a id="L484" href="#L484" class="br">484 </a>    <span class="kwrd">auto</span> <span class="hid">cudnnIdesc</span> = <span class="hid">input.makeCudnnTensor</span>;
 <a id="L485" href="#L485" class="br">485 </a>    <span class="kwrd">auto</span> <span class="hid">cudnnOdesc</span> = <span class="hid">output.makeCudnnTensor</span>;
 <a id="L486" href="#L486" class="br">486 </a>    <span class="hid">size_t</span> <span class="hid">workSpaceSize</span>;
-<a id="L487" href="#L487" class="br">487 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a> ( <span class="hid">cudnnGetConvolutionForwardWorkspaceSize</span>
-<a id="L488" href="#L488" class="br">488 </a>                 (<a href="grain.cuda.d.html#L23" title="grain.cuda.cudnnHandle" class="hid">cudnnHandle</a>, <span class="hid">cudnnIdesc</span>, <span class="hid">cudnnFdesc</span>, <span class="hid">cudnnConvDesc</span>,
+<a id="L487" href="#L487" class="br">487 </a>    <span class="hid">checkCUDNN</span> ( <span class="hid">cudnnGetConvolutionForwardWorkspaceSize</span>
+<a id="L488" href="#L488" class="br">488 </a>                 (<span class="hid">cudnnHandle</span>, <span class="hid">cudnnIdesc</span>, <span class="hid">cudnnFdesc</span>, <span class="hid">cudnnConvDesc</span>,
 <a id="L489" href="#L489" class="br">489 </a>                  <span class="hid">cudnnOdesc</span>, <span class="hid">algo</span>, &amp;<span class="hid">workSpaceSize</span>) );
-<a id="L490" href="#L490" class="br">490 </a>    <span class="kwrd">auto</span> <span class="hid">workSpace</span> = <a href="grain.cuda.d.html#L264" title="grain.cuda.CuPtr" class="hid">CuPtr</a>!<span class="type">byte</span>(<span class="hid">workSpaceSize</span>);
+<a id="L490" href="#L490" class="br">490 </a>    <span class="kwrd">auto</span> <span class="hid">workSpace</span> = <span class="hid">CuPtr</span>!<span class="type">byte</span>(<span class="hid">workSpaceSize</span>);
 <a id="L491" href="#L491" class="br">491 </a>
-<a id="L492" href="#L492" class="br">492 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a> ( <span class="hid">cudnnConvolutionForward</span> (<a href="grain.cuda.d.html#L23" title="grain.cuda.cudnnHandle" class="hid">cudnnHandle</a>,
+<a id="L492" href="#L492" class="br">492 </a>    <span class="hid">checkCUDNN</span> ( <span class="hid">cudnnConvolutionForward</span> (<span class="hid">cudnnHandle</span>,
 <a id="L493" href="#L493" class="br">493 </a>                                             <span class="kwrd">cast</span>(<span class="kwrd">const</span> <span class="type">void</span>*) &amp;<span class="hid">alpha</span>,
 <a id="L494" href="#L494" class="br">494 </a>                                             <span class="hid">cudnnIdesc</span>, <span class="kwrd">cast</span>(<span class="kwrd">const</span> <span class="type">void</span>*) <span class="hid">input.data.ptr</span>,
 <a id="L495" href="#L495" class="br">495 </a>                                             <span class="hid">cudnnFdesc</span>, <span class="kwrd">cast</span>(<span class="kwrd">const</span> <span class="type">void</span>*) <span class="hid">filter.data.ptr</span>,
@@ -570,17 +570,17 @@
 <a id="L540" href="#L540" class="br">540 </a>
 <a id="L541" href="#L541" class="br">541 </a>    <span class="com">// TODO cache these?</span>
 <a id="L542" href="#L542" class="br">542 </a>    <a href="derelict.cudnn7.d.html#L439" title="derelict.cudnn7.cudnnFilterDescriptor_t" class="hid">cudnnFilterDescriptor_t</a> <span class="hid">cudnnFdesc</span>;
-<a id="L543" href="#L543" class="br">543 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnCreateFilterDescriptor</span>(&amp;<span class="hid">cudnnFdesc</span>) );
+<a id="L543" href="#L543" class="br">543 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnCreateFilterDescriptor</span>(&amp;<span class="hid">cudnnFdesc</span>) );
 <a id="L544" href="#L544" class="br">544 </a>    <span class="kwrd">scope</span>(<span class="hid">exit</span>) <span class="hid">cudnnDestroyFilterDescriptor</span>(<span class="hid">cudnnFdesc</span>);
-<a id="L545" href="#L545" class="br">545 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnSetFilterNdDescriptor</span>(<span class="hid">cudnnFdesc</span>, <a href="grain.cudnn.d.html#L32" title="grain.cudnn.cudnnDataType" class="hid">cudnnDataType</a>!<span class="hid">T</span>, <span class="hid">format</span>,
+<a id="L545" href="#L545" class="br">545 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnSetFilterNdDescriptor</span>(<span class="hid">cudnnFdesc</span>, <a href="grain.cudnn.d.html#L32" title="grain.cudnn.cudnnDataType" class="hid">cudnnDataType</a>!<span class="hid">T</span>, <span class="hid">format</span>,
 <a id="L546" href="#L546" class="br">546 </a>                                           <span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">nbDim_</span>, <span class="hid">fshape_.ptr</span>
 <a id="L547" href="#L547" class="br">547 </a>                                           ) );
 <a id="L548" href="#L548" class="br">548 </a>
 <a id="L549" href="#L549" class="br">549 </a>    <a href="derelict.cudnn7.d.html#L433" title="derelict.cudnn7.cudnnConvolutionDescriptor_t" class="hid">cudnnConvolutionDescriptor_t</a> <span class="hid">cudnnConvDesc</span>;
-<a id="L550" href="#L550" class="br">550 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnCreateConvolutionDescriptor</span>(&amp;<span class="hid">cudnnConvDesc</span>) );
+<a id="L550" href="#L550" class="br">550 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnCreateConvolutionDescriptor</span>(&amp;<span class="hid">cudnnConvDesc</span>) );
 <a id="L551" href="#L551" class="br">551 </a>    <span class="kwrd">scope</span>(<span class="hid">exit</span>) <span class="hid">cudnnDestroyConvolutionDescriptor</span>(<span class="hid">cudnnConvDesc</span>);
-<a id="L552" href="#L552" class="br">552 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnSetConvolutionGroupCount</span>(<span class="hid">cudnnConvDesc</span>, <span class="hid">ngroup</span>) );
-<a id="L553" href="#L553" class="br">553 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnSetConvolutionNdDescriptor</span>(<span class="hid">cudnnConvDesc</span>, <span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">imDim_</span>,
+<a id="L552" href="#L552" class="br">552 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnSetConvolutionGroupCount</span>(<span class="hid">cudnnConvDesc</span>, <span class="hid">ngroup</span>) );
+<a id="L553" href="#L553" class="br">553 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnSetConvolutionNdDescriptor</span>(<span class="hid">cudnnConvDesc</span>, <span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">imDim_</span>,
 <a id="L554" href="#L554" class="br">554 </a>                                                <span class="hid">pad_.ptr</span>, <span class="hid">stride_.ptr</span>, <span class="hid">dilation_.ptr</span>,
 <a id="L555" href="#L555" class="br">555 </a>                                                <span class="hid">mode</span>, <a href="grain.cudnn.d.html#L32" title="grain.cudnn.cudnnDataType" class="hid">cudnnDataType</a>!<span class="hid">T</span>
 <a id="L556" href="#L556" class="br">556 </a>                                                ) );
@@ -590,11 +590,11 @@
 <a id="L560" href="#L560" class="br">560 </a>    <span class="kwrd">auto</span> <span class="hid">cudnnGOdesc</span> = <span class="hid">gradOutput.makeCudnnTensor</span>;
 <a id="L561" href="#L561" class="br">561 </a>
 <a id="L562" href="#L562" class="br">562 </a>    <span class="hid">size_t</span> <span class="hid">dworkSpaceSize</span>;
-<a id="L563" href="#L563" class="br">563 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a> ( <span class="hid">cudnnGetConvolutionBackwardDataWorkspaceSize</span>
-<a id="L564" href="#L564" class="br">564 </a>                    (<a href="grain.cuda.d.html#L23" title="grain.cuda.cudnnHandle" class="hid">cudnnHandle</a>, <span class="hid">cudnnFdesc</span>, <span class="hid">cudnnGOdesc</span>, <span class="hid">cudnnConvDesc</span>,
+<a id="L563" href="#L563" class="br">563 </a>    <span class="hid">checkCUDNN</span> ( <span class="hid">cudnnGetConvolutionBackwardDataWorkspaceSize</span>
+<a id="L564" href="#L564" class="br">564 </a>                    (<span class="hid">cudnnHandle</span>, <span class="hid">cudnnFdesc</span>, <span class="hid">cudnnGOdesc</span>, <span class="hid">cudnnConvDesc</span>,
 <a id="L565" href="#L565" class="br">565 </a>                     <span class="hid">cudnnGIdesc</span>, <span class="hid">algo</span>, &amp;<span class="hid">dworkSpaceSize</span>) );
-<a id="L566" href="#L566" class="br">566 </a>    <span class="kwrd">auto</span> <span class="hid">dworkSpace</span> = <a href="grain.cuda.d.html#L264" title="grain.cuda.CuPtr" class="hid">CuPtr</a>!<span class="type">byte</span>(<span class="hid">dworkSpaceSize</span>);
-<a id="L567" href="#L567" class="br">567 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a> ( <span class="hid">cudnnConvolutionBackwardData</span> (<a href="grain.cuda.d.html#L23" title="grain.cuda.cudnnHandle" class="hid">cudnnHandle</a>,
+<a id="L566" href="#L566" class="br">566 </a>    <span class="kwrd">auto</span> <span class="hid">dworkSpace</span> = <span class="hid">CuPtr</span>!<span class="type">byte</span>(<span class="hid">dworkSpaceSize</span>);
+<a id="L567" href="#L567" class="br">567 </a>    <span class="hid">checkCUDNN</span> ( <span class="hid">cudnnConvolutionBackwardData</span> (<span class="hid">cudnnHandle</span>,
 <a id="L568" href="#L568" class="br">568 </a>                                                  <span class="kwrd">cast</span>(<span class="kwrd">const</span> <span class="type">void</span>*)(&amp;<span class="hid">alpha</span>),
 <a id="L569" href="#L569" class="br">569 </a>                                                  <span class="hid">cudnnFdesc</span>, <span class="kwrd">cast</span>(<span class="kwrd">const</span> <span class="type">void</span>*) <span class="hid">filter.data.ptr</span>,
 <a id="L570" href="#L570" class="br">570 </a>                                                  <span class="hid">cudnnGOdesc</span>, <span class="kwrd">cast</span>(<span class="kwrd">const</span> <span class="type">void</span>*) <span class="hid">gradOutput.data.ptr</span>,
@@ -605,11 +605,11 @@
 <a id="L575" href="#L575" class="br">575 </a>                                                  <span class="hid">cudnnGIdesc</span>, <span class="kwrd">cast</span>(<span class="type">void</span>*) <span class="hid">gradInput.data.ptr</span>) );
 <a id="L576" href="#L576" class="br">576 </a>
 <a id="L577" href="#L577" class="br">577 </a>    <span class="hid">size_t</span> <span class="hid">fworkSpaceSize</span>;
-<a id="L578" href="#L578" class="br">578 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a> ( <span class="hid">cudnnGetConvolutionBackwardFilterWorkspaceSize</span>
-<a id="L579" href="#L579" class="br">579 </a>                    (<a href="grain.cuda.d.html#L23" title="grain.cuda.cudnnHandle" class="hid">cudnnHandle</a>, <span class="hid">cudnnIdesc</span>, <span class="hid">cudnnGOdesc</span>, <span class="hid">cudnnConvDesc</span>,
+<a id="L578" href="#L578" class="br">578 </a>    <span class="hid">checkCUDNN</span> ( <span class="hid">cudnnGetConvolutionBackwardFilterWorkspaceSize</span>
+<a id="L579" href="#L579" class="br">579 </a>                    (<span class="hid">cudnnHandle</span>, <span class="hid">cudnnIdesc</span>, <span class="hid">cudnnGOdesc</span>, <span class="hid">cudnnConvDesc</span>,
 <a id="L580" href="#L580" class="br">580 </a>                     <span class="hid">cudnnFdesc</span>, <span class="hid">algo</span>, &amp;<span class="hid">fworkSpaceSize</span>) );
-<a id="L581" href="#L581" class="br">581 </a>    <span class="kwrd">auto</span> <span class="hid">fworkSpace</span> = <a href="grain.cuda.d.html#L264" title="grain.cuda.CuPtr" class="hid">CuPtr</a>!<span class="type">byte</span>(<span class="hid">fworkSpaceSize</span>);
-<a id="L582" href="#L582" class="br">582 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a> ( <span class="hid">cudnnConvolutionBackwardFilter</span> (<a href="grain.cuda.d.html#L23" title="grain.cuda.cudnnHandle" class="hid">cudnnHandle</a>,
+<a id="L581" href="#L581" class="br">581 </a>    <span class="kwrd">auto</span> <span class="hid">fworkSpace</span> = <span class="hid">CuPtr</span>!<span class="type">byte</span>(<span class="hid">fworkSpaceSize</span>);
+<a id="L582" href="#L582" class="br">582 </a>    <span class="hid">checkCUDNN</span> ( <span class="hid">cudnnConvolutionBackwardFilter</span> (<span class="hid">cudnnHandle</span>,
 <a id="L583" href="#L583" class="br">583 </a>                                                    <span class="kwrd">cast</span>(<span class="kwrd">const</span> <span class="type">void</span>*)(&amp;<span class="hid">alpha</span>),
 <a id="L584" href="#L584" class="br">584 </a>                                                    <span class="hid">cudnnIdesc</span>,  <span class="kwrd">cast</span>(<span class="kwrd">const</span> <span class="type">void</span>*) <span class="hid">input.data.ptr</span>,
 <a id="L585" href="#L585" class="br">585 </a>                                                    <span class="hid">cudnnGOdesc</span>, <span class="kwrd">cast</span>(<span class="kwrd">const</span> <span class="type">void</span>*) <span class="hid">gradOutput.data.ptr</span>,
@@ -649,8 +649,8 @@
 <a id="L619" href="#L619" class="br">619 </a>    }
 <a id="L620" href="#L620" class="br">620 </a>
 <a id="L621" href="#L621" class="br">621 </a>    <a href="derelict.cudnn7.d.html#L436" title="derelict.cudnn7.cudnnPoolingDescriptor_t" class="hid">cudnnPoolingDescriptor_t</a>     <span class="hid">poolingDesc</span>;
-<a id="L622" href="#L622" class="br">622 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnCreatePoolingDescriptor</span>(&amp;<span class="hid">poolingDesc</span>) );
-<a id="L623" href="#L623" class="br">623 </a>    <span class="kwrd">scope</span>(<span class="hid">exit</span>) <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnDestroyPoolingDescriptor</span>(<span class="hid">poolingDesc</span>) );
+<a id="L622" href="#L622" class="br">622 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnCreatePoolingDescriptor</span>(&amp;<span class="hid">poolingDesc</span>) );
+<a id="L623" href="#L623" class="br">623 </a>    <span class="kwrd">scope</span>(<span class="hid">exit</span>) <span class="hid">checkCUDNN</span>( <span class="hid">cudnnDestroyPoolingDescriptor</span>(<span class="hid">poolingDesc</span>) );
 <a id="L624" href="#L624" class="br">624 </a>
 <a id="L625" href="#L625" class="br">625 </a>    <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="hid">isMax</span>) {
 <a id="L626" href="#L626" class="br">626 </a>        <span class="kwrd">immutable</span> <span class="hid">mode</span> = <a href="grain.cudnn.d.html#L21" title="grain.cudnn.isDeterministic" class="hid">isDeterministic</a>() == <span class="hid">CUDNN_DETERMINISTIC</span>
@@ -661,7 +661,7 @@
 <a id="L631" href="#L631" class="br">631 </a>            ? <span class="hid">CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING</span>
 <a id="L632" href="#L632" class="br">632 </a>            : <span class="hid">CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING</span>;
 <a id="L633" href="#L633" class="br">633 </a>    }
-<a id="L634" href="#L634" class="br">634 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnSetPoolingNdDescriptor</span>(<span class="hid">poolingDesc</span>,
+<a id="L634" href="#L634" class="br">634 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnSetPoolingNdDescriptor</span>(<span class="hid">poolingDesc</span>,
 <a id="L635" href="#L635" class="br">635 </a>                                            <span class="hid">mode</span>,
 <a id="L636" href="#L636" class="br">636 </a>                                            <a href="grain.cudnn.d.html#L26" title="grain.cudnn.isNanProp" class="hid">isNanProp</a>(),
 <a id="L637" href="#L637" class="br">637 </a>                                            <span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">poolDims</span>,
@@ -671,7 +671,7 @@
 <a id="L641" href="#L641" class="br">641 </a>
 <a id="L642" href="#L642" class="br">642 </a>    <span class="kwrd">const</span> <span class="hid">inputDesc</span> = <span class="hid">input.makeCudnnTensor</span>;
 <a id="L643" href="#L643" class="br">643 </a>    <span class="type">int</span>[<span class="hid">tensorDims</span>] <span class="hid">tensorOutputDimA</span>;
-<a id="L644" href="#L644" class="br">644 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnGetPoolingNdForwardOutputDim</span>(<span class="hid">poolingDesc</span>,
+<a id="L644" href="#L644" class="br">644 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnGetPoolingNdForwardOutputDim</span>(<span class="hid">poolingDesc</span>,
 <a id="L645" href="#L645" class="br">645 </a>                                                  <span class="hid">inputDesc</span>,
 <a id="L646" href="#L646" class="br">646 </a>                                                  <span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">tensorDims</span>,
 <a id="L647" href="#L647" class="br">647 </a>                                                  <span class="hid">tensorOutputDimA.ptr</span>) );
@@ -679,7 +679,7 @@
 <a id="L649" href="#L649" class="br">649 </a>    <span class="com">// if (tensorOutputDimA != output.shape.castArray!int) {</span>
 <a id="L650" href="#L650" class="br">650 </a>    <span class="kwrd">auto</span> <span class="hid">output</span> = <span class="hid">uninitVariable</span>!(<span class="hid">T</span>, <span class="hid">DeviceStorage</span>, <span class="hid">tensorDims</span>)(<span class="hid">tensorOutputDimA.castArray</span>!<span class="type">uint</span>, <span class="hid">input.requiresGrad</span>);
 <a id="L651" href="#L651" class="br">651 </a>
-<a id="L652" href="#L652" class="br">652 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnPoolingForward</span>(<a href="grain.cuda.d.html#L23" title="grain.cuda.cudnnHandle" class="hid">cudnnHandle</a>,
+<a id="L652" href="#L652" class="br">652 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnPoolingForward</span>(<span class="hid">cudnnHandle</span>,
 <a id="L653" href="#L653" class="br">653 </a>                                    <span class="hid">poolingDesc</span>,
 <a id="L654" href="#L654" class="br">654 </a>                                    <span class="kwrd">cast</span>(<span class="kwrd">const</span> <span class="type">void</span>*) &amp;<span class="hid">alpha</span>,
 <a id="L655" href="#L655" class="br">655 </a>                                    <span class="hid">inputDesc</span>,
@@ -722,8 +722,8 @@
 <a id="L692" href="#L692" class="br">692 </a>    }
 <a id="L693" href="#L693" class="br">693 </a>
 <a id="L694" href="#L694" class="br">694 </a>    <a href="derelict.cudnn7.d.html#L436" title="derelict.cudnn7.cudnnPoolingDescriptor_t" class="hid">cudnnPoolingDescriptor_t</a>     <span class="hid">poolingDesc</span>;
-<a id="L695" href="#L695" class="br">695 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnCreatePoolingDescriptor</span>(&amp;<span class="hid">poolingDesc</span>) );
-<a id="L696" href="#L696" class="br">696 </a>    <span class="kwrd">scope</span>(<span class="hid">exit</span>) <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnDestroyPoolingDescriptor</span>(<span class="hid">poolingDesc</span>) );
+<a id="L695" href="#L695" class="br">695 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnCreatePoolingDescriptor</span>(&amp;<span class="hid">poolingDesc</span>) );
+<a id="L696" href="#L696" class="br">696 </a>    <span class="kwrd">scope</span>(<span class="hid">exit</span>) <span class="hid">checkCUDNN</span>( <span class="hid">cudnnDestroyPoolingDescriptor</span>(<span class="hid">poolingDesc</span>) );
 <a id="L697" href="#L697" class="br">697 </a>
 <a id="L698" href="#L698" class="br">698 </a>    <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="hid">isMax</span>) {
 <a id="L699" href="#L699" class="br">699 </a>        <span class="kwrd">immutable</span> <span class="hid">mode</span> = <a href="grain.cudnn.d.html#L21" title="grain.cudnn.isDeterministic" class="hid">isDeterministic</a>() == <span class="hid">CUDNN_DETERMINISTIC</span>
@@ -734,7 +734,7 @@
 <a id="L704" href="#L704" class="br">704 </a>            ? <span class="hid">CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING</span>
 <a id="L705" href="#L705" class="br">705 </a>            : <span class="hid">CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING</span>;
 <a id="L706" href="#L706" class="br">706 </a>    }
-<a id="L707" href="#L707" class="br">707 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnSetPoolingNdDescriptor</span>(<span class="hid">poolingDesc</span>,
+<a id="L707" href="#L707" class="br">707 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnSetPoolingNdDescriptor</span>(<span class="hid">poolingDesc</span>,
 <a id="L708" href="#L708" class="br">708 </a>                                            <span class="hid">mode</span>,
 <a id="L709" href="#L709" class="br">709 </a>                                            <a href="grain.cudnn.d.html#L26" title="grain.cudnn.isNanProp" class="hid">isNanProp</a>(),
 <a id="L710" href="#L710" class="br">710 </a>                                            <span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">poolDims</span>,
@@ -742,7 +742,7 @@
 <a id="L712" href="#L712" class="br">712 </a>                                            <span class="hid">paddingA.ptr</span>,
 <a id="L713" href="#L713" class="br">713 </a>                                            <span class="hid">strideA.ptr</span> ) );
 <a id="L714" href="#L714" class="br">714 </a>
-<a id="L715" href="#L715" class="br">715 </a>    <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>( <span class="hid">cudnnPoolingBackward</span>(<a href="grain.cuda.d.html#L23" title="grain.cuda.cudnnHandle" class="hid">cudnnHandle</a>,
+<a id="L715" href="#L715" class="br">715 </a>    <span class="hid">checkCUDNN</span>( <span class="hid">cudnnPoolingBackward</span>(<span class="hid">cudnnHandle</span>,
 <a id="L716" href="#L716" class="br">716 </a>                                     <span class="hid">poolingDesc</span>,
 <a id="L717" href="#L717" class="br">717 </a>
 <a id="L718" href="#L718" class="br">718 </a>                                     <span class="kwrd">cast</span>(<span class="kwrd">const</span> <span class="type">void</span>*) &amp;<span class="hid">alpha</span>,
@@ -763,7 +763,7 @@
 <a id="L733" href="#L733" class="br">733 </a><span class="kwrd">struct</span> <a href="grain.cudnn.d.html#L733" title="grain.cudnn.ThreadLocalDropout" class="hid">ThreadLocalDropout</a> {
 <a id="L734" href="#L734" class="br">734 </a>    <span class="kwrd">static</span> <span class="kwrd">shared</span> <span class="hid">size_t</span> <span class="hid">count</span> = <span class="num">0</span>;
 <a id="L735" href="#L735" class="br">735 </a>    <span class="kwrd">static</span> <a href="derelict.cudnn7.d.html#L690" title="derelict.cudnn7.cudnnDropoutDescriptor_t" class="hid">cudnnDropoutDescriptor_t</a> <span class="hid">_dropoutDesc</span> = <span class="kwrd">null</span>;
-<a id="L736" href="#L736" class="br">736 </a>    <span class="kwrd">static</span> <a href="grain.cuda.d.html#L264" title="grain.cuda.CuPtr" class="hid">CuPtr</a>!<span class="type">byte</span> <span class="hid">_stateArray</span>;
+<a id="L736" href="#L736" class="br">736 </a>    <span class="kwrd">static</span> <span class="hid">CuPtr</span>!<span class="type">byte</span> <span class="hid">_stateArray</span>;
 <a id="L737" href="#L737" class="br">737 </a>
 <a id="L738" href="#L738" class="br">738 </a>    @<span class="hid">disable</span> <span class="kwrd">this</span>(<span class="kwrd">this</span>);
 <a id="L739" href="#L739" class="br">739 </a>    @<span class="hid">disable</span> <span class="kwrd">new</span>(<span class="hid">size_t</span>);
@@ -772,15 +772,15 @@
 <a id="L742" href="#L742" class="br">742 </a>    <span class="kwrd">static</span> <span class="type">void</span> <span class="hid">init</span>(<span class="hid">size_t</span> <span class="hid">seed</span>=<span class="num">0</span>) {
 <a id="L743" href="#L743" class="br">743 </a>        <span class="kwrd">if</span> (<span class="hid">_dropoutDesc</span> != <span class="kwrd">null</span>) <span class="kwrd">return</span>;
 <a id="L744" href="#L744" class="br">744 </a>
-<a id="L745" href="#L745" class="br">745 </a>        <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>(<span class="hid">cudnnCreateDropoutDescriptor</span>(&amp;<span class="hid">_dropoutDesc</span>));
+<a id="L745" href="#L745" class="br">745 </a>        <span class="hid">checkCUDNN</span>(<span class="hid">cudnnCreateDropoutDescriptor</span>(&amp;<span class="hid">_dropoutDesc</span>));
 <a id="L746" href="#L746" class="br">746 </a>        <span class="com">// How much memory does dropout need for states?</span>
 <a id="L747" href="#L747" class="br">747 </a>        <span class="com">// These states are used to generate random numbers internally</span>
 <a id="L748" href="#L748" class="br">748 </a>        <span class="com">// and should not be freed until the RNN descriptor is no longer used</span>
 <a id="L749" href="#L749" class="br">749 </a>        <span class="hid">size_t</span> <span class="hid">stateSize</span>;
-<a id="L750" href="#L750" class="br">750 </a>        <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>(<span class="hid">cudnnDropoutGetStatesSize</span>(<a href="grain.cuda.d.html#L23" title="grain.cuda.cudnnHandle" class="hid">cudnnHandle</a>, &amp;<span class="hid">stateSize</span>));
-<a id="L751" href="#L751" class="br">751 </a>        <span class="hid">_stateArray</span> = <a href="grain.cuda.d.html#L264" title="grain.cuda.CuPtr" class="hid">CuPtr</a>!<span class="type">byte</span>(<span class="hid">stateSize</span>);
-<a id="L752" href="#L752" class="br">752 </a>        <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>(<span class="hid">cudnnSetDropoutDescriptor</span>(<span class="hid">_dropoutDesc</span>,
-<a id="L753" href="#L753" class="br">753 </a>                                             <a href="grain.cuda.d.html#L23" title="grain.cuda.cudnnHandle" class="hid">cudnnHandle</a>,
+<a id="L750" href="#L750" class="br">750 </a>        <span class="hid">checkCUDNN</span>(<span class="hid">cudnnDropoutGetStatesSize</span>(<span class="hid">cudnnHandle</span>, &amp;<span class="hid">stateSize</span>));
+<a id="L751" href="#L751" class="br">751 </a>        <span class="hid">_stateArray</span> = <span class="hid">CuPtr</span>!<span class="type">byte</span>(<span class="hid">stateSize</span>);
+<a id="L752" href="#L752" class="br">752 </a>        <span class="hid">checkCUDNN</span>(<span class="hid">cudnnSetDropoutDescriptor</span>(<span class="hid">_dropoutDesc</span>,
+<a id="L753" href="#L753" class="br">753 </a>                                             <span class="hid">cudnnHandle</span>,
 <a id="L754" href="#L754" class="br">754 </a>                                             <span class="num">0f</span>,
 <a id="L755" href="#L755" class="br">755 </a>                                             <span class="kwrd">cast</span>(<span class="type">void</span>*) <span class="hid">_stateArray.ptr</span>,
 <a id="L756" href="#L756" class="br">756 </a>                                             <span class="hid">stateSize</span>,
@@ -793,9 +793,9 @@
 <a id="L763" href="#L763" class="br">763 </a>    <span class="kwrd">static</span> <span class="hid">descriptor</span>(<span class="type">float</span> <span class="hid">ratio</span>=<span class="num">0.0</span>) {
 <a id="L764" href="#L764" class="br">764 </a>        <span class="hid">init</span>();
 <a id="L765" href="#L765" class="br">765 </a>        <span class="kwrd">if</span> (<span class="hid">ratio</span> != <span class="num">0.0</span>) {
-<a id="L766" href="#L766" class="br">766 </a>            <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>(<span class="hid">cudnnSetDropoutDescriptor</span>(
+<a id="L766" href="#L766" class="br">766 </a>            <span class="hid">checkCUDNN</span>(<span class="hid">cudnnSetDropoutDescriptor</span>(
 <a id="L767" href="#L767" class="br">767 </a>                           <span class="hid">_dropoutDesc</span>,
-<a id="L768" href="#L768" class="br">768 </a>                           <a href="grain.cuda.d.html#L23" title="grain.cuda.cudnnHandle" class="hid">cudnnHandle</a>,
+<a id="L768" href="#L768" class="br">768 </a>                           <span class="hid">cudnnHandle</span>,
 <a id="L769" href="#L769" class="br">769 </a>                           <span class="hid">ratio</span>,
 <a id="L770" href="#L770" class="br">770 </a>                           <span class="kwrd">null</span>, <span class="com">// if state is null, state won't be updated</span>
 <a id="L771" href="#L771" class="br">771 </a>                           <span class="num">0</span>,
@@ -811,7 +811,7 @@
 <a id="L781" href="#L781" class="br">781 </a>}
 <a id="L782" href="#L782" class="br">782 </a>
 <a id="L783" href="#L783" class="br">783 </a><span class="kwrd">struct</span> <a href="grain.cudnn.d.html#L783" title="grain.cudnn.CudnnDropout" class="hid">CudnnDropout</a> {
-<a id="L784" href="#L784" class="br">784 </a>    <a href="grain.cuda.d.html#L264" title="grain.cuda.CuPtr" class="hid">CuPtr</a>!<span class="type">byte</span> <span class="hid">reserved</span>;
+<a id="L784" href="#L784" class="br">784 </a>    <span class="hid">CuPtr</span>!<span class="type">byte</span> <span class="hid">reserved</span>;
 <a id="L785" href="#L785" class="br">785 </a>
 <a id="L786" href="#L786" class="br">786 </a>    <span class="kwrd">auto</span> <span class="hid">forward</span>(<span class="hid">size_t</span> <span class="hid">dim</span>)(<span class="hid">Variable</span>!(<span class="type">float</span>, <span class="hid">dim</span>, <span class="hid">DeviceStorage</span>) <span class="hid">x</span>, <span class="type">float</span> <span class="hid">ratio</span>) {
 <a id="L787" href="#L787" class="br">787 </a>        <span class="kwrd">import</span> <span class="hid">std.algorithm</span> : <span class="hid">move</span>;
@@ -820,10 +820,10 @@
 <a id="L790" href="#L790" class="br">790 </a>
 <a id="L791" href="#L791" class="br">791 </a>        <span class="hid">size_t</span> <span class="hid">reservedSize</span>;
 <a id="L792" href="#L792" class="br">792 </a>        <span class="hid">cudnnDropoutGetReserveSpaceSize</span>(<span class="hid">xt</span>, &amp;<span class="hid">reservedSize</span>);
-<a id="L793" href="#L793" class="br">793 </a>        <span class="kwrd">this</span>.<span class="hid">reserved</span> = <a href="grain.cuda.d.html#L264" title="grain.cuda.CuPtr" class="hid">CuPtr</a>!<span class="type">byte</span>(<span class="hid">reservedSize</span>);
+<a id="L793" href="#L793" class="br">793 </a>        <span class="kwrd">this</span>.<span class="hid">reserved</span> = <span class="hid">CuPtr</span>!<span class="type">byte</span>(<span class="hid">reservedSize</span>);
 <a id="L794" href="#L794" class="br">794 </a>
-<a id="L795" href="#L795" class="br">795 </a>        <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>(<span class="hid">cudnnDropoutForward</span>(
-<a id="L796" href="#L796" class="br">796 </a>                       <a href="grain.cuda.d.html#L23" title="grain.cuda.cudnnHandle" class="hid">cudnnHandle</a>,
+<a id="L795" href="#L795" class="br">795 </a>        <span class="hid">checkCUDNN</span>(<span class="hid">cudnnDropoutForward</span>(
+<a id="L796" href="#L796" class="br">796 </a>                       <span class="hid">cudnnHandle</span>,
 <a id="L797" href="#L797" class="br">797 </a>                       <a href="grain.cudnn.d.html#L763" title="grain.cudnn.ThreadLocalDropout.descriptor" class="hid">ThreadLocalDropout.descriptor</a>(<span class="hid">ratio</span>),
 <a id="L798" href="#L798" class="br">798 </a>                       <span class="hid">xt</span>,
 <a id="L799" href="#L799" class="br">799 </a>                       <span class="kwrd">cast</span>(<span class="type">void</span>*) <span class="hid">x.ptr</span>,
@@ -837,8 +837,8 @@
 <a id="L807" href="#L807" class="br">807 </a>
 <a id="L808" href="#L808" class="br">808 </a>    <span class="kwrd">auto</span> <span class="hid">backward</span>(<span class="hid">size_t</span> <span class="hid">dim</span>)(<span class="hid">Variable</span>!(<span class="type">float</span>, <span class="hid">dim</span>, <span class="hid">DeviceStorage</span>) <span class="hid">gy</span>) {
 <a id="L809" href="#L809" class="br">809 </a>        <span class="kwrd">auto</span> <span class="hid">gx</span> = <span class="hid">gy.uninit</span>;
-<a id="L810" href="#L810" class="br">810 </a>        <a href="grain.cuda.d.html#L436" title="grain.cuda.checkCUDNN" class="hid">checkCUDNN</a>(<span class="hid">cudnnDropoutBackward</span>(
-<a id="L811" href="#L811" class="br">811 </a>                       <a href="grain.cuda.d.html#L23" title="grain.cuda.cudnnHandle" class="hid">cudnnHandle</a>,
+<a id="L810" href="#L810" class="br">810 </a>        <span class="hid">checkCUDNN</span>(<span class="hid">cudnnDropoutBackward</span>(
+<a id="L811" href="#L811" class="br">811 </a>                       <span class="hid">cudnnHandle</span>,
 <a id="L812" href="#L812" class="br">812 </a>                       <a href="grain.cudnn.d.html#L763" title="grain.cudnn.ThreadLocalDropout.descriptor" class="hid">ThreadLocalDropout.descriptor</a>,
 <a id="L813" href="#L813" class="br">813 </a>                       <span class="hid">gy.makeCudnnTensor</span>,
 <a id="L814" href="#L814" class="br">814 </a>                       <span class="kwrd">cast</span>(<span class="type">void</span>*) <span class="hid">gy.ptr</span>,

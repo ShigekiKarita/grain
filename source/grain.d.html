@@ -28,39 +28,31 @@
     </div>
     <div id="page-body">
         <div id="page-content">
-        <pre class="d_code highlighted with-line-wrappers"><a id="L1" href="#L1" class="br">1 </a><span class="kwrd">module</span> <span class="hid">grain</span>;
-<a id="L2" href="#L2" class="br">2 </a><span class="com">/++
-<a id="L3" href="#L3" class="br">3 </a>
-<a id="L4" href="#L4" class="br">4 </a>Chainer like autograd and neural networks library
-<a id="L5" href="#L5" class="br">5 </a>
-<a id="L6" href="#L6" class="br">6 </a> +/</span>
-<a id="L7" href="#L7" class="br">7 </a>
-<a id="L8" href="#L8" class="br">8 </a><span class="com">/**
-<a id="L9" href="#L9" class="br">9 </a>   License: $(LINK2 http://boost.org/LICENSE_1_0.txt, Boost License 1.0).
-<a id="L10" href="#L10" class="br">10 </a>   Authors:
-<a id="L11" href="#L11" class="br">11 </a>   $(LINK2 https://github.com/ShigekiKarita, Shigeki Karita),
+        <pre class="d_code highlighted with-line-wrappers"><a id="L1" href="#L1" class="br">1 </a><span class="com">/**
+<a id="L2" href="#L2" class="br">2 </a>   library structure
+<a id="L3" href="#L3" class="br">3 </a>   $(RAW_HTML
+<a id="L4" href="#L4" class="br">4 </a>   &lt;object type=&quot;image/svg+xml&quot; data=&quot;grain.svg&quot; width=&quot;100%&quot;&gt;
+<a id="L5" href="#L5" class="br">5 </a>   )
+<a id="L6" href="#L6" class="br">6 </a>
+<a id="L7" href="#L7" class="br">7 </a>   License: $(LINK2 http://boost.org/LICENSE_1_0.txt, Boost License 1.0).
+<a id="L8" href="#L8" class="br">8 </a>   Authors:
+<a id="L9" href="#L9" class="br">9 </a>   $(LINK2 https://github.com/ShigekiKarita, Shigeki Karita)
+<a id="L10" href="#L10" class="br">10 </a>*/</span>
+<a id="L11" href="#L11" class="br">11 </a><span class="kwrd">module</span> <span class="hid">grain</span>;
 <a id="L12" href="#L12" class="br">12 </a>
-<a id="L13" href="#L13" class="br">13 </a>   See_Also:
-<a id="L14" href="#L14" class="br">14 </a>   $(LINK2 https://github.com/ShigekiKarita/grain, Github repo)
-<a id="L15" href="#L15" class="br">15 </a>   $(BR)
-<a id="L16" href="#L16" class="br">16 </a>   $(LINK2 https://chainer.org, chainer)
-<a id="L17" href="#L17" class="br">17 </a>   $(BR)
-<a id="L18" href="#L18" class="br">18 </a>   $(LINK2 https://pytorch.org, pytorch)
-<a id="L19" href="#L19" class="br">19 </a>   $(BR)
-<a id="L20" href="#L20" class="br">20 </a>*/</span>
-<a id="L21" href="#L21" class="br">21 </a>
+<a id="L13" href="#L13" class="br">13 </a><span class="com">//    &lt;img src=&quot;grain.svg&quot;, alt=&quot;dependency&quot;, width=&quot;100%&quot;&gt;</span>
+<a id="L14" href="#L14" class="br">14 </a>
+<a id="L15" href="#L15" class="br">15 </a><span class="kwrd">public</span>:
+<a id="L16" href="#L16" class="br">16 </a><span class="kwrd">import</span> <span class="hid">grain.autograd</span>;
+<a id="L17" href="#L17" class="br">17 </a><span class="kwrd">import</span> <span class="hid">grain.chain</span>;
+<a id="L18" href="#L18" class="br">18 </a><span class="kwrd">import</span> <span class="hid">grain.config</span>;
+<a id="L19" href="#L19" class="br">19 </a><span class="kwrd">import</span> <span class="hid">grain.serializer</span>;
+<a id="L20" href="#L20" class="br">20 </a><span class="kwrd">import</span> <span class="hid">grain.optim</span>;
+<a id="L21" href="#L21" class="br">21 </a><span class="kwrd">import</span> <span class="hid">grain.metric</span>;
 <a id="L22" href="#L22" class="br">22 </a>
-<a id="L23" href="#L23" class="br">23 </a><span class="kwrd">public</span>:
-<a id="L24" href="#L24" class="br">24 </a><span class="kwrd">import</span> <span class="hid">grain.autograd</span>;
-<a id="L25" href="#L25" class="br">25 </a><span class="kwrd">import</span> <span class="hid">grain.chain</span>;
-<a id="L26" href="#L26" class="br">26 </a><span class="kwrd">import</span> <span class="hid">grain.config</span>;
-<a id="L27" href="#L27" class="br">27 </a><span class="kwrd">import</span> <span class="hid">grain.serializer</span>;
-<a id="L28" href="#L28" class="br">28 </a><span class="kwrd">import</span> <span class="hid">grain.optim</span>;
-<a id="L29" href="#L29" class="br">29 </a><span class="kwrd">import</span> <span class="hid">grain.metric</span>;
-<a id="L30" href="#L30" class="br">30 </a>
-<a id="L31" href="#L31" class="br">31 </a><span class="kwrd">version</span> (<span class="hid">grain_cuda</span>) <span class="kwrd">import</span> <span class="hid">grain.cuda</span>;</pre></div>
+<a id="L23" href="#L23" class="br">23 </a><span class="kwrd">version</span> (<span class="hid">grain_cuda</span>) <span class="kwrd">import</span> <span class="hid">grain.cuda</span>;</pre></div>
         <div id="page-nav">
-        <div id="source-navigation"><div class="list-holder"><ul><li><a href="../grain.html" class="docs">[Docs] </a><a href="#L1">grain</a><ul><li><a href="../grain.autograd.html" class="docs">[Docs] </a><a href="#L24">grain.autograd</a></li><li><a href="../grain.chain.html" class="docs">[Docs] </a><a href="#L25">grain.chain</a></li><li><a href="../grain.config.html" class="docs">[Docs] </a><a href="#L26">grain.config</a></li><li><a href="../grain.serializer.html" class="docs">[Docs] </a><a href="#L27">grain.serializer</a></li><li><a href="../grain.optim.html" class="docs">[Docs] </a><a href="#L28">grain.optim</a></li><li><a href="../grain.metric.html" class="docs">[Docs] </a><a href="#L29">grain.metric</a></li><li><a href="#L31">grain.cuda</a></li></ul></li></ul></div></div></div>
+        <div id="source-navigation"><div class="list-holder"><ul><li><a href="../grain.html" class="docs">[Docs] </a><a href="#L1">grain</a><ul><li><a href="../grain.autograd.html" class="docs">[Docs] </a><a href="#L16">grain.autograd</a></li><li><a href="../grain.chain.html" class="docs">[Docs] </a><a href="#L17">grain.chain</a></li><li><a href="../grain.config.html" class="docs">[Docs] </a><a href="#L18">grain.config</a></li><li><a href="../grain.serializer.html" class="docs">[Docs] </a><a href="#L19">grain.serializer</a></li><li><a href="../grain.optim.html" class="docs">[Docs] </a><a href="#L20">grain.optim</a></li><li><a href="../grain.metric.html" class="docs">[Docs] </a><a href="#L21">grain.metric</a></li><li><a href="#L23">grain.cuda</a></li></ul></li></ul></div></div></div>
     </div>
     <div id="page-footer">
         Distributed under <a href="https://www.boost.org/users/license.html">BSL-1.0</a>.
