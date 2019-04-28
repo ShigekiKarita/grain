@@ -9,10 +9,6 @@ import grain.autograd;
 import grain.hdf5;
 import std.string : toStringz;
 
-shared static this() {
-    H5open();
-}
-
 
 /// enumerate the parameter names inside chain C
 enum variableNames(C) = {
