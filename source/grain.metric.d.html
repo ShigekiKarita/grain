@@ -35,17 +35,17 @@
 <a id="L5" href="#L5" class="br">5 </a>*/</span>
 <a id="L6" href="#L6" class="br">6 </a><span class="kwrd">module</span> <span class="hid">grain.metric</span>;
 <a id="L7" href="#L7" class="br">7 </a>
-<a id="L8" href="#L8" class="br">8 </a><span class="kwrd">import</span> <span class="hid">grain.autograd</span> : <a href="grain.autograd.d.html#L512" title="grain.autograd.isVariable" class="hid">isVariable</a>;
+<a id="L8" href="#L8" class="br">8 </a><span class="kwrd">import</span> <span class="hid">grain.autograd</span> : <span class="hid">isVariable</span>;
 <a id="L9" href="#L9" class="br">9 </a>
 <a id="L10" href="#L10" class="br">10 </a>
 <a id="L11" href="#L11" class="br">11 </a><span class="com">/// compute accuracy comparing prediction y (histgram) to target t (id)</span>
-<a id="L12" href="#L12" class="br">12 </a><span class="kwrd">auto</span> <a href="grain.metric.d.html#L12" title="grain.metric.accuracy" class="hid">accuracy</a>(<span class="hid">Vy</span>, <span class="hid">Vt</span>)(<span class="hid">Vy</span> <span class="hid">y</span>, <span class="hid">Vt</span> <span class="hid">t</span>) <span class="kwrd">if</span> (<a href="grain.autograd.d.html#L512" title="grain.autograd.isVariable" class="hid">isVariable</a>!<span class="hid">Vy</span> &amp;&amp; <a href="grain.autograd.d.html#L512" title="grain.autograd.isVariable" class="hid">isVariable</a>!<span class="hid">Vt</span>) {
+<a id="L12" href="#L12" class="br">12 </a><span class="kwrd">auto</span> <a href="grain.metric.d.html#L12" title="grain.metric.accuracy" class="hid">accuracy</a>(<span class="hid">Vy</span>, <span class="hid">Vt</span>)(<span class="hid">Vy</span> <span class="hid">y</span>, <span class="hid">Vt</span> <span class="hid">t</span>) <span class="kwrd">if</span> (<span class="hid">isVariable</span>!<span class="hid">Vy</span> &amp;&amp; <span class="hid">isVariable</span>!<span class="hid">Vt</span>) {
 <a id="L13" href="#L13" class="br">13 </a>    <span class="kwrd">import</span> <span class="hid">mir.ndslice</span> : <span class="hid">maxIndex</span>;
-<a id="L14" href="#L14" class="br">14 </a>    <span class="kwrd">import</span> <span class="hid">grain.autograd</span> : <a href="grain.autograd.d.html#L97" title="grain.autograd.to" class="hid">to</a>, <a href="grain.autograd.d.html#L22" title="grain.autograd.HostStorage" class="hid">HostStorage</a>;
+<a id="L14" href="#L14" class="br">14 </a>    <span class="kwrd">import</span> <span class="hid">grain.autograd</span> : <span class="hid">to</span>, <span class="hid">HostStorage</span>;
 <a id="L15" href="#L15" class="br">15 </a>
 <a id="L16" href="#L16" class="br">16 </a>    <span class="kwrd">auto</span> <span class="hid">nbatch</span> = <span class="hid">t.shape</span>[<span class="num">0</span>];
-<a id="L17" href="#L17" class="br">17 </a>    <span class="kwrd">auto</span> <span class="hid">hy</span> = <span class="hid">y.to</span>!<a href="grain.autograd.d.html#L22" title="grain.autograd.HostStorage" class="hid">HostStorage.sliced</a>;
-<a id="L18" href="#L18" class="br">18 </a>    <span class="kwrd">auto</span> <span class="hid">ht</span> = <span class="hid">t.to</span>!<a href="grain.autograd.d.html#L22" title="grain.autograd.HostStorage" class="hid">HostStorage.sliced</a>;
+<a id="L17" href="#L17" class="br">17 </a>    <span class="kwrd">auto</span> <span class="hid">hy</span> = <span class="hid">y.to</span>!<span class="hid">HostStorage.sliced</span>;
+<a id="L18" href="#L18" class="br">18 </a>    <span class="kwrd">auto</span> <span class="hid">ht</span> = <span class="hid">t.to</span>!<span class="hid">HostStorage.sliced</span>;
 <a id="L19" href="#L19" class="br">19 </a>    <span class="type">double</span> <span class="hid">acc</span> = <span class="num">0.0</span>;
 <a id="L20" href="#L20" class="br">20 </a>    <span class="kwrd">foreach</span> (<span class="hid">i</span>; <span class="num">0</span> .. <span class="hid">nbatch</span>) {
 <a id="L21" href="#L21" class="br">21 </a>        <span class="kwrd">auto</span> <span class="hid">maxid</span> = <span class="hid">hy</span>[<span class="hid">i</span>].<span class="hid">maxIndex</span>[<span class="num">0</span>];

@@ -43,7 +43,7 @@
 <a id="L13" href="#L13" class="br">13 </a><span class="kwrd">import</span> <span class="hid">std.range</span> : <a href="grain.autograd.d.html#L522" title="grain.autograd.ElementType" class="hid">ElementType</a>;
 <a id="L14" href="#L14" class="br">14 </a>
 <a id="L15" href="#L15" class="br">15 </a><span class="kwrd">import</span> <span class="hid">grain.cuda</span>;
-<a id="L16" href="#L16" class="br">16 </a><span class="kwrd">import</span> <span class="hid">grain.utility</span> : <span class="hid">castArray</span>;
+<a id="L16" href="#L16" class="br">16 </a><span class="kwrd">import</span> <span class="hid">grain.utility</span> : <a href="grain.utility.d.html#L27" title="grain.utility.castArray" class="hid">castArray</a>;
 <a id="L17" href="#L17" class="br">17 </a>
 <a id="L18" href="#L18" class="br">18 </a><span class="com">// import std.algorithm : fill;</span>
 <a id="L19" href="#L19" class="br">19 </a><span class="com">// alias fill_ = fill;</span>
@@ -89,7 +89,7 @@
 <a id="L59" href="#L59" class="br">59 </a>    }
 <a id="L60" href="#L60" class="br">60 </a>    <span class="kwrd">version</span> (<span class="hid">grain_cuda</span>) {
 <a id="L61" href="#L61" class="br">61 </a>        <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="kwrd">is</span>(<span class="hid">S</span>!<span class="hid">T</span> == <a href="grain.autograd.d.html#L91" title="grain.autograd.DeviceStorage" class="hid">DeviceStorage</a>!<span class="hid">T</span>)) {
-<a id="L62" href="#L62" class="br">62 </a>            <span class="kwrd">auto</span> <span class="hid">data</span> = <span class="hid">CuArray</span>!<span class="hid">T</span>(<span class="hid">CuPtr</span>!<span class="hid">T</span>(<a href="grain.autograd.d.html#L525" title="grain.autograd.length" class="hid">length</a>));
+<a id="L62" href="#L62" class="br">62 </a>            <span class="kwrd">auto</span> <span class="hid">data</span> = <a href="grain.cuda.d.html#L316" title="grain.cuda.CuArray" class="hid">CuArray</a>!<span class="hid">T</span>(<a href="grain.cuda.d.html#L264" title="grain.cuda.CuPtr" class="hid">CuPtr</a>!<span class="hid">T</span>(<a href="grain.autograd.d.html#L525" title="grain.autograd.length" class="hid">length</a>));
 <a id="L63" href="#L63" class="br">63 </a>        }
 <a id="L64" href="#L64" class="br">64 </a>    }
 <a id="L65" href="#L65" class="br">65 </a>    <span class="type">int</span>[<span class="hid">dim</span>] <span class="hid">strides</span>;
@@ -118,14 +118,14 @@
 <a id="L88" href="#L88" class="br">88 </a>        <span class="kwrd">return</span> <a href="grain.autograd.d.html#L53" title="grain.autograd.uninitVariable" class="hid">uninitVariable</a>!(<span class="hid">T</span>, <a href="grain.autograd.d.html#L91" title="grain.autograd.DeviceStorage" class="hid">DeviceStorage</a>, <span class="hid">dim</span>)(<span class="hid">v.shape</span>, <span class="hid">v.requiresGrad</span>);
 <a id="L89" href="#L89" class="br">89 </a>    }
 <a id="L90" href="#L90" class="br">90 </a>
-<a id="L91" href="#L91" class="br">91 </a>    <span class="kwrd">alias</span> <a href="grain.autograd.d.html#L91" title="grain.autograd.DeviceStorage" class="hid">DeviceStorage</a>(<span class="hid">T</span>) = <span class="hid">CuArray</span>!<span class="hid">T</span>;
+<a id="L91" href="#L91" class="br">91 </a>    <span class="kwrd">alias</span> <a href="grain.autograd.d.html#L91" title="grain.autograd.DeviceStorage" class="hid">DeviceStorage</a>(<span class="hid">T</span>) = <a href="grain.cuda.d.html#L316" title="grain.cuda.CuArray" class="hid">CuArray</a>!<span class="hid">T</span>;
 <a id="L92" href="#L92" class="br">92 </a>
 <a id="L93" href="#L93" class="br">93 </a>    <span class="com">// enum bool isDevice(T) = isDeviceMemory(typeof(T.data)); // is(typeof({T.init.toHost();}));</span>
-<a id="L94" href="#L94" class="br">94 </a>    <span class="kwrd">alias</span> <a href="grain.autograd.d.html#L94" title="grain.autograd.isDevice" class="hid">isDevice</a> = <span class="hid">isDeviceMemory</span>;
+<a id="L94" href="#L94" class="br">94 </a>    <span class="kwrd">alias</span> <a href="grain.autograd.d.html#L94" title="grain.autograd.isDevice" class="hid">isDevice</a> = <a href="grain.cuda.d.html#L209" title="grain.cuda.isDeviceMemory" class="hid">isDeviceMemory</a>;
 <a id="L95" href="#L95" class="br">95 </a>
 <a id="L96" href="#L96" class="br">96 </a>    <span class="com">/// CUDA -&gt; CPU memory conversion</span>
 <a id="L97" href="#L97" class="br">97 </a>    <span class="kwrd">auto</span> <a href="grain.autograd.d.html#L97" title="grain.autograd.to" class="hid">to</a>(<span class="kwrd">alias</span> <span class="hid">S</span> : <a href="grain.autograd.d.html#L91" title="grain.autograd.DeviceStorage" class="hid">DeviceStorage</a>, <span class="hid">T</span>)(<span class="hid">T</span>[] <span class="hid">src</span>) {
-<a id="L98" href="#L98" class="br">98 </a>        <span class="kwrd">import</span> <span class="hid">std.array</span> : <span class="hid">empty</span>;
+<a id="L98" href="#L98" class="br">98 </a>        <span class="kwrd">import</span> <span class="hid">std.array</span> : <a href="grain.cuda.d.html#L229" title="grain.cuda.empty" class="hid">empty</a>;
 <a id="L99" href="#L99" class="br">99 </a>
 <a id="L100" href="#L100" class="br">100 </a>        <span class="kwrd">return</span> <span class="hid">src.empty</span> ? <a href="grain.autograd.d.html#L91" title="grain.autograd.DeviceStorage" class="hid">DeviceStorage</a>!<span class="hid">T</span>() : <a href="grain.autograd.d.html#L91" title="grain.autograd.DeviceStorage" class="hid">DeviceStorage</a>!<span class="hid">T</span>(<span class="hid">src</span>);
 <a id="L101" href="#L101" class="br">101 </a>    }
@@ -198,7 +198,7 @@
 <a id="L168" href="#L168" class="br">168 </a>        <span class="kwrd">import</span> <span class="hid">mir.ndslice.slice</span> : <span class="hid">sliced</span>;
 <a id="L169" href="#L169" class="br">169 </a>
 <a id="L170" href="#L170" class="br">170 </a>        <span class="kwrd">return</span> <span class="hid">grad.get</span>!(<span class="kwrd">typeof</span>(<span class="hid">V.init.data</span>)).<span class="hid">ptr.sliced</span>(<span class="kwrd">this</span>.<span class="hid">shape</span>[<span class="num">0</span> .. <a href="grain.autograd.d.html#L519" title="grain.autograd.DimensionCount" class="hid">DimensionCount</a>!<span class="hid">V</span>]
-<a id="L171" href="#L171" class="br">171 </a>                .<span class="hid">castArray</span>!<span class="hid">size_t</span>);
+<a id="L171" href="#L171" class="br">171 </a>                .<a href="grain.utility.d.html#L27" title="grain.utility.castArray" class="hid">castArray</a>!<span class="hid">size_t</span>);
 <a id="L172" href="#L172" class="br">172 </a>    }
 <a id="L173" href="#L173" class="br">173 </a>
 <a id="L174" href="#L174" class="br">174 </a>    <span class="com">///</span>
@@ -206,7 +206,7 @@
 <a id="L176" href="#L176" class="br">176 </a>        <span class="kwrd">import</span> <span class="hid">mir.ndslice.slice</span> : <span class="hid">sliced</span>;
 <a id="L177" href="#L177" class="br">177 </a>
 <a id="L178" href="#L178" class="br">178 </a>        <span class="kwrd">return</span> <span class="hid">data.get</span>!(<span class="kwrd">typeof</span>(<span class="hid">V.init.data</span>)).<span class="hid">ptr.sliced</span>(<span class="kwrd">this</span>.<span class="hid">shape</span>[<span class="num">0</span> .. <a href="grain.autograd.d.html#L519" title="grain.autograd.DimensionCount" class="hid">DimensionCount</a>!<span class="hid">V</span>]
-<a id="L179" href="#L179" class="br">179 </a>                .<span class="hid">castArray</span>!<span class="hid">size_t</span>);
+<a id="L179" href="#L179" class="br">179 </a>                .<a href="grain.utility.d.html#L27" title="grain.utility.castArray" class="hid">castArray</a>!<span class="hid">size_t</span>);
 <a id="L180" href="#L180" class="br">180 </a>    }
 <a id="L181" href="#L181" class="br">181 </a>}
 <a id="L182" href="#L182" class="br">182 </a>
@@ -228,7 +228,7 @@
 <a id="L198" href="#L198" class="br">198 </a>    <span class="com">/// error backward propagation</span>
 <a id="L199" href="#L199" class="br">199 </a>    <span class="type">void</span> <span class="hid">backward</span>(<a href="grain.autograd.d.html#L117" title="grain.autograd.UntypedVariable" class="hid">UntypedVariable</a>* <span class="hid">grad</span> = <span class="kwrd">null</span>, <span class="hid">size_t</span> <span class="hid">pos</span> = <span class="num">0</span>) {
 <a id="L200" href="#L200" class="br">200 </a>        <span class="kwrd">import</span> <span class="hid">std.exception</span> : <span class="hid">enforce</span>;
-<a id="L201" href="#L201" class="br">201 </a>        <span class="kwrd">import</span> <span class="hid">std.range</span> : <span class="hid">empty</span>;
+<a id="L201" href="#L201" class="br">201 </a>        <span class="kwrd">import</span> <span class="hid">std.range</span> : <a href="grain.cuda.d.html#L229" title="grain.cuda.empty" class="hid">empty</a>;
 <a id="L202" href="#L202" class="br">202 </a>
 <a id="L203" href="#L203" class="br">203 </a>        <span class="kwrd">if</span> (<span class="kwrd">this</span>.<span class="hid">gradOutputs.empty</span>) <span class="kwrd">return</span>;
 <a id="L204" href="#L204" class="br">204 </a>        ++<span class="kwrd">this</span>.<span class="hid">nGrad</span>;
@@ -287,7 +287,7 @@
 <a id="L257" href="#L257" class="br">257 </a>            <span class="kwrd">this</span>.<span class="hid">grad</span> = <a href="grain.autograd.d.html#L33" title="grain.autograd.zeros" class="hid">zeros</a>!(<span class="hid">Storage</span>!<span class="hid">T</span>)(<span class="kwrd">this</span>.<span class="hid">data.length</span>);
 <a id="L258" href="#L258" class="br">258 </a>        }
 <a id="L259" href="#L259" class="br">259 </a>        <span class="kwrd">else</span> <span class="kwrd">version</span> (<span class="hid">grain_cuda</span>) {
-<a id="L260" href="#L260" class="br">260 </a>            <span class="kwrd">this</span>.<span class="hid">grad</span> = <span class="hid">grain.cuda.zeros</span>!(<span class="hid">CuPtr</span>!<span class="hid">T</span>)(<span class="kwrd">this</span>.<span class="hid">data.length</span>);
+<a id="L260" href="#L260" class="br">260 </a>            <span class="kwrd">this</span>.<span class="hid">grad</span> = <a href="grain.cuda.d.html#L409" title="grain.cuda.zeros" class="hid">grain.cuda.zeros</a>!(<a href="grain.cuda.d.html#L264" title="grain.cuda.CuPtr" class="hid">CuPtr</a>!<span class="hid">T</span>)(<span class="kwrd">this</span>.<span class="hid">data.length</span>);
 <a id="L261" href="#L261" class="br">261 </a>        }
 <a id="L262" href="#L262" class="br">262 </a>    }
 <a id="L263" href="#L263" class="br">263 </a>
@@ -313,13 +313,13 @@
 <a id="L283" href="#L283" class="br">283 </a>    }
 <a id="L284" href="#L284" class="br">284 </a>
 <a id="L285" href="#L285" class="br">285 </a>    <span class="com">/// duplicate (deep copy) variable</span>
-<a id="L286" href="#L286" class="br">286 </a>    <span class="kwrd">auto</span> <span class="hid">dup</span>() {
+<a id="L286" href="#L286" class="br">286 </a>    <span class="kwrd">auto</span> <a href="grain.cuda.d.html#L304" title="grain.cuda.dup" class="hid">dup</a>() {
 <a id="L287" href="#L287" class="br">287 </a>        <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="kwrd">is</span>(<span class="hid">Storage</span>!<span class="hid">T</span> == <a href="grain.autograd.d.html#L22" title="grain.autograd.HostStorage" class="hid">HostStorage</a>!<span class="hid">T</span>)) {
 <a id="L288" href="#L288" class="br">288 </a>            <span class="kwrd">auto</span> <span class="hid">d</span> = <span class="kwrd">new</span> <span class="hid">T</span>[<span class="hid">data.length</span>];
 <a id="L289" href="#L289" class="br">289 </a>            <span class="hid">d</span>[] = <span class="hid">data</span>[];
 <a id="L290" href="#L290" class="br">290 </a>        }
 <a id="L291" href="#L291" class="br">291 </a>        <span class="kwrd">else</span> {
-<a id="L292" href="#L292" class="br">292 </a>            <span class="kwrd">auto</span> <span class="hid">d</span> = <span class="hid">CuArray</span>!<span class="hid">T</span>(<span class="hid">data.dup</span>);
+<a id="L292" href="#L292" class="br">292 </a>            <span class="kwrd">auto</span> <span class="hid">d</span> = <a href="grain.cuda.d.html#L316" title="grain.cuda.CuArray" class="hid">CuArray</a>!<span class="hid">T</span>(<span class="hid">data.dup</span>);
 <a id="L293" href="#L293" class="br">293 </a>        }
 <a id="L294" href="#L294" class="br">294 </a>        <span class="kwrd">auto</span> <span class="hid">y</span> = <a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>(<span class="kwrd">this</span>.<span class="hid">requiresGrad</span>, <span class="kwrd">this</span>.<span class="hid">shape</span>, <span class="kwrd">this</span>.<span class="hid">strides</span>, <span class="hid">d</span>);
 <a id="L295" href="#L295" class="br">295 </a>        <span class="kwrd">return</span> <span class="hid">y</span>;
@@ -420,7 +420,7 @@
 <a id="L390" href="#L390" class="br">390 </a>            <span class="hid">fill</span>(<span class="hid">v.data</span>, <span class="hid">b</span>);
 <a id="L391" href="#L391" class="br">391 </a>        }
 <a id="L392" href="#L392" class="br">392 </a>        <span class="kwrd">else</span> {
-<a id="L393" href="#L393" class="br">393 </a>            <span class="hid">fill_</span>(<span class="hid">v.data</span>, <span class="hid">b</span>);
+<a id="L393" href="#L393" class="br">393 </a>            <a href="grain.cuda.d.html#L377" title="grain.cuda.fill_" class="hid">fill_</a>(<span class="hid">v.data</span>, <span class="hid">b</span>);
 <a id="L394" href="#L394" class="br">394 </a>        }
 <a id="L395" href="#L395" class="br">395 </a>        <span class="kwrd">return</span> <span class="kwrd">this</span>.<span class="hid">opBinary</span>!<span class="hid">op</span>(<span class="hid">v</span>);
 <a id="L396" href="#L396" class="br">396 </a>    }
@@ -443,7 +443,7 @@
 <a id="L413" href="#L413" class="br">413 </a>                <span class="hid">fill</span>(<span class="hid">v.data</span>, <span class="hid">b</span>);
 <a id="L414" href="#L414" class="br">414 </a>            }
 <a id="L415" href="#L415" class="br">415 </a>            <span class="kwrd">else</span> {
-<a id="L416" href="#L416" class="br">416 </a>                <span class="hid">fill_</span>(<span class="hid">v.data</span>, <span class="hid">b</span>);
+<a id="L416" href="#L416" class="br">416 </a>                <a href="grain.cuda.d.html#L377" title="grain.cuda.fill_" class="hid">fill_</a>(<span class="hid">v.data</span>, <span class="hid">b</span>);
 <a id="L417" href="#L417" class="br">417 </a>            }
 <a id="L418" href="#L418" class="br">418 </a>            <span class="kwrd">return</span> <span class="hid">v.opBinary</span>!<span class="hid">op</span>(<span class="kwrd">this</span>);
 <a id="L419" href="#L419" class="br">419 </a>        }
@@ -606,7 +606,7 @@
 <a id="L576" href="#L576" class="br">576 </a>    <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="kwrd">is</span>(<span class="hid">Dst</span>!<span class="hid">T</span> == <span class="hid">Src</span>!<span class="hid">T</span>))
 <a id="L577" href="#L577" class="br">577 </a>        <span class="kwrd">return</span> <span class="hid">src</span>;
 <a id="L578" href="#L578" class="br">578 </a>    <span class="kwrd">else</span> {
-<a id="L579" href="#L579" class="br">579 </a>        <span class="kwrd">import</span> <span class="hid">std.range</span> : <span class="hid">empty</span>;
+<a id="L579" href="#L579" class="br">579 </a>        <span class="kwrd">import</span> <span class="hid">std.range</span> : <a href="grain.cuda.d.html#L229" title="grain.cuda.empty" class="hid">empty</a>;
 <a id="L580" href="#L580" class="br">580 </a>
 <a id="L581" href="#L581" class="br">581 </a>        <span class="kwrd">auto</span> <span class="hid">d</span> = <span class="hid">src.data.to</span>!<span class="hid">Dst</span>;
 <a id="L582" href="#L582" class="br">582 </a>        <span class="kwrd">auto</span> <span class="hid">g</span> = <span class="hid">src.grad.to</span>!<span class="hid">Dst</span>;

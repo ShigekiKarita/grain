@@ -34,13 +34,13 @@
 <a id="L4" href="#L4" class="br">4 </a><span class="kwrd">module</span> <span class="hid">grain.optim</span>;
 <a id="L5" href="#L5" class="br">5 </a>
 <a id="L6" href="#L6" class="br">6 </a><span class="kwrd">import</span> <span class="hid">std.stdio</span>;
-<a id="L7" href="#L7" class="br">7 </a><span class="kwrd">import</span> <span class="hid">grain.autograd</span> : <span class="hid">isVariable</span>, <span class="hid">zero_</span>, <span class="hid">isHost</span>, <span class="hid">UntypedVariable</span>, <span class="hid">Variable</span>,
+<a id="L7" href="#L7" class="br">7 </a><span class="kwrd">import</span> <span class="hid">grain.autograd</span> : <span class="hid">isVariable</span>, <a href="grain.cuda.d.html#L403" title="grain.cuda.zero_" class="hid">zero_</a>, <span class="hid">isHost</span>, <span class="hid">UntypedVariable</span>, <span class="hid">Variable</span>,
 <a id="L8" href="#L8" class="br">8 </a>    <span class="hid">HostStorage</span>, <span class="hid">iterVariables</span>;
 <a id="L9" href="#L9" class="br">9 </a><span class="kwrd">import</span> <span class="hid">std.traits</span> : <span class="hid">hasMember</span>;
 <a id="L10" href="#L10" class="br">10 </a><span class="kwrd">import</span> <span class="hid">std.stdio</span>;
 <a id="L11" href="#L11" class="br">11 </a>
 <a id="L12" href="#L12" class="br">12 </a><span class="kwrd">version</span> (<span class="hid">grain_cuda</span>) {
-<a id="L13" href="#L13" class="br">13 </a>    <span class="kwrd">import</span> <span class="hid">grain.cuda</span> : <span class="hid">zero_</span>;
+<a id="L13" href="#L13" class="br">13 </a>    <span class="kwrd">import</span> <span class="hid">grain.cuda</span> : <a href="grain.cuda.d.html#L403" title="grain.cuda.zero_" class="hid">zero_</a>;
 <a id="L14" href="#L14" class="br">14 </a>    <span class="kwrd">import</span> <span class="hid">grain.cudnn</span> : <a href="grain.optim.d.html#L47" title="grain.optim.transform" class="hid">transform</a>;
 <a id="L15" href="#L15" class="br">15 </a>}
 <a id="L16" href="#L16" class="br">16 </a>
@@ -132,9 +132,9 @@
 <a id="L102" href="#L102" class="br">102 </a>            <span class="hid">field.sliced</span>[] -= <span class="kwrd">this</span>.<span class="hid">lr</span> * <span class="hid">field.gradSliced</span>[];
 <a id="L103" href="#L103" class="br">103 </a>        }
 <a id="L104" href="#L104" class="br">104 </a>        <span class="kwrd">else</span> {
-<a id="L105" href="#L105" class="br">105 </a>            <span class="kwrd">import</span> <span class="hid">grain.cuda</span> : <span class="hid">axpy</span>;
+<a id="L105" href="#L105" class="br">105 </a>            <span class="kwrd">import</span> <span class="hid">grain.cuda</span> : <a href="grain.cuda.d.html#L531" title="grain.cuda.axpy" class="hid">axpy</a>;
 <a id="L106" href="#L106" class="br">106 </a>
-<a id="L107" href="#L107" class="br">107 </a>            <span class="hid">axpy</span>(<span class="hid">field.grad</span>, <span class="hid">field.data</span>, -<span class="kwrd">this</span>.<span class="hid">lr</span>);
+<a id="L107" href="#L107" class="br">107 </a>            <a href="grain.cuda.d.html#L531" title="grain.cuda.axpy" class="hid">axpy</a>(<span class="hid">field.grad</span>, <span class="hid">field.data</span>, -<span class="kwrd">this</span>.<span class="hid">lr</span>);
 <a id="L108" href="#L108" class="br">108 </a>        }
 <a id="L109" href="#L109" class="br">109 </a>    }
 <a id="L110" href="#L110" class="br">110 </a>}
