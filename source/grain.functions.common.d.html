@@ -35,7 +35,7 @@
 <a id="L5" href="#L5" class="br">5 </a>
 <a id="L6" href="#L6" class="br">6 </a><span class="kwrd">import</span> <span class="hid">grain.autograd</span>;
 <a id="L7" href="#L7" class="br">7 </a><span class="kwrd">import</span> <span class="hid">grain.cuda</span>;
-<a id="L8" href="#L8" class="br">8 </a><span class="kwrd">import</span> <span class="hid">grain.utility</span> : <a href="grain.utility.d.html#L18" title="grain.utility.fromTuple" class="hid">fromTuple</a>, <a href="grain.utility.d.html#L27" title="grain.utility.castArray" class="hid">castArray</a>;
+<a id="L8" href="#L8" class="br">8 </a><span class="kwrd">import</span> <span class="hid">grain.utility</span> : <span class="hid">fromTuple</span>, <span class="hid">castArray</span>;
 <a id="L9" href="#L9" class="br">9 </a><span class="kwrd">import</span> <span class="hid">mir.ndslice</span> : <span class="hid">isSlice</span>;
 <a id="L10" href="#L10" class="br">10 </a>
 <a id="L11" href="#L11" class="br">11 </a><span class="kwrd">import</span> <span class="hid">std.stdio</span>;
@@ -74,7 +74,7 @@
 <a id="L44" href="#L44" class="br">44 </a>    <span class="kwrd">import</span> <span class="hid">std.meta</span> : <span class="hid">allSatisfy</span>;
 <a id="L45" href="#L45" class="br">45 </a>    <span class="kwrd">import</span> <span class="hid">std.typecons</span> : <span class="hid">isTuple</span>, <span class="hid">tuple</span>, <span class="hid">Tuple</span>, <span class="hid">RefCounted</span>;
 <a id="L46" href="#L46" class="br">46 </a>    <span class="kwrd">import</span> <span class="hid">std.traits</span> : <span class="hid">arity</span>, <span class="hid">Parameters</span>, <span class="hid">ReturnType</span>;
-<a id="L47" href="#L47" class="br">47 </a>    <span class="kwrd">import</span> <span class="hid">grain.utility</span> : <a href="grain.utility.d.html#L9" title="grain.utility.toTuple" class="hid">toTuple</a>;
+<a id="L47" href="#L47" class="br">47 </a>    <span class="kwrd">import</span> <span class="hid">grain.utility</span> : <span class="hid">toTuple</span>;
 <a id="L48" href="#L48" class="br">48 </a>    
 <a id="L49" href="#L49" class="br">49 </a>    @<span class="hid">disable</span> <span class="kwrd">this</span>(<span class="kwrd">this</span>); <span class="com">// no copyable</span>
 <a id="L50" href="#L50" class="br">50 </a>
@@ -107,7 +107,7 @@
 <a id="L77" href="#L77" class="br">77 </a>            <span class="kwrd">static</span> <span class="kwrd">if</span> (<a href="grain.autograd.d.html#L515" title="grain.autograd.isHost" class="hid">isHost</a>) <span class="hid">_mixin_hargs</span>[<span class="hid">i</span>] = <span class="hid">a</span>;
 <a id="L78" href="#L78" class="br">78 </a>            <span class="kwrd">else</span> <span class="hid">_mixin_dargs</span>[<span class="hid">i</span>] = <span class="hid">a</span>;
 <a id="L79" href="#L79" class="br">79 </a>        }
-<a id="L80" href="#L80" class="br">80 </a>        <span class="kwrd">auto</span> <span class="hid">rets</span> = <span class="kwrd">this</span>.<span class="hid">forward</span>(<span class="hid">args</span>).<a href="grain.utility.d.html#L9" title="grain.utility.toTuple" class="hid">toTuple</a>;
+<a id="L80" href="#L80" class="br">80 </a>        <span class="kwrd">auto</span> <span class="hid">rets</span> = <span class="kwrd">this</span>.<span class="hid">forward</span>(<span class="hid">args</span>).<span class="hid">toTuple</span>;
 <a id="L81" href="#L81" class="br">81 </a>        <span class="kwrd">auto</span> <span class="hid">bp</span> = <a href="grain.autograd.d.html#L192" title="grain.autograd.BackProp" class="hid">BackProp</a>(&amp;<span class="kwrd">this</span>.<span class="hid">applyBackward</span>!<a href="grain.autograd.d.html#L515" title="grain.autograd.isHost" class="hid">isHost</a>,
 <a id="L82" href="#L82" class="br">82 </a>                           <span class="kwrd">new</span> <a href="grain.autograd.d.html#L117" title="grain.autograd.UntypedVariable" class="hid">UntypedVariable</a>[<span class="hid">rets.length</span>]);
 <a id="L83" href="#L83" class="br">83 </a>        <span class="kwrd">if</span> (<span class="hid">grain.config.backprop</span>) {
@@ -134,7 +134,7 @@
 <a id="L104" href="#L104" class="br">104 </a>        <span class="kwrd">static</span> <span class="kwrd">foreach</span> (<span class="hid">i</span>; <span class="num">0</span> .. <span class="hid">vgradOutputs.length</span>) {
 <a id="L105" href="#L105" class="br">105 </a>            <span class="hid">vgradOutputs</span>[<span class="hid">i</span>] = <span class="hid">ugradOutputs</span>[<span class="hid">i</span>].<a href="grain.autograd.d.html#L97" title="grain.autograd.to" class="hid">to</a>!(<span class="kwrd">typeof</span>(<span class="hid">vgradOutputs</span>[<span class="hid">i</span>]));
 <a id="L106" href="#L106" class="br">106 </a>        }
-<a id="L107" href="#L107" class="br">107 </a>        <span class="kwrd">auto</span> <span class="hid">vgradInputs</span> = <span class="kwrd">this</span>.<span class="hid">backward</span>(<span class="hid">vgradOutputs.expand</span>).<a href="grain.utility.d.html#L9" title="grain.utility.toTuple" class="hid">toTuple</a>;
+<a id="L107" href="#L107" class="br">107 </a>        <span class="kwrd">auto</span> <span class="hid">vgradInputs</span> = <span class="kwrd">this</span>.<span class="hid">backward</span>(<span class="hid">vgradOutputs.expand</span>).<span class="hid">toTuple</span>;
 <a id="L108" href="#L108" class="br">108 </a>        <span class="kwrd">static</span> <span class="kwrd">assert</span>(<span class="kwrd">typeof</span>(<span class="hid">vgradInputs</span>).<a href="grain.autograd.d.html#L525" title="grain.autograd.length" class="hid">length</a> == <span class="hid">args.length</span>,
 <a id="L109" href="#L109" class="br">109 </a>                      <span class="str">&quot;invalid number of input gradients&quot;</span>);
 <a id="L110" href="#L110" class="br">110 </a>

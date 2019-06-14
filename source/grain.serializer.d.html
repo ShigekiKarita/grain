@@ -111,27 +111,27 @@
 <a id="L81" href="#L81" class="br">81 </a>    <span class="kwrd">import</span> <span class="hid">mir.ndslice</span> : <span class="hid">slice</span>;
 <a id="L82" href="#L82" class="br">82 </a>    <span class="kwrd">import</span> <span class="hid">grain.utility</span> : <span class="hid">castArray</span>;
 <a id="L83" href="#L83" class="br">83 </a>
-<a id="L84" href="#L84" class="br">84 </a>    <span class="kwrd">auto</span> <span class="hid">file</span> = <a href="grain.hdf5.d.html#L133" title="grain.hdf5.H5Fcreate" class="hid">H5Fcreate</a>(<span class="hid">path.toStringz</span>, <span class="com">// path.exists ? H5F_ACC_TRUNC :</span>
+<a id="L84" href="#L84" class="br">84 </a>    <span class="kwrd">auto</span> <span class="hid">file</span> = <span class="hid">H5Fcreate</span>(<span class="hid">path.toStringz</span>, <span class="com">// path.exists ? H5F_ACC_TRUNC :</span>
 <a id="L85" href="#L85" class="br">85 </a>                          <span class="com">// H5F_ACC_RDWR, //</span>
-<a id="L86" href="#L86" class="br">86 </a>                          <a href="grain.hdf5.d.html#L0" title="grain.hdf5.H5F_ACC_TRUNC" class="hid">H5F_ACC_TRUNC</a>,
-<a id="L87" href="#L87" class="br">87 </a>                          <a href="grain.hdf5.d.html#L0" title="grain.hdf5.H5P_DEFAULT" class="hid">H5P_DEFAULT</a>, <a href="grain.hdf5.d.html#L0" title="grain.hdf5.H5P_DEFAULT" class="hid">H5P_DEFAULT</a>);
+<a id="L86" href="#L86" class="br">86 </a>                          <span class="hid">H5F_ACC_TRUNC</span>,
+<a id="L87" href="#L87" class="br">87 </a>                          <span class="hid">H5P_DEFAULT</span>, <span class="hid">H5P_DEFAULT</span>);
 <a id="L88" href="#L88" class="br">88 </a>    <span class="kwrd">scope</span> (<span class="hid">exit</span>)
-<a id="L89" href="#L89" class="br">89 </a>        <a href="grain.hdf5.d.html#L137" title="grain.hdf5.H5Fclose" class="hid">H5Fclose</a>(<span class="hid">file</span>);
+<a id="L89" href="#L89" class="br">89 </a>        <span class="hid">H5Fclose</span>(<span class="hid">file</span>);
 <a id="L90" href="#L90" class="br">90 </a>
 <a id="L91" href="#L91" class="br">91 </a>    <span class="type">void</span> <span class="hid">register</span>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<span class="type">string</span> <span class="hid">k</span>, <span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">v</span>) {
 <a id="L92" href="#L92" class="br">92 </a>        <span class="kwrd">auto</span> <span class="hid">h</span> = <span class="hid">v.to</span>!<span class="hid">HostStorage</span>;
 <a id="L93" href="#L93" class="br">93 </a>        <span class="com">// FIXME support check contiguous</span>
 <a id="L94" href="#L94" class="br">94 </a>        <span class="com">// auto s = h.sliced.slice;</span>
 <a id="L95" href="#L95" class="br">95 </a>        <span class="kwrd">auto</span> <span class="hid">data</span> = <span class="hid">v.to</span>!<span class="hid">HostStorage.data</span>;
-<a id="L96" href="#L96" class="br">96 </a>        <span class="kwrd">auto</span> <span class="hid">dims</span> = <span class="hid">h.shape.castArray</span>!<a href="grain.hdf5.d.html#L31" title="grain.hdf5.hsize_t" class="hid">hsize_t</a>;
-<a id="L97" href="#L97" class="br">97 </a>        <span class="kwrd">auto</span> <span class="hid">space</span> = <a href="grain.hdf5.d.html#L140" title="grain.hdf5.H5Screate_simple" class="hid">H5Screate_simple</a>(<span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">dims.length</span>, <span class="hid">dims.ptr</span>, <span class="hid">dims.ptr</span>);
+<a id="L96" href="#L96" class="br">96 </a>        <span class="kwrd">auto</span> <span class="hid">dims</span> = <span class="hid">h.shape.castArray</span>!<span class="hid">hsize_t</span>;
+<a id="L97" href="#L97" class="br">97 </a>        <span class="kwrd">auto</span> <span class="hid">space</span> = <span class="hid">H5Screate_simple</span>(<span class="kwrd">cast</span>(<span class="type">int</span>) <span class="hid">dims.length</span>, <span class="hid">dims.ptr</span>, <span class="hid">dims.ptr</span>);
 <a id="L98" href="#L98" class="br">98 </a>        <span class="kwrd">scope</span> (<span class="hid">exit</span>)
-<a id="L99" href="#L99" class="br">99 </a>            <a href="grain.hdf5.d.html#L142" title="grain.hdf5.H5Sclose" class="hid">H5Sclose</a>(<span class="hid">space</span>);
-<a id="L100" href="#L100" class="br">100 </a>        <span class="kwrd">auto</span> <span class="hid">dataset</span> = <a href="grain.hdf5.d.html#L147" title="grain.hdf5.H5Dcreate2" class="hid">H5Dcreate2</a>(<span class="hid">file</span>, <span class="hid">toStringz</span>(<span class="str">&quot;/&quot;</span> ~ <span class="hid">k</span>), <a href="grain.serializer.d.html#L68" title="grain.serializer.toH5Type" class="hid">toH5Type</a>!<span class="hid">T</span>, <span class="hid">space</span>,
-<a id="L101" href="#L101" class="br">101 </a>                <a href="grain.hdf5.d.html#L0" title="grain.hdf5.H5P_DEFAULT" class="hid">H5P_DEFAULT</a>, <a href="grain.hdf5.d.html#L0" title="grain.hdf5.H5P_DEFAULT" class="hid">H5P_DEFAULT</a>, <a href="grain.hdf5.d.html#L0" title="grain.hdf5.H5P_DEFAULT" class="hid">H5P_DEFAULT</a>);
+<a id="L99" href="#L99" class="br">99 </a>            <span class="hid">H5Sclose</span>(<span class="hid">space</span>);
+<a id="L100" href="#L100" class="br">100 </a>        <span class="kwrd">auto</span> <span class="hid">dataset</span> = <span class="hid">H5Dcreate2</span>(<span class="hid">file</span>, <span class="hid">toStringz</span>(<span class="str">&quot;/&quot;</span> ~ <span class="hid">k</span>), <a href="grain.serializer.d.html#L68" title="grain.serializer.toH5Type" class="hid">toH5Type</a>!<span class="hid">T</span>, <span class="hid">space</span>,
+<a id="L101" href="#L101" class="br">101 </a>                <span class="hid">H5P_DEFAULT</span>, <span class="hid">H5P_DEFAULT</span>, <span class="hid">H5P_DEFAULT</span>);
 <a id="L102" href="#L102" class="br">102 </a>        <span class="kwrd">scope</span> (<span class="hid">exit</span>)
-<a id="L103" href="#L103" class="br">103 </a>            <a href="grain.hdf5.d.html#L150" title="grain.hdf5.H5Dclose" class="hid">H5Dclose</a>(<span class="hid">dataset</span>);
-<a id="L104" href="#L104" class="br">104 </a>        <a href="grain.hdf5.d.html#L155" title="grain.hdf5.H5Dwrite" class="hid">H5Dwrite</a>(<span class="hid">dataset</span>, <a href="grain.serializer.d.html#L68" title="grain.serializer.toH5Type" class="hid">toH5Type</a>!<span class="hid">T</span>, <a href="grain.hdf5.d.html#L0" title="grain.hdf5.H5S_ALL" class="hid">H5S_ALL</a>, <a href="grain.hdf5.d.html#L0" title="grain.hdf5.H5S_ALL" class="hid">H5S_ALL</a>, <a href="grain.hdf5.d.html#L0" title="grain.hdf5.H5P_DEFAULT" class="hid">H5P_DEFAULT</a>, <span class="kwrd">cast</span>(<span class="type">void</span>*) <span class="hid">data</span>
+<a id="L103" href="#L103" class="br">103 </a>            <span class="hid">H5Dclose</span>(<span class="hid">dataset</span>);
+<a id="L104" href="#L104" class="br">104 </a>        <span class="hid">H5Dwrite</span>(<span class="hid">dataset</span>, <a href="grain.serializer.d.html#L68" title="grain.serializer.toH5Type" class="hid">toH5Type</a>!<span class="hid">T</span>, <span class="hid">H5S_ALL</span>, <span class="hid">H5S_ALL</span>, <span class="hid">H5P_DEFAULT</span>, <span class="kwrd">cast</span>(<span class="type">void</span>*) <span class="hid">data</span>
 <a id="L105" href="#L105" class="br">105 </a>                .<span class="hid">ptr</span>);
 <a id="L106" href="#L106" class="br">106 </a>    }
 <a id="L107" href="#L107" class="br">107 </a>
@@ -145,20 +145,20 @@
 <a id="L115" href="#L115" class="br">115 </a>
 <a id="L116" href="#L116" class="br">116 </a>    <span class="kwrd">import</span> <span class="hid">grain.utility</span> : <span class="hid">castArray</span>;
 <a id="L117" href="#L117" class="br">117 </a>
-<a id="L118" href="#L118" class="br">118 </a>    <span class="kwrd">auto</span> <span class="hid">file</span> = <a href="grain.hdf5.d.html#L135" title="grain.hdf5.H5Fopen" class="hid">H5Fopen</a>(<span class="hid">path.toStringz</span>, <span class="com">// path.exists ? H5F_ACC_RDWR :</span>
-<a id="L119" href="#L119" class="br">119 </a>            <a href="grain.hdf5.d.html#L0" title="grain.hdf5.H5F_ACC_RDONLY" class="hid">H5F_ACC_RDONLY</a>, <span class="com">//</span>
+<a id="L118" href="#L118" class="br">118 </a>    <span class="kwrd">auto</span> <span class="hid">file</span> = <span class="hid">H5Fopen</span>(<span class="hid">path.toStringz</span>, <span class="com">// path.exists ? H5F_ACC_RDWR :</span>
+<a id="L119" href="#L119" class="br">119 </a>            <span class="hid">H5F_ACC_RDONLY</span>, <span class="com">//</span>
 <a id="L120" href="#L120" class="br">120 </a>            <span class="com">// H5F_ACC_RDWR,</span>
-<a id="L121" href="#L121" class="br">121 </a>            <a href="grain.hdf5.d.html#L0" title="grain.hdf5.H5P_DEFAULT" class="hid">H5P_DEFAULT</a>);
+<a id="L121" href="#L121" class="br">121 </a>            <span class="hid">H5P_DEFAULT</span>);
 <a id="L122" href="#L122" class="br">122 </a>    <span class="kwrd">scope</span> (<span class="hid">exit</span>)
-<a id="L123" href="#L123" class="br">123 </a>        <a href="grain.hdf5.d.html#L137" title="grain.hdf5.H5Fclose" class="hid">H5Fclose</a>(<span class="hid">file</span>);
+<a id="L123" href="#L123" class="br">123 </a>        <span class="hid">H5Fclose</span>(<span class="hid">file</span>);
 <a id="L124" href="#L124" class="br">124 </a>
 <a id="L125" href="#L125" class="br">125 </a>    <span class="type">void</span> <span class="hid">register</span>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<span class="type">string</span> <span class="hid">k</span>, <span class="kwrd">ref</span> <span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">v</span>) {
-<a id="L126" href="#L126" class="br">126 </a>        <span class="kwrd">auto</span> <span class="hid">dataset</span> = <a href="grain.hdf5.d.html#L145" title="grain.hdf5.H5Dopen2" class="hid">H5Dopen2</a>(<span class="hid">file</span>, <span class="hid">toStringz</span>(<span class="str">&quot;/&quot;</span> ~ <span class="hid">k</span>), <a href="grain.hdf5.d.html#L0" title="grain.hdf5.H5P_DEFAULT" class="hid">H5P_DEFAULT</a>);
+<a id="L126" href="#L126" class="br">126 </a>        <span class="kwrd">auto</span> <span class="hid">dataset</span> = <span class="hid">H5Dopen2</span>(<span class="hid">file</span>, <span class="hid">toStringz</span>(<span class="str">&quot;/&quot;</span> ~ <span class="hid">k</span>), <span class="hid">H5P_DEFAULT</span>);
 <a id="L127" href="#L127" class="br">127 </a>        <span class="kwrd">scope</span> (<span class="hid">exit</span>)
-<a id="L128" href="#L128" class="br">128 </a>            <a href="grain.hdf5.d.html#L150" title="grain.hdf5.H5Dclose" class="hid">H5Dclose</a>(<span class="hid">dataset</span>);
+<a id="L128" href="#L128" class="br">128 </a>            <span class="hid">H5Dclose</span>(<span class="hid">dataset</span>);
 <a id="L129" href="#L129" class="br">129 </a>
 <a id="L130" href="#L130" class="br">130 </a>        <span class="kwrd">auto</span> <span class="hid">raw</span> = <span class="kwrd">new</span> <span class="hid">T</span>[<span class="hid">v.data.length</span>];
-<a id="L131" href="#L131" class="br">131 </a>        <a href="grain.hdf5.d.html#L152" title="grain.hdf5.H5Dread" class="hid">H5Dread</a>(<span class="hid">dataset</span>, <a href="grain.serializer.d.html#L68" title="grain.serializer.toH5Type" class="hid">toH5Type</a>!<span class="hid">T</span>, <a href="grain.hdf5.d.html#L0" title="grain.hdf5.H5S_ALL" class="hid">H5S_ALL</a>, <a href="grain.hdf5.d.html#L0" title="grain.hdf5.H5S_ALL" class="hid">H5S_ALL</a>, <a href="grain.hdf5.d.html#L0" title="grain.hdf5.H5P_DEFAULT" class="hid">H5P_DEFAULT</a>, <span class="kwrd">cast</span>(<span class="type">void</span>*)&amp;<span class="hid">raw</span>[
+<a id="L131" href="#L131" class="br">131 </a>        <span class="hid">H5Dread</span>(<span class="hid">dataset</span>, <a href="grain.serializer.d.html#L68" title="grain.serializer.toH5Type" class="hid">toH5Type</a>!<span class="hid">T</span>, <span class="hid">H5S_ALL</span>, <span class="hid">H5S_ALL</span>, <span class="hid">H5P_DEFAULT</span>, <span class="kwrd">cast</span>(<span class="type">void</span>*)&amp;<span class="hid">raw</span>[
 <a id="L132" href="#L132" class="br">132 </a>                <span class="num">0</span>]);
 <a id="L133" href="#L133" class="br">133 </a>
 <a id="L134" href="#L134" class="br">134 </a>        <span class="kwrd">auto</span> <span class="hid">src</span> = <span class="hid">raw.sliced</span>(<span class="hid">v.shape.castArray</span>!<span class="hid">size_t</span>).<span class="hid">variable</span>;

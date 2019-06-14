@@ -36,7 +36,7 @@
 <a id="L6" href="#L6" class="br">6 </a><span class="kwrd">import</span> <span class="hid">grain.autograd</span>;
 <a id="L7" href="#L7" class="br">7 </a><span class="kwrd">import</span> <span class="hid">grain.cuda</span>;
 <a id="L8" href="#L8" class="br">8 </a><span class="kwrd">import</span> <span class="hid">grain.functions.common</span>;
-<a id="L9" href="#L9" class="br">9 </a><span class="kwrd">import</span> <span class="hid">grain.utility</span> : <a href="grain.utility.d.html#L9" title="grain.utility.toTuple" class="hid">toTuple</a>, <a href="grain.utility.d.html#L18" title="grain.utility.fromTuple" class="hid">fromTuple</a>, <a href="grain.utility.d.html#L27" title="grain.utility.castArray" class="hid">castArray</a>;
+<a id="L9" href="#L9" class="br">9 </a><span class="kwrd">import</span> <span class="hid">grain.utility</span> : <span class="hid">toTuple</span>, <span class="hid">fromTuple</span>, <span class="hid">castArray</span>;
 <a id="L10" href="#L10" class="br">10 </a>
 <a id="L11" href="#L11" class="br">11 </a><span class="com">/// sum to scalar. mode is similar to mir.math.sum</span>
 <a id="L12" href="#L12" class="br">12 </a><span class="kwrd">struct</span> <a href="grain.functions.reduction.d.html#L12" title="grain.functions.reduction.Sum" class="hid">Sum</a>(<span class="type">string</span> <span class="hid">mode</span> = <span class="str">&quot;fast&quot;</span>, <span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>) {
@@ -81,7 +81,7 @@
 <a id="L51" href="#L51" class="br">51 </a>        }
 <a id="L52" href="#L52" class="br">52 </a>    }
 <a id="L53" href="#L53" class="br">53 </a>
-<a id="L54" href="#L54" class="br">54 </a>    <span class="kwrd">mixin</span> <span class="hid">FunctionCommon</span>;
+<a id="L54" href="#L54" class="br">54 </a>    <span class="kwrd">mixin</span> <a href="grain.functions.common.d.html#L43" title="grain.functions.common.FunctionCommon" class="hid">FunctionCommon</a>;
 <a id="L55" href="#L55" class="br">55 </a>}
 <a id="L56" href="#L56" class="br">56 </a>
 <a id="L57" href="#L57" class="br">57 </a><span class="com">///</span>

@@ -45,7 +45,7 @@
 <a id="L15" href="#L15" class="br">15 </a>
 <a id="L16" href="#L16" class="br">16 </a><span class="kwrd">import</span> <span class="hid">grain.autograd</span>; <span class="com">// : Variable, variable, to;</span>
 <a id="L17" href="#L17" class="br">17 </a><span class="kwrd">version</span> (<span class="hid">grain_cuda</span>) {
-<a id="L18" href="#L18" class="br">18 </a>    <span class="kwrd">import</span> <span class="hid">grain.cuda</span> : <span class="hid">zero_</span>;
+<a id="L18" href="#L18" class="br">18 </a>    <span class="kwrd">import</span> <span class="hid">grain.cuda</span> : <a href="grain.autograd.d.html#L25" title="grain.autograd.zero_" class="hid">zero_</a>;
 <a id="L19" href="#L19" class="br">19 </a>}
 <a id="L20" href="#L20" class="br">20 </a>
 <a id="L21" href="#L21" class="br">21 </a><span class="com">// enum isChain(T) = {</span>
@@ -59,7 +59,7 @@
 <a id="L29" href="#L29" class="br">29 </a><span class="com">//////// Unary functions</span>
 <a id="L30" href="#L30" class="br">30 </a>
 <a id="L31" href="#L31" class="br">31 </a><span class="com">/// rectified linear unit nonlinearity</span>
-<a id="L32" href="#L32" class="br">32 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L32" title="grain.chain.relu" class="hid">relu</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
+<a id="L32" href="#L32" class="br">32 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L32" title="grain.chain.relu" class="hid">relu</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
 <a id="L33" href="#L33" class="br">33 </a>    <span class="kwrd">import</span> <span class="hid">grain.functions</span> : <span class="hid">ReLU</span>;
 <a id="L34" href="#L34" class="br">34 </a>
 <a id="L35" href="#L35" class="br">35 </a>    <span class="kwrd">auto</span> <span class="hid">func</span> = <span class="kwrd">new</span> <span class="hid">ReLU</span>!(<span class="hid">T</span>, <span class="hid">dim</span>);
@@ -67,7 +67,7 @@
 <a id="L37" href="#L37" class="br">37 </a>}
 <a id="L38" href="#L38" class="br">38 </a>
 <a id="L39" href="#L39" class="br">39 </a><span class="com">/// sigmoid nonlinearity</span>
-<a id="L40" href="#L40" class="br">40 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L40" title="grain.chain.sigmoid" class="hid">sigmoid</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
+<a id="L40" href="#L40" class="br">40 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L40" title="grain.chain.sigmoid" class="hid">sigmoid</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
 <a id="L41" href="#L41" class="br">41 </a>    <span class="kwrd">import</span> <span class="hid">grain.functions</span> : <span class="hid">Sigmoid</span>;
 <a id="L42" href="#L42" class="br">42 </a>
 <a id="L43" href="#L43" class="br">43 </a>    <span class="kwrd">auto</span> <span class="hid">func</span> = <span class="kwrd">new</span> <span class="hid">Sigmoid</span>!(<span class="hid">T</span>, <span class="hid">dim</span>);
@@ -75,7 +75,7 @@
 <a id="L45" href="#L45" class="br">45 </a>}
 <a id="L46" href="#L46" class="br">46 </a>
 <a id="L47" href="#L47" class="br">47 </a><span class="com">/// tanh nonlinearity</span>
-<a id="L48" href="#L48" class="br">48 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L48" title="grain.chain.tanh" class="hid">tanh</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
+<a id="L48" href="#L48" class="br">48 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L48" title="grain.chain.tanh" class="hid">tanh</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
 <a id="L49" href="#L49" class="br">49 </a>    <span class="kwrd">import</span> <span class="hid">grain.functions</span> : <span class="hid">Tanh</span>;
 <a id="L50" href="#L50" class="br">50 </a>
 <a id="L51" href="#L51" class="br">51 </a>    <span class="kwrd">auto</span> <span class="hid">func</span> = <span class="kwrd">new</span> <span class="hid">Tanh</span>!(<span class="hid">T</span>, <span class="hid">dim</span>);
@@ -83,7 +83,7 @@
 <a id="L53" href="#L53" class="br">53 </a>}
 <a id="L54" href="#L54" class="br">54 </a>
 <a id="L55" href="#L55" class="br">55 </a><span class="com">/// 1 / x</span>
-<a id="L56" href="#L56" class="br">56 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L56" title="grain.chain.reciprocal" class="hid">reciprocal</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
+<a id="L56" href="#L56" class="br">56 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L56" title="grain.chain.reciprocal" class="hid">reciprocal</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
 <a id="L57" href="#L57" class="br">57 </a>    <span class="kwrd">import</span> <span class="hid">grain.functions</span> : <span class="hid">Reciprocal</span>;
 <a id="L58" href="#L58" class="br">58 </a>
 <a id="L59" href="#L59" class="br">59 </a>    <span class="kwrd">auto</span> <span class="hid">func</span> = <span class="kwrd">new</span> <span class="hid">Reciprocal</span>!(<span class="hid">T</span>, <span class="hid">dim</span>);
@@ -91,7 +91,7 @@
 <a id="L61" href="#L61" class="br">61 </a>}
 <a id="L62" href="#L62" class="br">62 </a>
 <a id="L63" href="#L63" class="br">63 </a><span class="com">/// -x</span>
-<a id="L64" href="#L64" class="br">64 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L64" title="grain.chain.neg" class="hid">neg</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
+<a id="L64" href="#L64" class="br">64 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L64" title="grain.chain.neg" class="hid">neg</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
 <a id="L65" href="#L65" class="br">65 </a>    <span class="kwrd">import</span> <span class="hid">grain.functions</span> : <span class="hid">Neg</span>;
 <a id="L66" href="#L66" class="br">66 </a>
 <a id="L67" href="#L67" class="br">67 </a>    <span class="kwrd">auto</span> <span class="hid">func</span> = <span class="kwrd">new</span> <span class="hid">Neg</span>!(<span class="hid">T</span>, <span class="hid">dim</span>);
@@ -99,7 +99,7 @@
 <a id="L69" href="#L69" class="br">69 </a>}
 <a id="L70" href="#L70" class="br">70 </a>
 <a id="L71" href="#L71" class="br">71 </a><span class="com">/// exp x</span>
-<a id="L72" href="#L72" class="br">72 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L72" title="grain.chain.exp" class="hid">exp</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
+<a id="L72" href="#L72" class="br">72 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L72" title="grain.chain.exp" class="hid">exp</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
 <a id="L73" href="#L73" class="br">73 </a>    <span class="kwrd">import</span> <span class="hid">grain.functions.unary</span> : <span class="hid">Exp</span>;
 <a id="L74" href="#L74" class="br">74 </a>
 <a id="L75" href="#L75" class="br">75 </a>    <span class="kwrd">auto</span> <span class="hid">func</span> = <span class="kwrd">new</span> <span class="hid">Exp</span>!(<span class="hid">T</span>, <span class="hid">dim</span>);
@@ -107,7 +107,7 @@
 <a id="L77" href="#L77" class="br">77 </a>}
 <a id="L78" href="#L78" class="br">78 </a>
 <a id="L79" href="#L79" class="br">79 </a><span class="com">/// log x</span>
-<a id="L80" href="#L80" class="br">80 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L80" title="grain.chain.log" class="hid">log</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
+<a id="L80" href="#L80" class="br">80 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L80" title="grain.chain.log" class="hid">log</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
 <a id="L81" href="#L81" class="br">81 </a>    <span class="kwrd">import</span> <span class="hid">grain.functions.unary</span> : <span class="hid">Log</span>;
 <a id="L82" href="#L82" class="br">82 </a>
 <a id="L83" href="#L83" class="br">83 </a>    <span class="kwrd">auto</span> <span class="hid">func</span> = <span class="kwrd">new</span> <span class="hid">Log</span>!(<span class="hid">T</span>, <span class="hid">dim</span>);
@@ -115,7 +115,7 @@
 <a id="L85" href="#L85" class="br">85 </a>}
 <a id="L86" href="#L86" class="br">86 </a>
 <a id="L87" href="#L87" class="br">87 </a><span class="com">/// sin x</span>
-<a id="L88" href="#L88" class="br">88 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L88" title="grain.chain.sin" class="hid">sin</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
+<a id="L88" href="#L88" class="br">88 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L88" title="grain.chain.sin" class="hid">sin</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
 <a id="L89" href="#L89" class="br">89 </a>    <span class="kwrd">import</span> <span class="hid">grain.functions.unary</span> : <span class="hid">Sin</span>;
 <a id="L90" href="#L90" class="br">90 </a>
 <a id="L91" href="#L91" class="br">91 </a>    <span class="kwrd">auto</span> <span class="hid">func</span> = <span class="kwrd">new</span> <span class="hid">Sin</span>!(<span class="hid">T</span>, <span class="hid">dim</span>);
@@ -123,7 +123,7 @@
 <a id="L93" href="#L93" class="br">93 </a>}
 <a id="L94" href="#L94" class="br">94 </a>
 <a id="L95" href="#L95" class="br">95 </a><span class="com">/// cos x</span>
-<a id="L96" href="#L96" class="br">96 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L96" title="grain.chain.cos" class="hid">cos</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
+<a id="L96" href="#L96" class="br">96 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L96" title="grain.chain.cos" class="hid">cos</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
 <a id="L97" href="#L97" class="br">97 </a>    <span class="kwrd">import</span> <span class="hid">grain.functions.unary</span> : <span class="hid">Cos</span>;
 <a id="L98" href="#L98" class="br">98 </a>
 <a id="L99" href="#L99" class="br">99 </a>    <span class="kwrd">auto</span> <span class="hid">func</span> = <span class="kwrd">new</span> <span class="hid">Cos</span>!(<span class="hid">T</span>, <span class="hid">dim</span>);
@@ -131,7 +131,7 @@
 <a id="L101" href="#L101" class="br">101 </a>}
 <a id="L102" href="#L102" class="br">102 </a>
 <a id="L103" href="#L103" class="br">103 </a><span class="com">/// tan x</span>
-<a id="L104" href="#L104" class="br">104 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L104" title="grain.chain.tan" class="hid">tan</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
+<a id="L104" href="#L104" class="br">104 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L104" title="grain.chain.tan" class="hid">tan</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
 <a id="L105" href="#L105" class="br">105 </a>    <span class="kwrd">import</span> <span class="hid">grain.functions.unary</span> : <span class="hid">Tan</span>;
 <a id="L106" href="#L106" class="br">106 </a>
 <a id="L107" href="#L107" class="br">107 </a>    <span class="kwrd">auto</span> <span class="hid">func</span> = <span class="kwrd">new</span> <span class="hid">Tan</span>!(<span class="hid">T</span>, <span class="hid">dim</span>);
@@ -139,7 +139,7 @@
 <a id="L109" href="#L109" class="br">109 </a>}
 <a id="L110" href="#L110" class="br">110 </a>
 <a id="L111" href="#L111" class="br">111 </a><span class="com">/// abs</span>
-<a id="L112" href="#L112" class="br">112 </a><span class="kwrd">auto</span>  <a href="grain.chain.d.html#L112" title="grain.chain.abs" class="hid">abs</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
+<a id="L112" href="#L112" class="br">112 </a><span class="kwrd">auto</span>  <a href="grain.chain.d.html#L112" title="grain.chain.abs" class="hid">abs</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
 <a id="L113" href="#L113" class="br">113 </a>    <span class="kwrd">import</span> <span class="hid">grain.functions.unary</span> : <span class="hid">Abs</span>;
 <a id="L114" href="#L114" class="br">114 </a>
 <a id="L115" href="#L115" class="br">115 </a>    <span class="kwrd">auto</span> <span class="hid">func</span> = <span class="kwrd">new</span> <span class="hid">Abs</span>!(<span class="hid">T</span>, <span class="hid">dim</span>);
@@ -147,7 +147,7 @@
 <a id="L117" href="#L117" class="br">117 </a>}
 <a id="L118" href="#L118" class="br">118 </a>
 <a id="L119" href="#L119" class="br">119 </a><span class="com">/// pow</span>
-<a id="L120" href="#L120" class="br">120 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L120" title="grain.chain.pow" class="hid">pow</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>, <span class="hid">T</span> <span class="hid">power</span>) {
+<a id="L120" href="#L120" class="br">120 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L120" title="grain.chain.pow" class="hid">pow</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>, <span class="hid">T</span> <span class="hid">power</span>) {
 <a id="L121" href="#L121" class="br">121 </a>    <span class="kwrd">import</span> <span class="hid">grain.functions.unary</span> : <span class="hid">Pow</span>;
 <a id="L122" href="#L122" class="br">122 </a>
 <a id="L123" href="#L123" class="br">123 </a>    <span class="kwrd">auto</span> <span class="hid">func</span> = <span class="kwrd">new</span> <span class="hid">Pow</span>!(<span class="hid">T</span>, <span class="hid">dim</span>)(<span class="hid">power</span>);
@@ -155,7 +155,7 @@
 <a id="L125" href="#L125" class="br">125 </a>}
 <a id="L126" href="#L126" class="br">126 </a>
 <a id="L127" href="#L127" class="br">127 </a><span class="com">/// log exp(x_i) / sum_i (exp(x_i))</span>
-<a id="L128" href="#L128" class="br">128 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L128" title="grain.chain.logSoftmax" class="hid">logSoftmax</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
+<a id="L128" href="#L128" class="br">128 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L128" title="grain.chain.logSoftmax" class="hid">logSoftmax</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
 <a id="L129" href="#L129" class="br">129 </a>    <span class="kwrd">import</span> <span class="hid">grain.functions.unary</span> : <span class="hid">LogSoftmax</span>;
 <a id="L130" href="#L130" class="br">130 </a>
 <a id="L131" href="#L131" class="br">131 </a>    <span class="kwrd">auto</span> <span class="hid">func</span> = <span class="kwrd">new</span> <span class="hid">LogSoftmax</span>!(<span class="hid">T</span>, <span class="hid">dim</span>);
@@ -180,8 +180,8 @@
 <a id="L150" href="#L150" class="br">150 </a><span class="com">/////// Loss</span>
 <a id="L151" href="#L151" class="br">151 </a>
 <a id="L152" href="#L152" class="br">152 </a><span class="com">/// negative loglikelihood - log p(x). note that p(x) should be normalized</span>
-<a id="L153" href="#L153" class="br">153 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L153" title="grain.chain.negativeLogLikelihood" class="hid">negativeLogLikelihood</a>(<span class="kwrd">alias</span> <span class="hid">Storage</span>)(<span class="hid">Variable</span>!(<span class="type">float</span>, <span class="num">2</span>, <span class="hid">Storage</span>) <span class="hid">x</span>,
-<a id="L154" href="#L154" class="br">154 </a>        <span class="hid">Variable</span>!(<span class="type">int</span>, <span class="num">1</span>, <span class="hid">Storage</span>) <span class="hid">t</span>, <span class="type">int</span> <span class="hid">ignoreIndex</span> = -<span class="num">100</span>) {
+<a id="L153" href="#L153" class="br">153 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L153" title="grain.chain.negativeLogLikelihood" class="hid">negativeLogLikelihood</a>(<span class="kwrd">alias</span> <span class="hid">Storage</span>)(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="type">float</span>, <span class="num">2</span>, <span class="hid">Storage</span>) <span class="hid">x</span>,
+<a id="L154" href="#L154" class="br">154 </a>        <a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="type">int</span>, <span class="num">1</span>, <span class="hid">Storage</span>) <span class="hid">t</span>, <span class="type">int</span> <span class="hid">ignoreIndex</span> = -<span class="num">100</span>) {
 <a id="L155" href="#L155" class="br">155 </a>    <span class="kwrd">import</span> <span class="hid">grain.functions</span> : <span class="hid">NegativeLogLikelihood</span>;
 <a id="L156" href="#L156" class="br">156 </a>
 <a id="L157" href="#L157" class="br">157 </a>    <span class="kwrd">auto</span> <span class="hid">nll</span> = <span class="kwrd">new</span> <span class="hid">NegativeLogLikelihood</span>!(<span class="type">float</span>, <span class="type">int</span>);
@@ -190,8 +190,8 @@
 <a id="L160" href="#L160" class="br">160 </a>}
 <a id="L161" href="#L161" class="br">161 </a>
 <a id="L162" href="#L162" class="br">162 </a><span class="com">/// cross entropy loss (logsoftmax -&gt; negative loglikelihood function)</span>
-<a id="L163" href="#L163" class="br">163 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L163" title="grain.chain.crossEntropy" class="hid">crossEntropy</a>(<span class="kwrd">alias</span> <span class="hid">Storage</span>)(<span class="hid">Variable</span>!(<span class="type">float</span>, <span class="num">2</span>, <span class="hid">Storage</span>) <span class="hid">x</span>,
-<a id="L164" href="#L164" class="br">164 </a>        <span class="hid">Variable</span>!(<span class="type">int</span>, <span class="num">1</span>, <span class="hid">Storage</span>) <span class="hid">t</span>, <span class="type">int</span> <span class="hid">ignoreIndex</span> = -<span class="num">100</span>) {
+<a id="L163" href="#L163" class="br">163 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L163" title="grain.chain.crossEntropy" class="hid">crossEntropy</a>(<span class="kwrd">alias</span> <span class="hid">Storage</span>)(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="type">float</span>, <span class="num">2</span>, <span class="hid">Storage</span>) <span class="hid">x</span>,
+<a id="L164" href="#L164" class="br">164 </a>        <a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="type">int</span>, <span class="num">1</span>, <span class="hid">Storage</span>) <span class="hid">t</span>, <span class="type">int</span> <span class="hid">ignoreIndex</span> = -<span class="num">100</span>) {
 <a id="L165" href="#L165" class="br">165 </a>    <span class="kwrd">import</span> <span class="hid">grain.functions</span> : <span class="hid">NegativeLogLikelihood</span>;
 <a id="L166" href="#L166" class="br">166 </a>
 <a id="L167" href="#L167" class="br">167 </a>    <span class="kwrd">auto</span> <span class="hid">y</span> = <a href="grain.chain.d.html#L128" title="grain.chain.logSoftmax" class="hid">logSoftmax</a>(<span class="hid">x</span>);
@@ -220,21 +220,21 @@
 <a id="L190" href="#L190" class="br">190 </a>    <span class="kwrd">static</span> <span class="kwrd">import</span> <span class="hid">grain.config</span>;
 <a id="L191" href="#L191" class="br">191 </a>    <span class="hid">grain.config.backprop</span> = <span class="kwrd">true</span>;
 <a id="L192" href="#L192" class="br">192 </a>
-<a id="L193" href="#L193" class="br">193 </a>    <span class="kwrd">auto</span> <span class="hid">hx</span> = [[<span class="num">0.1f</span>, <span class="num">0.2f</span>], [<span class="num">0.3f</span>, <span class="num">0.4f</span>], [<span class="num">0.5f</span>, <span class="num">0.6f</span>]].<span class="hid">variable</span>(<span class="kwrd">true</span>);
-<a id="L194" href="#L194" class="br">194 </a>    <span class="kwrd">auto</span> <span class="hid">ht</span> = [<span class="num">1</span>, <span class="num">0</span>, -<span class="num">100</span>].<span class="hid">variable</span>;
+<a id="L193" href="#L193" class="br">193 </a>    <span class="kwrd">auto</span> <span class="hid">hx</span> = [[<span class="num">0.1f</span>, <span class="num">0.2f</span>], [<span class="num">0.3f</span>, <span class="num">0.4f</span>], [<span class="num">0.5f</span>, <span class="num">0.6f</span>]].<a href="grain.autograd.d.html#L532" title="grain.autograd.variable" class="hid">variable</a>(<span class="kwrd">true</span>);
+<a id="L194" href="#L194" class="br">194 </a>    <span class="kwrd">auto</span> <span class="hid">ht</span> = [<span class="num">1</span>, <span class="num">0</span>, -<span class="num">100</span>].<a href="grain.autograd.d.html#L532" title="grain.autograd.variable" class="hid">variable</a>;
 <a id="L195" href="#L195" class="br">195 </a>    <span class="kwrd">auto</span> <span class="hid">hl</span> = <a href="grain.chain.d.html#L163" title="grain.chain.crossEntropy" class="hid">crossEntropy</a>(<span class="hid">hx</span>, <span class="hid">ht</span>);
 <a id="L196" href="#L196" class="br">196 </a>    <span class="hid">hl.backward</span>();
 <a id="L197" href="#L197" class="br">197 </a>    <span class="kwrd">assert</span>(<span class="hid">approxEqual</span>(<span class="hid">hx.gradSliced</span>, [[<span class="num">0.2375</span>, -<span class="num">0.2375</span>], [-<span class="num">0.2625</span>, <span class="num">0.2625</span>],
 <a id="L198" href="#L198" class="br">198 </a>            [<span class="num">0.0000</span>, <span class="num">0.0000</span>]].<span class="hid">nparray</span>));
 <a id="L199" href="#L199" class="br">199 </a>
 <a id="L200" href="#L200" class="br">200 </a>    <span class="kwrd">version</span> (<span class="hid">grain_cuda</span>) {
-<a id="L201" href="#L201" class="br">201 </a>        <span class="kwrd">auto</span> <span class="hid">dx</span> = <span class="hid">hx.to</span>!<span class="hid">DeviceStorage</span>;
+<a id="L201" href="#L201" class="br">201 </a>        <span class="kwrd">auto</span> <span class="hid">dx</span> = <span class="hid">hx.to</span>!<a href="grain.autograd.d.html#L91" title="grain.autograd.DeviceStorage" class="hid">DeviceStorage</a>;
 <a id="L202" href="#L202" class="br">202 </a>        <span class="hid">dx.grad.zero_</span>();
-<a id="L203" href="#L203" class="br">203 </a>        <span class="kwrd">auto</span> <span class="hid">dt</span> = <span class="hid">ht.to</span>!<span class="hid">DeviceStorage</span>;
+<a id="L203" href="#L203" class="br">203 </a>        <span class="kwrd">auto</span> <span class="hid">dt</span> = <span class="hid">ht.to</span>!<a href="grain.autograd.d.html#L91" title="grain.autograd.DeviceStorage" class="hid">DeviceStorage</a>;
 <a id="L204" href="#L204" class="br">204 </a>        <span class="kwrd">auto</span> <span class="hid">dl</span> = <a href="grain.chain.d.html#L163" title="grain.chain.crossEntropy" class="hid">crossEntropy</a>(<span class="hid">dx</span>, <span class="hid">dt</span>);
-<a id="L205" href="#L205" class="br">205 </a>        <span class="kwrd">assert</span>(<span class="hid">approxEqual</span>(<span class="hid">hl.sliced</span>, <span class="hid">dl.to</span>!<span class="hid">HostStorage.sliced</span>));
+<a id="L205" href="#L205" class="br">205 </a>        <span class="kwrd">assert</span>(<span class="hid">approxEqual</span>(<span class="hid">hl.sliced</span>, <span class="hid">dl.to</span>!<a href="grain.autograd.d.html#L22" title="grain.autograd.HostStorage" class="hid">HostStorage.sliced</a>));
 <a id="L206" href="#L206" class="br">206 </a>        <span class="hid">dl.backward</span>();
-<a id="L207" href="#L207" class="br">207 </a>        <span class="kwrd">assert</span>(<span class="hid">approxEqual</span>(<span class="hid">dx.to</span>!<span class="hid">HostStorage.gradSliced</span>, <span class="hid">hx.gradSliced</span>));
+<a id="L207" href="#L207" class="br">207 </a>        <span class="kwrd">assert</span>(<span class="hid">approxEqual</span>(<span class="hid">dx.to</span>!<a href="grain.autograd.d.html#L22" title="grain.autograd.HostStorage" class="hid">HostStorage.gradSliced</a>, <span class="hid">hx.gradSliced</span>));
 <a id="L208" href="#L208" class="br">208 </a>    }
 <a id="L209" href="#L209" class="br">209 </a>}
 <a id="L210" href="#L210" class="br">210 </a>
@@ -245,8 +245,8 @@
 <a id="L215" href="#L215" class="br">215 </a>
 <a id="L216" href="#L216" class="br">216 </a>  this function is tested under grain.autograd.Variable.opBinary
 <a id="L217" href="#L217" class="br">217 </a>*/</span>
-<a id="L218" href="#L218" class="br">218 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L218" title="grain.chain.opBinaryFunc" class="hid">opBinaryFunc</a>(<span class="type">string</span> <span class="hid">op</span>, <span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>,
-<a id="L219" href="#L219" class="br">219 </a>        <span class="hid">Storage</span>) <span class="hid">a</span>, <span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">b</span>, <span class="hid">T</span> <span class="hid">alpha1</span> = <span class="num">1</span>, <span class="hid">T</span> <span class="hid">alpha2</span> = <span class="num">1</span>) {
+<a id="L218" href="#L218" class="br">218 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L218" title="grain.chain.opBinaryFunc" class="hid">opBinaryFunc</a>(<span class="type">string</span> <span class="hid">op</span>, <span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>,
+<a id="L219" href="#L219" class="br">219 </a>        <span class="hid">Storage</span>) <span class="hid">a</span>, <a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">b</span>, <span class="hid">T</span> <span class="hid">alpha1</span> = <span class="num">1</span>, <span class="hid">T</span> <span class="hid">alpha2</span> = <span class="num">1</span>) {
 <a id="L220" href="#L220" class="br">220 </a>    <span class="kwrd">import</span> <span class="hid">grain.functions</span> : <span class="hid">OpBinary</span>;
 <a id="L221" href="#L221" class="br">221 </a>
 <a id="L222" href="#L222" class="br">222 </a>    <span class="kwrd">auto</span> <span class="hid">func</span> = <span class="kwrd">new</span> <span class="hid">OpBinary</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">op</span>)(<span class="hid">alpha1</span>, <span class="hid">alpha2</span>);
@@ -254,7 +254,7 @@
 <a id="L224" href="#L224" class="br">224 </a>}
 <a id="L225" href="#L225" class="br">225 </a>
 <a id="L226" href="#L226" class="br">226 </a><span class="com">/// matrix x matrix multiplication</span>
-<a id="L227" href="#L227" class="br">227 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L227" title="grain.chain.matMul" class="hid">matMul</a>(<span class="hid">T</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="num">2</span>, <span class="hid">Storage</span>) <span class="hid">a</span>, <span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="num">2</span>, <span class="hid">Storage</span>) <span class="hid">b</span>) {
+<a id="L227" href="#L227" class="br">227 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L227" title="grain.chain.matMul" class="hid">matMul</a>(<span class="hid">T</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="num">2</span>, <span class="hid">Storage</span>) <span class="hid">a</span>, <a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="num">2</span>, <span class="hid">Storage</span>) <span class="hid">b</span>) {
 <a id="L228" href="#L228" class="br">228 </a>    <span class="kwrd">import</span> <span class="hid">grain.functions</span> : <span class="hid">MatMul</span>;
 <a id="L229" href="#L229" class="br">229 </a>
 <a id="L230" href="#L230" class="br">230 </a>    <span class="kwrd">auto</span> <span class="hid">func</span> = <span class="kwrd">new</span> <span class="hid">MatMul</span>!<span class="hid">T</span>;
@@ -262,7 +262,7 @@
 <a id="L232" href="#L232" class="br">232 </a>}
 <a id="L233" href="#L233" class="br">233 </a>
 <a id="L234" href="#L234" class="br">234 </a><span class="com">/// matrix + vector row-wise addition. TODO replace this with broadcasted addition</span>
-<a id="L235" href="#L235" class="br">235 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L235" title="grain.chain.addVec" class="hid">addVec</a>(<span class="hid">T</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="num">2</span>, <span class="hid">Storage</span>) <span class="hid">a</span>, <span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="num">1</span>, <span class="hid">Storage</span>) <span class="hid">b</span>) {
+<a id="L235" href="#L235" class="br">235 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L235" title="grain.chain.addVec" class="hid">addVec</a>(<span class="hid">T</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="num">2</span>, <span class="hid">Storage</span>) <span class="hid">a</span>, <a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="num">1</span>, <span class="hid">Storage</span>) <span class="hid">b</span>) {
 <a id="L236" href="#L236" class="br">236 </a>    <span class="kwrd">import</span> <span class="hid">grain.functions</span> : <span class="hid">AddBias</span>;
 <a id="L237" href="#L237" class="br">237 </a>
 <a id="L238" href="#L238" class="br">238 </a>    <span class="kwrd">auto</span> <span class="hid">func</span> = <span class="kwrd">new</span> <span class="hid">AddBias</span>!<span class="hid">T</span>;
@@ -271,7 +271,7 @@
 <a id="L241" href="#L241" class="br">241 </a>
 <a id="L242" href="#L242" class="br">242 </a><span class="com">/// tensor convolution (do cross correlation default)</span>
 <a id="L243" href="#L243" class="br">243 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L243" title="grain.chain.convolution" class="hid">convolution</a>(<span class="type">bool</span> <span class="hid">isConv</span> = <span class="kwrd">false</span>, <span class="type">bool</span> <span class="hid">isNchw</span> = <span class="kwrd">true</span>, <span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="hid">size_t</span> <span class="hid">imDim</span>,
-<a id="L244" href="#L244" class="br">244 </a>        <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>, <span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>,
+<a id="L244" href="#L244" class="br">244 </a>        <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>, <a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>,
 <a id="L245" href="#L245" class="br">245 </a>        <span class="hid">Storage</span>) <span class="hid">w</span>, <span class="type">int</span>[<span class="hid">imDim</span>] <span class="hid">stride</span>, <span class="type">int</span>[<span class="hid">imDim</span>] <span class="hid">pad</span>, <span class="type">int</span>[<span class="hid">imDim</span>] <span class="hid">dilation</span>) {
 <a id="L246" href="#L246" class="br">246 </a>    <span class="kwrd">static</span> <span class="kwrd">assert</span>(<span class="hid">dim</span> == <span class="hid">imDim</span> + <span class="num">2</span>);
 <a id="L247" href="#L247" class="br">247 </a>    <span class="kwrd">import</span> <span class="hid">grain.functions</span> : <a href="grain.chain.d.html#L260" title="grain.chain.Convolution" class="hid">Convolution</a>;
@@ -291,8 +291,8 @@
 <a id="L261" href="#L261" class="br">261 </a>    <span class="kwrd">import</span> <span class="hid">grain.utility</span> : <span class="hid">castArray</span>;
 <a id="L262" href="#L262" class="br">262 </a>    <span class="kwrd">import</span> <span class="hid">mir.ndslice</span> : <span class="hid">slice</span>;
 <a id="L263" href="#L263" class="br">263 </a>
-<a id="L264" href="#L264" class="br">264 </a>    <span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span> + <span class="num">2</span>, <span class="hid">Storage</span>) <span class="hid">weight</span>;
-<a id="L265" href="#L265" class="br">265 </a>    <span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span> + <span class="num">2</span>, <span class="hid">Storage</span>) <span class="hid">bias</span>; <span class="com">// TODO implement unsqueeze</span>
+<a id="L264" href="#L264" class="br">264 </a>    <a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span> + <span class="num">2</span>, <span class="hid">Storage</span>) <span class="hid">weight</span>;
+<a id="L265" href="#L265" class="br">265 </a>    <a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span> + <span class="num">2</span>, <span class="hid">Storage</span>) <span class="hid">bias</span>; <span class="com">// TODO implement unsqueeze</span>
 <a id="L266" href="#L266" class="br">266 </a>    <span class="type">int</span> <span class="hid">nInput</span>, <span class="hid">nOutput</span>;
 <a id="L267" href="#L267" class="br">267 </a>    <span class="type">bool</span> <span class="hid">useBias</span> = <span class="kwrd">true</span>;
 <a id="L268" href="#L268" class="br">268 </a>    <span class="type">int</span>[<span class="hid">dim</span>] <span class="hid">kernel</span>, <span class="hid">stride</span>, <span class="hid">pad</span>, <span class="hid">dilation</span>;
@@ -346,18 +346,18 @@
 <a id="L316" href="#L316" class="br">316 </a>        <span class="hid">wshape</span>[<span class="num">1</span>] = <span class="kwrd">this</span>.<span class="hid">nInput</span>;
 <a id="L317" href="#L317" class="br">317 </a>        <span class="hid">wshape</span>[<span class="num">2</span> .. $] = <span class="kwrd">this</span>.<span class="hid">kernel</span>;
 <a id="L318" href="#L318" class="br">318 </a>        <span class="kwrd">this</span>.<span class="hid">weight</span> = <span class="hid">UniformVariable</span>!<span class="hid">T</span>(-<span class="hid">stdv</span>, <span class="hid">stdv</span>)
-<a id="L319" href="#L319" class="br">319 </a>            .<span class="hid">generate</span>(<span class="hid">wshape.castArray</span>!<span class="hid">size_t</span>).<span class="hid">slice.variable</span>(<span class="kwrd">true</span>).<span class="hid">to</span>!<span class="hid">Storage</span>;
+<a id="L319" href="#L319" class="br">319 </a>            .<span class="hid">generate</span>(<span class="hid">wshape.castArray</span>!<span class="hid">size_t</span>).<span class="hid">slice.variable</span>(<span class="kwrd">true</span>).<a href="grain.autograd.d.html#L97" title="grain.autograd.to" class="hid">to</a>!<span class="hid">Storage</span>;
 <a id="L320" href="#L320" class="br">320 </a>        <span class="kwrd">if</span> (<span class="kwrd">this</span>.<span class="hid">useBias</span>) {
 <a id="L321" href="#L321" class="br">321 </a>            <span class="type">int</span>[<span class="hid">dim</span> + <span class="num">2</span>] <span class="hid">bshape</span>;
 <a id="L322" href="#L322" class="br">322 </a>            <span class="hid">bshape</span>[] = <span class="num">1</span>;
 <a id="L323" href="#L323" class="br">323 </a>            <span class="hid">bshape</span>[<span class="num">1</span>] = <span class="kwrd">this</span>.<span class="hid">nOutput</span>;
 <a id="L324" href="#L324" class="br">324 </a>            <span class="kwrd">this</span>.<span class="hid">bias</span> = <span class="hid">UniformVariable</span>!<span class="hid">T</span>(-<span class="hid">stdv</span>, <span class="hid">stdv</span>).<span class="hid">generate</span>(
-<a id="L325" href="#L325" class="br">325 </a>                    <span class="hid">bshape.castArray</span>!<span class="hid">size_t</span>).<span class="hid">slice.variable</span>(<span class="kwrd">true</span>).<span class="hid">to</span>!<span class="hid">Storage</span>;
+<a id="L325" href="#L325" class="br">325 </a>                    <span class="hid">bshape.castArray</span>!<span class="hid">size_t</span>).<span class="hid">slice.variable</span>(<span class="kwrd">true</span>).<a href="grain.autograd.d.html#L97" title="grain.autograd.to" class="hid">to</a>!<span class="hid">Storage</span>;
 <a id="L326" href="#L326" class="br">326 </a>        }
 <a id="L327" href="#L327" class="br">327 </a>    }
 <a id="L328" href="#L328" class="br">328 </a>
 <a id="L329" href="#L329" class="br">329 </a>    <span class="com">///</span>
-<a id="L330" href="#L330" class="br">330 </a>    <span class="kwrd">auto</span> <span class="hid">opCall</span>(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span> + <span class="num">2</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
+<a id="L330" href="#L330" class="br">330 </a>    <span class="kwrd">auto</span> <span class="hid">opCall</span>(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span> + <span class="num">2</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
 <a id="L331" href="#L331" class="br">331 </a>        <span class="kwrd">auto</span> <span class="hid">wx</span> = <a href="grain.chain.d.html#L243" title="grain.chain.convolution" class="hid">convolution</a>(<span class="hid">x</span>, <span class="kwrd">this</span>.<span class="hid">weight</span>, <span class="kwrd">this</span>.<span class="hid">stride</span>, <span class="kwrd">this</span>.<span class="hid">pad</span>, <span class="kwrd">this</span>
 <a id="L332" href="#L332" class="br">332 </a>                .<span class="hid">dilation</span>);
 <a id="L333" href="#L333" class="br">333 </a>        <span class="kwrd">if</span> (<span class="kwrd">this</span>.<span class="hid">useBias</span>) {
@@ -376,7 +376,7 @@
 <a id="L346" href="#L346" class="br">346 </a>    <span class="kwrd">import</span> <a href="grain.chain.d.html#L14" title="grain.chain.numir" class="hid">numir</a>;
 <a id="L347" href="#L347" class="br">347 </a>    <span class="kwrd">import</span> <span class="hid">mir.ndslice</span>;
 <a id="L348" href="#L348" class="br">348 </a>
-<a id="L349" href="#L349" class="br">349 </a>    <span class="kwrd">auto</span> <span class="hid">conv</span> = <a href="grain.chain.d.html#L260" title="grain.chain.Convolution" class="hid">Convolution</a>!(<span class="type">float</span>, <span class="num">2</span>, <span class="hid">HostStorage</span>)(<span class="num">3</span>, <span class="num">4</span>, [<span class="num">3</span>, <span class="num">3</span>]);
+<a id="L349" href="#L349" class="br">349 </a>    <span class="kwrd">auto</span> <span class="hid">conv</span> = <a href="grain.chain.d.html#L260" title="grain.chain.Convolution" class="hid">Convolution</a>!(<span class="type">float</span>, <span class="num">2</span>, <a href="grain.autograd.d.html#L22" title="grain.autograd.HostStorage" class="hid">HostStorage</a>)(<span class="num">3</span>, <span class="num">4</span>, [<span class="num">3</span>, <span class="num">3</span>]);
 <a id="L350" href="#L350" class="br">350 </a>    <span class="kwrd">auto</span> <span class="hid">x</span> = <span class="hid">uniform</span>!<span class="type">float</span>(<span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">4</span>).<span class="hid">slice.variable</span>(<span class="kwrd">true</span>);
 <a id="L351" href="#L351" class="br">351 </a>    <span class="kwrd">auto</span> <span class="hid">y</span> = <span class="hid">conv</span>(<span class="hid">x</span>);
 <a id="L352" href="#L352" class="br">352 </a>    <span class="kwrd">auto</span> <span class="hid">gy</span> = <span class="hid">uniform</span>!<span class="type">float</span>(<span class="hid">y.shape.castArray</span>!<span class="hid">size_t</span>).<span class="hid">slice.variable</span>;
@@ -387,8 +387,8 @@
 <a id="L357" href="#L357" class="br">357 </a><span class="kwrd">struct</span> <a href="grain.chain.d.html#L357" title="grain.chain.Linear" class="hid">Linear</a>(<span class="hid">T</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>) <span class="kwrd">if</span> (<span class="hid">isFloatingPoint</span>!<span class="hid">T</span>) {
 <a id="L358" href="#L358" class="br">358 </a>    <span class="kwrd">import</span> <span class="hid">mir.ndslice</span> : <span class="hid">slice</span>;
 <a id="L359" href="#L359" class="br">359 </a>
-<a id="L360" href="#L360" class="br">360 </a>    <span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="num">2</span>, <span class="hid">Storage</span>) <span class="hid">weight</span>;
-<a id="L361" href="#L361" class="br">361 </a>    <span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="num">1</span>, <span class="hid">Storage</span>) <span class="hid">bias</span>;
+<a id="L360" href="#L360" class="br">360 </a>    <a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="num">2</span>, <span class="hid">Storage</span>) <span class="hid">weight</span>;
+<a id="L361" href="#L361" class="br">361 </a>    <a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="num">1</span>, <span class="hid">Storage</span>) <span class="hid">bias</span>;
 <a id="L362" href="#L362" class="br">362 </a>    <span class="type">int</span> <span class="hid">nInput</span>, <span class="hid">nOutput</span>;
 <a id="L363" href="#L363" class="br">363 </a>    <span class="type">bool</span> <span class="hid">useBias</span> = <span class="kwrd">true</span>;
 <a id="L364" href="#L364" class="br">364 </a>
@@ -406,14 +406,14 @@
 <a id="L376" href="#L376" class="br">376 </a>
 <a id="L377" href="#L377" class="br">377 </a>        <span class="kwrd">auto</span> <span class="hid">stdv</span> = <span class="num">1.0</span> / (<span class="kwrd">cast</span>(<span class="hid">T</span>) <span class="kwrd">this</span>.<span class="hid">nOutput</span> ^^ <span class="num">0.5</span>);
 <a id="L378" href="#L378" class="br">378 </a>        <span class="kwrd">this</span>.<span class="hid">weight</span> = <span class="hid">UniformVariable</span>!<span class="hid">T</span>(-<span class="hid">stdv</span>, <span class="hid">stdv</span>).<span class="hid">generate</span>(<span class="kwrd">this</span>.<span class="hid">nInput</span>,
-<a id="L379" href="#L379" class="br">379 </a>                <span class="kwrd">this</span>.<span class="hid">nOutput</span>).<span class="hid">slice.variable</span>(<span class="kwrd">true</span>).<span class="hid">to</span>!<span class="hid">Storage</span>;
+<a id="L379" href="#L379" class="br">379 </a>                <span class="kwrd">this</span>.<span class="hid">nOutput</span>).<span class="hid">slice.variable</span>(<span class="kwrd">true</span>).<a href="grain.autograd.d.html#L97" title="grain.autograd.to" class="hid">to</a>!<span class="hid">Storage</span>;
 <a id="L380" href="#L380" class="br">380 </a>        <span class="kwrd">if</span> (<span class="kwrd">this</span>.<span class="hid">useBias</span>) {
 <a id="L381" href="#L381" class="br">381 </a>            <span class="kwrd">this</span>.<span class="hid">bias</span> = <span class="hid">UniformVariable</span>!<span class="hid">T</span>(-<span class="hid">stdv</span>, <span class="hid">stdv</span>).<span class="hid">generate</span>(<span class="kwrd">this</span>.<span class="hid">nOutput</span>)
-<a id="L382" href="#L382" class="br">382 </a>                .<span class="hid">slice.variable</span>(<span class="kwrd">true</span>).<span class="hid">to</span>!<span class="hid">Storage</span>;
+<a id="L382" href="#L382" class="br">382 </a>                .<span class="hid">slice.variable</span>(<span class="kwrd">true</span>).<a href="grain.autograd.d.html#L97" title="grain.autograd.to" class="hid">to</a>!<span class="hid">Storage</span>;
 <a id="L383" href="#L383" class="br">383 </a>        }
 <a id="L384" href="#L384" class="br">384 </a>    }
 <a id="L385" href="#L385" class="br">385 </a>
-<a id="L386" href="#L386" class="br">386 </a>    <span class="kwrd">auto</span> <span class="hid">opCall</span>(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="num">2</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
+<a id="L386" href="#L386" class="br">386 </a>    <span class="kwrd">auto</span> <span class="hid">opCall</span>(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="num">2</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
 <a id="L387" href="#L387" class="br">387 </a>        <span class="kwrd">auto</span> <span class="hid">wx</span> = <a href="grain.chain.d.html#L227" title="grain.chain.matMul" class="hid">matMul</a>(<span class="hid">x</span>, <span class="kwrd">this</span>.<span class="hid">weight</span>);
 <a id="L388" href="#L388" class="br">388 </a>        <span class="kwrd">if</span> (<span class="kwrd">this</span>.<span class="hid">useBias</span>) {
 <a id="L389" href="#L389" class="br">389 </a>            <span class="kwrd">return</span> <a href="grain.chain.d.html#L235" title="grain.chain.addVec" class="hid">addVec</a>(<span class="hid">wx</span>, <span class="kwrd">this</span>.<span class="hid">bias</span>);
@@ -431,7 +431,7 @@
 <a id="L401" href="#L401" class="br">401 </a>    <span class="kwrd">import</span> <a href="grain.chain.d.html#L14" title="grain.chain.numir" class="hid">numir</a>;
 <a id="L402" href="#L402" class="br">402 </a>    <span class="kwrd">import</span> <span class="hid">mir.ndslice</span>;
 <a id="L403" href="#L403" class="br">403 </a>
-<a id="L404" href="#L404" class="br">404 </a>    <span class="kwrd">auto</span> <span class="hid">f</span> = <a href="grain.chain.d.html#L357" title="grain.chain.Linear" class="hid">Linear</a>!(<span class="type">float</span>, <span class="hid">HostStorage</span>)(<span class="num">2</span>, <span class="num">3</span>);
+<a id="L404" href="#L404" class="br">404 </a>    <span class="kwrd">auto</span> <span class="hid">f</span> = <a href="grain.chain.d.html#L357" title="grain.chain.Linear" class="hid">Linear</a>!(<span class="type">float</span>, <a href="grain.autograd.d.html#L22" title="grain.autograd.HostStorage" class="hid">HostStorage</a>)(<span class="num">2</span>, <span class="num">3</span>);
 <a id="L405" href="#L405" class="br">405 </a>    <span class="kwrd">auto</span> <span class="hid">x</span> = <span class="hid">uniform</span>!<span class="type">float</span>(<span class="num">2</span>, <span class="num">2</span>).<span class="hid">slice.variable</span>(<span class="kwrd">true</span>);
 <a id="L406" href="#L406" class="br">406 </a>    <span class="kwrd">auto</span> <span class="hid">y</span> = <span class="hid">f</span>(<span class="hid">x</span>);
 <a id="L407" href="#L407" class="br">407 </a>    <span class="kwrd">auto</span> <span class="hid">gy</span> = <span class="hid">uniform</span>!<span class="type">float</span>(<span class="hid">y.shape.castArray</span>!<span class="hid">size_t</span>).<span class="hid">slice.variable</span>;
@@ -442,7 +442,7 @@
 <a id="L412" href="#L412" class="br">412 </a><span class="kwrd">struct</span> <a href="grain.chain.d.html#L412" title="grain.chain.Embedding" class="hid">Embedding</a>(<span class="hid">T</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>) <span class="kwrd">if</span> (<span class="hid">isFloatingPoint</span>!<span class="hid">T</span>) {
 <a id="L413" href="#L413" class="br">413 </a>    <span class="kwrd">import</span> <span class="hid">mir.ndslice</span> : <span class="hid">slice</span>;
 <a id="L414" href="#L414" class="br">414 </a>
-<a id="L415" href="#L415" class="br">415 </a>    <span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="num">2</span>, <span class="hid">Storage</span>) <span class="hid">weight</span>;
+<a id="L415" href="#L415" class="br">415 </a>    <a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="num">2</span>, <span class="hid">Storage</span>) <span class="hid">weight</span>;
 <a id="L416" href="#L416" class="br">416 </a>    <span class="type">uint</span> <span class="hid">nVocab</span>, <span class="hid">nEmbed</span>;
 <a id="L417" href="#L417" class="br">417 </a>
 <a id="L418" href="#L418" class="br">418 </a>    <span class="kwrd">this</span>(<span class="type">uint</span> <span class="hid">nVocab</span>, <span class="type">uint</span> <span class="hid">nEmbed</span>) {
@@ -453,10 +453,10 @@
 <a id="L423" href="#L423" class="br">423 </a>
 <a id="L424" href="#L424" class="br">424 </a>    <span class="type">void</span> <span class="hid">resetParameters</span>() {
 <a id="L425" href="#L425" class="br">425 </a>        <span class="kwrd">import</span> <a href="grain.chain.d.html#L14" title="grain.chain.numir" class="hid">numir</a> : <span class="hid">normal</span>;
-<a id="L426" href="#L426" class="br">426 </a>        <span class="kwrd">this</span>.<span class="hid">weight</span> = <span class="hid">normal</span>!<span class="hid">T</span>(<span class="kwrd">this</span>.<span class="hid">nVocab</span>, <span class="kwrd">this</span>.<span class="hid">nEmbed</span>).<span class="hid">slice.variable</span>(<span class="kwrd">true</span>).<span class="hid">to</span>!<span class="hid">Storage</span>;
+<a id="L426" href="#L426" class="br">426 </a>        <span class="kwrd">this</span>.<span class="hid">weight</span> = <span class="hid">normal</span>!<span class="hid">T</span>(<span class="kwrd">this</span>.<span class="hid">nVocab</span>, <span class="kwrd">this</span>.<span class="hid">nEmbed</span>).<span class="hid">slice.variable</span>(<span class="kwrd">true</span>).<a href="grain.autograd.d.html#L97" title="grain.autograd.to" class="hid">to</a>!<span class="hid">Storage</span>;
 <a id="L427" href="#L427" class="br">427 </a>    }
 <a id="L428" href="#L428" class="br">428 </a>
-<a id="L429" href="#L429" class="br">429 </a>    <span class="kwrd">auto</span> <span class="hid">opCall</span>(<span class="hid">Variable</span>!(<span class="type">int</span>, <span class="num">1</span>, <span class="hid">Storage</span>) <span class="hid">ids</span>) {
+<a id="L429" href="#L429" class="br">429 </a>    <span class="kwrd">auto</span> <span class="hid">opCall</span>(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="type">int</span>, <span class="num">1</span>, <span class="hid">Storage</span>) <span class="hid">ids</span>) {
 <a id="L430" href="#L430" class="br">430 </a>        <span class="kwrd">import</span> <span class="hid">grain.functions</span>;
 <a id="L431" href="#L431" class="br">431 </a>
 <a id="L432" href="#L432" class="br">432 </a>        <span class="kwrd">auto</span> <span class="hid">func</span> = <span class="kwrd">new</span> <span class="hid">grain.functions.Embedding</span>!<span class="hid">T</span>;
@@ -469,7 +469,7 @@
 <a id="L439" href="#L439" class="br">439 </a><span class="com">/// reorganizing shape while it hold total elements a.k.a. reshape.</span>
 <a id="L440" href="#L440" class="br">440 </a><span class="com">/// At most one dimension of the new shape can be -1.</span>
 <a id="L441" href="#L441" class="br">441 </a><span class="com">/// In this case, the value is inferred from the size of the tensor and the remaining dimensions.</span>
-<a id="L442" href="#L442" class="br">442 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L442" title="grain.chain.view" class="hid">view</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">sdim</span>, <span class="hid">size_t</span> <span class="hid">tdim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">sdim</span>,
+<a id="L442" href="#L442" class="br">442 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L442" title="grain.chain.view" class="hid">view</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">sdim</span>, <span class="hid">size_t</span> <span class="hid">tdim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">sdim</span>,
 <a id="L443" href="#L443" class="br">443 </a>        <span class="hid">Storage</span>) <span class="hid">x</span>, <span class="hid">ptrdiff_t</span>[<span class="hid">tdim</span>] <span class="hid">shape</span>...) {
 <a id="L444" href="#L444" class="br">444 </a>    <span class="kwrd">import</span> <span class="hid">grain.functions</span>;
 <a id="L445" href="#L445" class="br">445 </a>
@@ -485,7 +485,7 @@
 <a id="L455" href="#L455" class="br">455 </a>
 <a id="L456" href="#L456" class="br">456 </a>    <span class="kwrd">auto</span> <span class="hid">hx</span> = <span class="hid">uniform</span>!<span class="type">float</span>(<span class="num">6</span>, <span class="num">4</span>).<span class="hid">slice.variable</span>(<span class="kwrd">true</span>);
 <a id="L457" href="#L457" class="br">457 </a>    <span class="kwrd">auto</span> <span class="hid">hgy</span> = <span class="hid">uniform</span>!<span class="type">float</span>(<span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>).<span class="hid">slice.variable</span>;
-<a id="L458" href="#L458" class="br">458 </a>    <span class="kwrd">auto</span> <span class="hid">ugy</span> = <span class="hid">UntypedVariable</span>(<span class="hid">hgy</span>);
+<a id="L458" href="#L458" class="br">458 </a>    <span class="kwrd">auto</span> <span class="hid">ugy</span> = <a href="grain.autograd.d.html#L117" title="grain.autograd.UntypedVariable" class="hid">UntypedVariable</a>(<span class="hid">hgy</span>);
 <a id="L459" href="#L459" class="br">459 </a>    <span class="kwrd">auto</span> <span class="hid">hy</span> = <span class="hid">hx.view</span>([<span class="num">2</span>, <span class="num">3</span>, -<span class="num">1</span>]);
 <a id="L460" href="#L460" class="br">460 </a>    <span class="kwrd">assert</span>(<span class="hid">hy.sliced</span> == <a href="grain.chain.d.html#L442" title="grain.chain.view" class="hid">numir.view</a>(<span class="hid">hx.sliced</span>, [<span class="num">2</span>, <span class="num">3</span>, -<span class="num">1</span>]));
 <a id="L461" href="#L461" class="br">461 </a>    <span class="hid">hy.backward</span>(&amp;<span class="hid">ugy</span>);
@@ -495,7 +495,7 @@
 <a id="L465" href="#L465" class="br">465 </a>
 <a id="L466" href="#L466" class="br">466 </a>
 <a id="L467" href="#L467" class="br">467 </a><span class="com">/// squeeze/remove redundant size-1 dimension (axis) d</span>
-<a id="L468" href="#L468" class="br">468 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L468" title="grain.chain.squeeze" class="hid">squeeze</a>(<span class="hid">size_t</span> <span class="hid">d</span>, <span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
+<a id="L468" href="#L468" class="br">468 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L468" title="grain.chain.squeeze" class="hid">squeeze</a>(<span class="hid">size_t</span> <span class="hid">d</span>, <span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
 <a id="L469" href="#L469" class="br">469 </a>    <span class="kwrd">import</span> <span class="hid">grain.utility</span> : <span class="hid">castArray</span>;
 <a id="L470" href="#L470" class="br">470 </a>    <span class="kwrd">static</span> <span class="kwrd">assert</span>(<span class="hid">dim</span> &gt;= <span class="num">1</span>);
 <a id="L471" href="#L471" class="br">471 </a>    <span class="kwrd">assert</span>(<span class="hid">x.shape</span>[<span class="hid">d</span>] == <span class="num">1</span>);
@@ -514,7 +514,7 @@
 <a id="L484" href="#L484" class="br">484 </a>
 <a id="L485" href="#L485" class="br">485 </a>
 <a id="L486" href="#L486" class="br">486 </a><span class="com">/// unsqueeze/add redundant size-1 dimension (axis) d</span>
-<a id="L487" href="#L487" class="br">487 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L487" title="grain.chain.unsqueeze" class="hid">unsqueeze</a>(<span class="hid">size_t</span> <span class="hid">d</span>, <span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
+<a id="L487" href="#L487" class="br">487 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L487" title="grain.chain.unsqueeze" class="hid">unsqueeze</a>(<span class="hid">size_t</span> <span class="hid">d</span>, <span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
 <a id="L488" href="#L488" class="br">488 </a>    <span class="kwrd">import</span> <span class="hid">grain.utility</span> : <span class="hid">castArray</span>;
 <a id="L489" href="#L489" class="br">489 </a>    <span class="kwrd">static</span> <span class="kwrd">assert</span>(<span class="hid">dim</span> &gt;= <span class="hid">d</span>);
 <a id="L490" href="#L490" class="br">490 </a>    <span class="hid">ptrdiff_t</span>[<span class="hid">dim</span>+<span class="num">1</span>] <span class="hid">s</span>;
@@ -532,7 +532,7 @@
 <a id="L502" href="#L502" class="br">502 </a>}
 <a id="L503" href="#L503" class="br">503 </a>
 <a id="L504" href="#L504" class="br">504 </a><span class="com">/// summation</span>
-<a id="L505" href="#L505" class="br">505 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L505" title="grain.chain.sum" class="hid">sum</a>(<span class="type">string</span> <span class="hid">mode</span> = <span class="str">&quot;fast&quot;</span>, <span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
+<a id="L505" href="#L505" class="br">505 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L505" title="grain.chain.sum" class="hid">sum</a>(<span class="type">string</span> <span class="hid">mode</span> = <span class="str">&quot;fast&quot;</span>, <span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>) {
 <a id="L506" href="#L506" class="br">506 </a>    <span class="kwrd">import</span> <span class="hid">grain.functions.reduction</span> : <span class="hid">Sum</span>;
 <a id="L507" href="#L507" class="br">507 </a>    <span class="kwrd">auto</span> <span class="hid">f</span> = <span class="kwrd">new</span> <span class="hid">Sum</span>!(<span class="hid">mode</span>, <span class="hid">T</span>, <span class="hid">dim</span>);
 <a id="L508" href="#L508" class="br">508 </a>    <span class="kwrd">return</span> <span class="hid">f.applyForward</span>(<span class="hid">x</span>);
@@ -545,7 +545,7 @@
 <a id="L515" href="#L515" class="br">515 </a>    <span class="kwrd">import</span> <span class="hid">mir.ndslice</span>;
 <a id="L516" href="#L516" class="br">516 </a>    <span class="kwrd">import</span> <span class="hid">std.meta</span>;
 <a id="L517" href="#L517" class="br">517 </a>
-<a id="L518" href="#L518" class="br">518 </a>    <span class="kwrd">auto</span> <span class="hid">hx</span> = [<span class="num">1f</span>, <span class="num">2f</span>, <span class="num">3f</span>, <span class="num">4f</span>].<span class="hid">sliced</span>(<span class="num">2</span>, <span class="num">2</span>).<span class="hid">variable</span>(<span class="kwrd">true</span>);
+<a id="L518" href="#L518" class="br">518 </a>    <span class="kwrd">auto</span> <span class="hid">hx</span> = [<span class="num">1f</span>, <span class="num">2f</span>, <span class="num">3f</span>, <span class="num">4f</span>].<span class="hid">sliced</span>(<span class="num">2</span>, <span class="num">2</span>).<a href="grain.autograd.d.html#L532" title="grain.autograd.variable" class="hid">variable</a>(<span class="kwrd">true</span>);
 <a id="L519" href="#L519" class="br">519 </a>    <span class="kwrd">auto</span> <span class="hid">loss</span> = <a href="grain.chain.d.html#L505" title="grain.chain.sum" class="hid">sum</a>(<span class="hid">hx</span>);
 <a id="L520" href="#L520" class="br">520 </a>    <span class="kwrd">assert</span>(<span class="hid">loss.data</span>[<span class="num">0</span>] == <span class="num">10f</span>);
 <a id="L521" href="#L521" class="br">521 </a>    <span class="hid">loss.backward</span>();
@@ -554,7 +554,7 @@
 <a id="L524" href="#L524" class="br">524 </a>
 <a id="L525" href="#L525" class="br">525 </a>
 <a id="L526" href="#L526" class="br">526 </a><span class="com">/// dropout : apply random mask</span>
-<a id="L527" href="#L527" class="br">527 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L527" title="grain.chain.dropout" class="hid">dropout</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<span class="hid">Variable</span>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>, <span class="type">float</span> <span class="hid">ratio</span>=<span class="num">0.5</span>, <span class="type">bool</span> <span class="hid">isTrain</span>=<span class="kwrd">true</span>) {
+<a id="L527" href="#L527" class="br">527 </a><span class="kwrd">auto</span> <a href="grain.chain.d.html#L527" title="grain.chain.dropout" class="hid">dropout</a>(<span class="hid">T</span>, <span class="hid">size_t</span> <span class="hid">dim</span>, <span class="kwrd">alias</span> <span class="hid">Storage</span>)(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <span class="hid">Storage</span>) <span class="hid">x</span>, <span class="type">float</span> <span class="hid">ratio</span>=<span class="num">0.5</span>, <span class="type">bool</span> <span class="hid">isTrain</span>=<span class="kwrd">true</span>) {
 <a id="L528" href="#L528" class="br">528 </a>    <span class="kwrd">import</span> <span class="hid">grain.functions.random</span> : <span class="hid">Dropout</span>;
 <a id="L529" href="#L529" class="br">529 </a>
 <a id="L530" href="#L530" class="br">530 </a>    <span class="kwrd">if</span> (!<span class="hid">isTrain</span> || <span class="hid">ratio</span> == <span class="num">0.0</span>) <span class="kwrd">return</span> <span class="hid">x</span>;
@@ -572,7 +572,7 @@
 <a id="L542" href="#L542" class="br">542 </a>    <span class="kwrd">import</span> <span class="hid">std.stdio</span>;
 <a id="L543" href="#L543" class="br">543 </a>    <span class="kwrd">import</span> <span class="hid">std.math</span>;
 <a id="L544" href="#L544" class="br">544 </a>
-<a id="L545" href="#L545" class="br">545 </a>    <span class="kwrd">auto</span> <span class="hid">hx</span> = [<span class="num">1f</span>, <span class="num">2f</span>, <span class="num">3f</span>, <span class="num">4f</span>].<span class="hid">sliced</span>(<span class="num">2</span>, <span class="num">2</span>).<span class="hid">variable</span>(<span class="kwrd">true</span>);
+<a id="L545" href="#L545" class="br">545 </a>    <span class="kwrd">auto</span> <span class="hid">hx</span> = [<span class="num">1f</span>, <span class="num">2f</span>, <span class="num">3f</span>, <span class="num">4f</span>].<span class="hid">sliced</span>(<span class="num">2</span>, <span class="num">2</span>).<a href="grain.autograd.d.html#L532" title="grain.autograd.variable" class="hid">variable</a>(<span class="kwrd">true</span>);
 <a id="L546" href="#L546" class="br">546 </a>    <span class="kwrd">auto</span> <span class="hid">hy</span> = <a href="grain.chain.d.html#L527" title="grain.chain.dropout" class="hid">dropout</a>(<span class="hid">hx</span>);
 <a id="L547" href="#L547" class="br">547 </a>    <span class="hid">hy.sum.backward</span>();
 <a id="L548" href="#L548" class="br">548 </a>    <span class="kwrd">auto</span> <span class="hid">ghx</span> = <span class="hid">hx.gradSliced</span>;

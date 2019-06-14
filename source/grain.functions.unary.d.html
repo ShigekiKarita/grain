@@ -63,14 +63,14 @@
 <a id="L33" href="#L33" class="br">33 </a>            <span class="com">// FIXME if train</span>
 <a id="L34" href="#L34" class="br">34 </a>            <span class="kwrd">this</span>.<span class="hid">dx</span> = <span class="hid">x.dup</span>;
 <a id="L35" href="#L35" class="br">35 </a>            <span class="kwrd">auto</span> <span class="hid">y</span> = <span class="hid">x.uninit</span>;
-<a id="L36" href="#L36" class="br">36 </a>            <a href="grain.cudnn.d.html#L111" title="grain.cudnn.activationForward" class="hid">activationForward</a>!<span class="hid">mode</span>(<span class="hid">x</span>, <span class="hid">y</span>);
+<a id="L36" href="#L36" class="br">36 </a>            <span class="hid">activationForward</span>!<span class="hid">mode</span>(<span class="hid">x</span>, <span class="hid">y</span>);
 <a id="L37" href="#L37" class="br">37 </a>            <span class="kwrd">this</span>.<span class="hid">dy</span> = <span class="hid">y</span>;
 <a id="L38" href="#L38" class="br">38 </a>            <span class="kwrd">return</span> <span class="hid">y</span>;
 <a id="L39" href="#L39" class="br">39 </a>        }
 <a id="L40" href="#L40" class="br">40 </a>        <span class="com">///</span>
 <a id="L41" href="#L41" class="br">41 </a>        <span class="kwrd">auto</span> <span class="hid">backward</span>(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <a href="grain.autograd.d.html#L91" title="grain.autograd.DeviceStorage" class="hid">DeviceStorage</a>) <span class="hid">gy</span>) {
 <a id="L42" href="#L42" class="br">42 </a>            <span class="kwrd">auto</span> <span class="hid">gx</span> = <span class="hid">gy.uninit</span>;
-<a id="L43" href="#L43" class="br">43 </a>            <a href="grain.cudnn.d.html#L136" title="grain.cudnn.activationBackward" class="hid">activationBackward</a>!<span class="hid">mode</span>(<span class="hid">gx</span>, <span class="hid">gy</span>, <span class="kwrd">this</span>.<span class="hid">dx</span>, <span class="kwrd">this</span>.<span class="hid">dy</span>);
+<a id="L43" href="#L43" class="br">43 </a>            <span class="hid">activationBackward</span>!<span class="hid">mode</span>(<span class="hid">gx</span>, <span class="hid">gy</span>, <span class="kwrd">this</span>.<span class="hid">dx</span>, <span class="kwrd">this</span>.<span class="hid">dy</span>);
 <a id="L44" href="#L44" class="br">44 </a>            <span class="kwrd">return</span> <span class="hid">gx</span>;
 <a id="L45" href="#L45" class="br">45 </a>        }
 <a id="L46" href="#L46" class="br">46 </a>    <span class="str">}</span></span>;
@@ -240,7 +240,7 @@
 <a id="L210" href="#L210" class="br">210 </a>            <span class="kwrd">auto</span> <span class="hid">y</span> = <span class="kwrd">this</span>.<span class="hid">inplace</span> ? <span class="hid">x</span> : <span class="hid">x.dup</span>;
 <a id="L211" href="#L211" class="br">211 </a>
 <a id="L212" href="#L212" class="br">212 </a>            <span class="kwrd">if</span> (<span class="kwrd">this</span>.<span class="hid">useCuDNN</span>) {
-<a id="L213" href="#L213" class="br">213 </a>                <a href="grain.cudnn.d.html#L111" title="grain.cudnn.activationForward" class="hid">activationForward</a>!<span class="hid">CUDNN_ACTIVATION_RELU</span>(<span class="hid">x</span>, <span class="hid">y</span>);
+<a id="L213" href="#L213" class="br">213 </a>                <span class="hid">activationForward</span>!<span class="hid">CUDNN_ACTIVATION_RELU</span>(<span class="hid">x</span>, <span class="hid">y</span>);
 <a id="L214" href="#L214" class="br">214 </a>                <span class="kwrd">this</span>.<span class="hid">dy</span> = <span class="hid">y</span>;
 <a id="L215" href="#L215" class="br">215 </a>            }
 <a id="L216" href="#L216" class="br">216 </a>            <span class="kwrd">else</span> {
@@ -255,7 +255,7 @@
 <a id="L225" href="#L225" class="br">225 </a>        <span class="kwrd">auto</span> <span class="hid">backward</span>(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <a href="grain.autograd.d.html#L91" title="grain.autograd.DeviceStorage" class="hid">DeviceStorage</a>) <span class="hid">gy</span>) {
 <a id="L226" href="#L226" class="br">226 </a>            <span class="kwrd">auto</span> <span class="hid">gx</span> = <span class="hid">gy.uninit</span>;
 <a id="L227" href="#L227" class="br">227 </a>            <span class="kwrd">if</span> (<span class="kwrd">this</span>.<span class="hid">useCuDNN</span>) {
-<a id="L228" href="#L228" class="br">228 </a>                <a href="grain.cudnn.d.html#L136" title="grain.cudnn.activationBackward" class="hid">activationBackward</a>!<span class="hid">CUDNN_ACTIVATION_RELU</span>(<span class="hid">gx</span>, <span class="hid">gy</span>, <span class="hid">dx</span>, <span class="hid">dy</span>);
+<a id="L228" href="#L228" class="br">228 </a>                <span class="hid">activationBackward</span>!<span class="hid">CUDNN_ACTIVATION_RELU</span>(<span class="hid">gx</span>, <span class="hid">gy</span>, <span class="hid">dx</span>, <span class="hid">dy</span>);
 <a id="L229" href="#L229" class="br">229 </a>            }
 <a id="L230" href="#L230" class="br">230 </a>            <span class="kwrd">else</span> {
 <a id="L231" href="#L231" class="br">231 </a>                <span class="kwrd">import</span> <span class="hid">grain.kernel</span> : <span class="hid">reluGrad</span>;
@@ -441,7 +441,7 @@
 <a id="L411" href="#L411" class="br">411 </a>
 <a id="L412" href="#L412" class="br">412 </a>        <span class="kwrd">auto</span> <span class="hid">forward</span>(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <a href="grain.autograd.d.html#L91" title="grain.autograd.DeviceStorage" class="hid">DeviceStorage</a>) <span class="hid">x</span>) {
 <a id="L413" href="#L413" class="br">413 </a>            <span class="kwrd">auto</span> <span class="hid">y</span> = <span class="hid">x.dup</span>;
-<a id="L414" href="#L414" class="br">414 </a>            <a href="grain.cudnn.d.html#L169" title="grain.cudnn.softmaxForward" class="hid">softmaxForward</a>!<span class="hid">CUDNN_SOFTMAX_LOG</span>(<span class="hid">x</span>, <span class="hid">y</span>);
+<a id="L414" href="#L414" class="br">414 </a>            <span class="hid">softmaxForward</span>!<span class="hid">CUDNN_SOFTMAX_LOG</span>(<span class="hid">x</span>, <span class="hid">y</span>);
 <a id="L415" href="#L415" class="br">415 </a>            <span class="com">// TODO if train</span>
 <a id="L416" href="#L416" class="br">416 </a>            <span class="kwrd">this</span>.<span class="hid">dy</span> = <span class="hid">y</span>;
 <a id="L417" href="#L417" class="br">417 </a>            <span class="kwrd">return</span> <span class="hid">y</span>;
@@ -449,7 +449,7 @@
 <a id="L419" href="#L419" class="br">419 </a>
 <a id="L420" href="#L420" class="br">420 </a>        <span class="kwrd">auto</span> <span class="hid">backward</span>(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <a href="grain.autograd.d.html#L91" title="grain.autograd.DeviceStorage" class="hid">DeviceStorage</a>) <span class="hid">gy</span>) {
 <a id="L421" href="#L421" class="br">421 </a>            <span class="kwrd">auto</span> <span class="hid">gx</span> = <span class="hid">gy.dup</span>;
-<a id="L422" href="#L422" class="br">422 </a>            <a href="grain.cudnn.d.html#L184" title="grain.cudnn.softmaxBackward" class="hid">softmaxBackward</a>!<span class="hid">CUDNN_SOFTMAX_LOG</span>(<span class="hid">gx</span>, <span class="hid">gy</span>, <span class="kwrd">this</span>.<span class="hid">dy</span>);
+<a id="L422" href="#L422" class="br">422 </a>            <span class="hid">softmaxBackward</span>!<span class="hid">CUDNN_SOFTMAX_LOG</span>(<span class="hid">gx</span>, <span class="hid">gy</span>, <span class="kwrd">this</span>.<span class="hid">dy</span>);
 <a id="L423" href="#L423" class="br">423 </a>            <span class="kwrd">return</span> <span class="hid">gx</span>;
 <a id="L424" href="#L424" class="br">424 </a>        }
 <a id="L425" href="#L425" class="br">425 </a>    }
@@ -609,11 +609,11 @@
 <a id="L579" href="#L579" class="br">579 </a>        }
 <a id="L580" href="#L580" class="br">580 </a>
 <a id="L581" href="#L581" class="br">581 </a>        <span class="kwrd">auto</span> <span class="hid">backward</span>(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <a href="grain.autograd.d.html#L91" title="grain.autograd.DeviceStorage" class="hid">DeviceStorage</a>) <span class="hid">gy</span>) {
-<a id="L582" href="#L582" class="br">582 </a>            <span class="kwrd">import</span> <span class="hid">grain.cudnn</span> : <a href="grain.cudnn.d.html#L215" title="grain.cudnn.tensorOp" class="hid">tensorOp</a>, <span class="hid">CUDNN_OP_TENSOR_MUL</span>;
+<a id="L582" href="#L582" class="br">582 </a>            <span class="kwrd">import</span> <span class="hid">grain.cudnn</span> : <span class="hid">tensorOp</span>, <span class="hid">CUDNN_OP_TENSOR_MUL</span>;
 <a id="L583" href="#L583" class="br">583 </a>
 <a id="L584" href="#L584" class="br">584 </a>            <span class="kwrd">auto</span> <span class="hid">gx</span> = <span class="kwrd">this</span>.<span class="hid">dy.dup</span>;
-<a id="L585" href="#L585" class="br">585 </a>            <a href="grain.cudnn.d.html#L215" title="grain.cudnn.tensorOp" class="hid">tensorOp</a>!<span class="hid">CUDNN_OP_TENSOR_MUL</span>(<span class="hid">gx</span>, <span class="hid">gx</span>, <span class="kwrd">this</span>.<span class="hid">dy</span>, <span class="hid">T</span>(-<span class="num">1</span>));
-<a id="L586" href="#L586" class="br">586 </a>            <a href="grain.cudnn.d.html#L215" title="grain.cudnn.tensorOp" class="hid">tensorOp</a>!<span class="hid">CUDNN_OP_TENSOR_MUL</span>(<span class="hid">gx</span>, <span class="hid">gx</span>, <span class="hid">gy</span>);
+<a id="L585" href="#L585" class="br">585 </a>            <span class="hid">tensorOp</span>!<span class="hid">CUDNN_OP_TENSOR_MUL</span>(<span class="hid">gx</span>, <span class="hid">gx</span>, <span class="kwrd">this</span>.<span class="hid">dy</span>, <span class="hid">T</span>(-<span class="num">1</span>));
+<a id="L586" href="#L586" class="br">586 </a>            <span class="hid">tensorOp</span>!<span class="hid">CUDNN_OP_TENSOR_MUL</span>(<span class="hid">gx</span>, <span class="hid">gx</span>, <span class="hid">gy</span>);
 <a id="L587" href="#L587" class="br">587 </a>            <span class="kwrd">return</span> <span class="hid">gx</span>;
 <a id="L588" href="#L588" class="br">588 </a>        }
 <a id="L589" href="#L589" class="br">589 </a>    }
@@ -828,7 +828,7 @@
 <a id="L798" href="#L798" class="br">798 </a>
 <a id="L799" href="#L799" class="br">799 </a>            <span class="kwrd">auto</span> <span class="hid">gx</span> = <span class="kwrd">this</span>.<span class="hid">dx.dup</span>;
 <a id="L800" href="#L800" class="br">800 </a>            <a href="grain.functions.unary.d.html#L463" title="grain.functions.unary.unaryFunc" class="hid">unaryFunc</a>!<span class="hid">cos</span>(<span class="hid">gx</span>);
-<a id="L801" href="#L801" class="br">801 </a>            <a href="grain.cudnn.d.html#L215" title="grain.cudnn.tensorOp" class="hid">tensorOp</a>!<span class="hid">CUDNN_OP_TENSOR_MUL</span>(<span class="hid">gx</span>, <span class="hid">gx</span>, <span class="hid">gy</span>);
+<a id="L801" href="#L801" class="br">801 </a>            <span class="hid">tensorOp</span>!<span class="hid">CUDNN_OP_TENSOR_MUL</span>(<span class="hid">gx</span>, <span class="hid">gx</span>, <span class="hid">gy</span>);
 <a id="L802" href="#L802" class="br">802 </a>            <span class="kwrd">return</span> <span class="hid">gx</span>;
 <a id="L803" href="#L803" class="br">803 </a>        }
 <a id="L804" href="#L804" class="br">804 </a>    }
@@ -901,7 +901,7 @@
 <a id="L871" href="#L871" class="br">871 </a>
 <a id="L872" href="#L872" class="br">872 </a>            <span class="kwrd">auto</span> <span class="hid">gx</span> = <span class="kwrd">this</span>.<span class="hid">dx.dup</span>;
 <a id="L873" href="#L873" class="br">873 </a>            <a href="grain.functions.unary.d.html#L463" title="grain.functions.unary.unaryFunc" class="hid">unaryFunc</a>!<span class="hid">sin</span>(<span class="hid">gx</span>);
-<a id="L874" href="#L874" class="br">874 </a>            <a href="grain.cudnn.d.html#L215" title="grain.cudnn.tensorOp" class="hid">tensorOp</a>!<span class="hid">CUDNN_OP_TENSOR_MUL</span>(<span class="hid">gx</span>, <span class="hid">gx</span>, <span class="hid">gy</span>, -<span class="num">1</span>);
+<a id="L874" href="#L874" class="br">874 </a>            <span class="hid">tensorOp</span>!<span class="hid">CUDNN_OP_TENSOR_MUL</span>(<span class="hid">gx</span>, <span class="hid">gx</span>, <span class="hid">gy</span>, -<span class="num">1</span>);
 <a id="L875" href="#L875" class="br">875 </a>            <span class="kwrd">return</span> <span class="hid">gx</span>;
 <a id="L876" href="#L876" class="br">876 </a>        }
 <a id="L877" href="#L877" class="br">877 </a>    }
@@ -980,7 +980,7 @@
 <a id="L950" href="#L950" class="br">950 </a>
 <a id="L951" href="#L951" class="br">951 </a>            <span class="kwrd">auto</span> <span class="hid">gx</span> = <span class="kwrd">this</span>.<span class="hid">dx.dup</span>;
 <a id="L952" href="#L952" class="br">952 </a>            <a href="grain.functions.unary.d.html#L463" title="grain.functions.unary.unaryFunc" class="hid">unaryFunc</a>!<span class="hid">cos</span>(<span class="hid">gx</span>);
-<a id="L953" href="#L953" class="br">953 </a>            <a href="grain.cudnn.d.html#L215" title="grain.cudnn.tensorOp" class="hid">tensorOp</a>!<span class="hid">CUDNN_OP_TENSOR_MUL</span>(<span class="hid">gx</span>, <span class="hid">gx</span>, <span class="hid">gx</span>); <span class="com">// cos^2 x</span>
+<a id="L953" href="#L953" class="br">953 </a>            <span class="hid">tensorOp</span>!<span class="hid">CUDNN_OP_TENSOR_MUL</span>(<span class="hid">gx</span>, <span class="hid">gx</span>, <span class="hid">gx</span>); <span class="com">// cos^2 x</span>
 <a id="L954" href="#L954" class="br">954 </a>            <span class="kwrd">return</span> <span class="hid">gy</span> / <span class="hid">gx</span>;
 <a id="L955" href="#L955" class="br">955 </a>        }
 <a id="L956" href="#L956" class="br">956 </a>    }
@@ -1026,17 +1026,17 @@
 <a id="L996" href="#L996" class="br">996 </a>    }
 <a id="L997" href="#L997" class="br">997 </a>
 <a id="L998" href="#L998" class="br">998 </a>    <span class="kwrd">version</span> (<span class="hid">grain_cuda</span>) {
-<a id="L999" href="#L999" class="br">999 </a>        <span class="kwrd">import</span> <span class="hid">grain.cudnn</span> : <a href="grain.cudnn.d.html#L232" title="grain.cudnn.scale" class="hid">scale</a>;
+<a id="L999" href="#L999" class="br">999 </a>        <span class="kwrd">import</span> <span class="hid">grain.cudnn</span> : <span class="hid">scale</span>;
 <a id="L1000" href="#L1000" class="br">1000 </a>
 <a id="L1001" href="#L1001" class="br">1001 </a>        <span class="kwrd">auto</span> <span class="hid">forward</span>(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <a href="grain.autograd.d.html#L91" title="grain.autograd.DeviceStorage" class="hid">DeviceStorage</a>) <span class="hid">x</span>) {
 <a id="L1002" href="#L1002" class="br">1002 </a>            <span class="kwrd">auto</span> <span class="hid">y</span> = <span class="hid">x.dup</span>;
-<a id="L1003" href="#L1003" class="br">1003 </a>            <a href="grain.cudnn.d.html#L232" title="grain.cudnn.scale" class="hid">scale</a>(<span class="hid">y</span>, <span class="kwrd">this</span>.<span class="hid">alpha</span>);
+<a id="L1003" href="#L1003" class="br">1003 </a>            <span class="hid">scale</span>(<span class="hid">y</span>, <span class="kwrd">this</span>.<span class="hid">alpha</span>);
 <a id="L1004" href="#L1004" class="br">1004 </a>            <span class="kwrd">return</span> <span class="hid">y</span>;
 <a id="L1005" href="#L1005" class="br">1005 </a>        }
 <a id="L1006" href="#L1006" class="br">1006 </a>
 <a id="L1007" href="#L1007" class="br">1007 </a>        <span class="kwrd">auto</span> <span class="hid">backward</span>(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <a href="grain.autograd.d.html#L91" title="grain.autograd.DeviceStorage" class="hid">DeviceStorage</a>) <span class="hid">gy</span>) {
 <a id="L1008" href="#L1008" class="br">1008 </a>            <span class="kwrd">auto</span> <span class="hid">gx</span> = <span class="hid">gy.dup</span>;
-<a id="L1009" href="#L1009" class="br">1009 </a>            <a href="grain.cudnn.d.html#L232" title="grain.cudnn.scale" class="hid">scale</a>(<span class="hid">gx</span>, <span class="kwrd">this</span>.<span class="hid">alpha</span>);
+<a id="L1009" href="#L1009" class="br">1009 </a>            <span class="hid">scale</span>(<span class="hid">gx</span>, <span class="kwrd">this</span>.<span class="hid">alpha</span>);
 <a id="L1010" href="#L1010" class="br">1010 </a>            <span class="kwrd">return</span> <span class="hid">gx</span>;
 <a id="L1011" href="#L1011" class="br">1011 </a>        }
 <a id="L1012" href="#L1012" class="br">1012 </a>    }
@@ -1384,7 +1384,7 @@
 <a id="L1354" href="#L1354" class="br">1354 </a>        <span class="kwrd">static</span> <span class="kwrd">assert</span>(<span class="hid">poolDims</span> + <span class="num">2</span> == <span class="hid">tensorDims</span>);
 <a id="L1355" href="#L1355" class="br">1355 </a>        <span class="hid">size_t</span>[<span class="hid">tensorDims</span>] <span class="hid">p</span>, <span class="hid">w</span>;
 <a id="L1356" href="#L1356" class="br">1356 </a>        <span class="hid">p</span>[<span class="num">2</span> .. $] = <span class="hid">padA.castArray</span>!<span class="hid">size_t</span>[];
-<a id="L1357" href="#L1357" class="br">1357 </a>        <span class="hid">w</span>[<span class="num">0</span> .. <span class="num">2</span>] = <span class="hid">x.shape</span>[<span class="num">0</span> .. <span class="num">2</span>].<a href="grain.utility.d.html#L27" title="grain.utility.castArray" class="hid">castArray</a>!<span class="hid">size_t</span>[];
+<a id="L1357" href="#L1357" class="br">1357 </a>        <span class="hid">w</span>[<span class="num">0</span> .. <span class="num">2</span>] = <span class="hid">x.shape</span>[<span class="num">0</span> .. <span class="num">2</span>].<span class="hid">castArray</span>!<span class="hid">size_t</span>[];
 <a id="L1358" href="#L1358" class="br">1358 </a>        <span class="hid">w</span>[<span class="num">2</span> .. $] = <span class="hid">windowA.castArray</span>!<span class="hid">size_t</span>[];
 <a id="L1359" href="#L1359" class="br">1359 </a>        <span class="hid">ptrdiff_t</span>[<span class="hid">tensorDims</span>] <span class="hid">s</span>;
 <a id="L1360" href="#L1360" class="br">1360 </a>        <span class="hid">s</span>[<span class="num">0</span> .. <span class="num">2</span>] = <span class="num">1</span>;
@@ -1422,7 +1422,7 @@
 <a id="L1392" href="#L1392" class="br">1392 </a>        <span class="kwrd">static</span> <span class="kwrd">assert</span>(<span class="hid">poolDims</span> + <span class="num">2</span> == <span class="hid">tensorDims</span>);
 <a id="L1393" href="#L1393" class="br">1393 </a>        <span class="hid">size_t</span>[<span class="hid">tensorDims</span>] <span class="hid">p</span>, <span class="hid">w</span>;
 <a id="L1394" href="#L1394" class="br">1394 </a>        <span class="hid">p</span>[<span class="num">2</span> .. $] = <span class="hid">padA.castArray</span>!<span class="hid">size_t</span>[];
-<a id="L1395" href="#L1395" class="br">1395 </a>        <span class="hid">w</span>[<span class="num">0</span> .. <span class="num">2</span>] = <span class="hid">x.shape</span>[<span class="num">0</span> .. <span class="num">2</span>].<a href="grain.utility.d.html#L27" title="grain.utility.castArray" class="hid">castArray</a>!<span class="hid">size_t</span>[];
+<a id="L1395" href="#L1395" class="br">1395 </a>        <span class="hid">w</span>[<span class="num">0</span> .. <span class="num">2</span>] = <span class="hid">x.shape</span>[<span class="num">0</span> .. <span class="num">2</span>].<span class="hid">castArray</span>!<span class="hid">size_t</span>[];
 <a id="L1396" href="#L1396" class="br">1396 </a>        <span class="hid">w</span>[<span class="num">2</span> .. $] = <span class="hid">windowA.castArray</span>!<span class="hid">size_t</span>[];
 <a id="L1397" href="#L1397" class="br">1397 </a>        <span class="hid">ptrdiff_t</span>[<span class="hid">tensorDims</span>] <span class="hid">s</span>;
 <a id="L1398" href="#L1398" class="br">1398 </a>        <span class="hid">s</span>[<span class="num">0</span> .. <span class="num">2</span>] = <span class="num">1</span>;
@@ -1488,7 +1488,7 @@
 <a id="L1458" href="#L1458" class="br">1458 </a>        <span class="kwrd">import</span> <span class="hid">grain.cudnn</span>;
 <a id="L1459" href="#L1459" class="br">1459 </a>
 <a id="L1460" href="#L1460" class="br">1460 </a>        <span class="kwrd">auto</span> <span class="hid">forward</span>(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <a href="grain.autograd.d.html#L91" title="grain.autograd.DeviceStorage" class="hid">DeviceStorage</a>) <span class="hid">x</span>) {
-<a id="L1461" href="#L1461" class="br">1461 </a>            <span class="kwrd">auto</span> <span class="hid">y</span> = <a href="grain.cudnn.d.html#L595" title="grain.cudnn.poolForward" class="hid">grain.cudnn.poolForward</a>(<span class="hid">x</span>, <span class="kwrd">this</span>.<span class="hid">window</span>, <span class="kwrd">this</span>.<span class="hid">pad</span>, <span class="kwrd">this</span>
+<a id="L1461" href="#L1461" class="br">1461 </a>            <span class="kwrd">auto</span> <span class="hid">y</span> = <span class="hid">grain.cudnn.poolForward</span>(<span class="hid">x</span>, <span class="kwrd">this</span>.<span class="hid">window</span>, <span class="kwrd">this</span>.<span class="hid">pad</span>, <span class="kwrd">this</span>
 <a id="L1462" href="#L1462" class="br">1462 </a>                    .<span class="hid">stride</span>);
 <a id="L1463" href="#L1463" class="br">1463 </a>            <span class="com">// TODO if train</span>
 <a id="L1464" href="#L1464" class="br">1464 </a>            <span class="kwrd">this</span>.<span class="hid">dx</span> = <span class="hid">x</span>;
@@ -1498,7 +1498,7 @@
 <a id="L1468" href="#L1468" class="br">1468 </a>
 <a id="L1469" href="#L1469" class="br">1469 </a>        <span class="kwrd">auto</span> <span class="hid">backward</span>(<a href="grain.autograd.d.html#L234" title="grain.autograd.Variable" class="hid">Variable</a>!(<span class="hid">T</span>, <span class="hid">dim</span>, <a href="grain.autograd.d.html#L91" title="grain.autograd.DeviceStorage" class="hid">DeviceStorage</a>) <span class="hid">gy</span>) {
 <a id="L1470" href="#L1470" class="br">1470 </a>            <span class="kwrd">auto</span> <span class="hid">gx</span> = <span class="kwrd">this</span>.<span class="hid">dx.uninit</span>;
-<a id="L1471" href="#L1471" class="br">1471 </a>            <a href="grain.cudnn.d.html#L665" title="grain.cudnn.poolBackward" class="hid">grain.cudnn.poolBackward</a>(<span class="hid">gx</span>, <span class="kwrd">this</span>.<span class="hid">dx</span>, <span class="hid">gy</span>, <span class="kwrd">this</span>.<span class="hid">dy</span>, <span class="kwrd">this</span>.<span class="hid">window</span>, <span class="kwrd">this</span>
+<a id="L1471" href="#L1471" class="br">1471 </a>            <span class="hid">grain.cudnn.poolBackward</span>(<span class="hid">gx</span>, <span class="kwrd">this</span>.<span class="hid">dx</span>, <span class="hid">gy</span>, <span class="kwrd">this</span>.<span class="hid">dy</span>, <span class="kwrd">this</span>.<span class="hid">window</span>, <span class="kwrd">this</span>
 <a id="L1472" href="#L1472" class="br">1472 </a>                    .<span class="hid">pad</span>, <span class="kwrd">this</span>.<span class="hid">stride</span>);
 <a id="L1473" href="#L1473" class="br">1473 </a>            <span class="kwrd">return</span> <span class="hid">gx</span>;
 <a id="L1474" href="#L1474" class="br">1474 </a>        }

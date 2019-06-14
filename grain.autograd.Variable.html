@@ -60,7 +60,9 @@ TODO implement contiguous with mir.ndslice and cudnnTransformTensor</p></div></d
 <span class="br">29 </span>            <span class="kwrd">auto</span> <span class="hid">dugc</span> = <span class="hid">UntypedVariable</span>(<span class="hid">gc</span>.<span class="hid">to</span>!<span class="hid">DeviceStorage</span>);
 <span class="br">30 </span>            <span class="hid">dc</span>.<span class="hid">backward</span>(&amp;<span class="hid">dugc</span>);
 <span class="br">31 </span>            <span class="kwrd">assert</span>(<span class="hid">approxEqual</span>(<span class="hid">da</span>.<span class="hid">to</span>!<span class="hid">HostStorage</span>.<span class="hid">gradSliced</span>, <span class="hid">a</span>.<span class="hid">gradSliced</span>));
-<span class="br">32 </span>        }</pre></div><div class="unittest-example-holder"><div class="documentation-comment"><p>test multiple addition</p></div><pre class="d_code highlighted with-line-wrappers"><span class="br">1 </span><span class="kwrd">static</span> <span class="kwrd">import</span> <span class="hid">grain</span>.<span class="hid">config</span>;
+<span class="br">32 </span>        }
+<span class="br">33 </span>    }
+<span class="br">34 </span>}</pre></div><div class="unittest-example-holder"><div class="documentation-comment"><p>test multiple addition</p></div><pre class="d_code highlighted with-line-wrappers"><span class="br">1 </span><span class="kwrd">static</span> <span class="kwrd">import</span> <span class="hid">grain</span>.<span class="hid">config</span>;
 <span class="br">2 </span><span class="hid">grain</span>.<span class="hid">config</span>.<span class="hid">backprop</span> = <span class="kwrd">true</span>;
 <span class="br">3 </span><span class="kwrd">auto</span> <span class="hid">x</span> = [<span class="num">1f</span>, <span class="num">2f</span>].<span class="hid">variable</span>(<span class="kwrd">true</span>);
 <span class="br">4 </span><span class="kwrd">auto</span> <span class="hid">y</span> = <span class="hid">x</span> + <span class="hid">x</span>; <span class="com">// x = 2 x</span>
