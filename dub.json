@@ -43,13 +43,13 @@
             "sourceFiles": ["libgrain_thrust.a"]
         },
         "unittest": {
-            "buildOptions": ["unittests", "debugMode", "debugInfo"],
+            "buildOptions": ["unittests", "debugMode", "debugInfo"]
         },
         "unittest-cov": {
-            "buildOptions": ["unittests", "coverage", "debugMode", "debugInfo"],
+            "buildOptions": ["unittests", "coverage", "debugMode", "debugInfo"]
         },
         "unittest-release": {
-            "buildOptions": ["unittests", "releaseMode", "optimize", "inline", "noBoundsCheck", "debugInfo"],
+            "buildOptions": ["unittests", "releaseMode", "optimize", "inline", "noBoundsCheck", "debugInfo"]
         },
         "grain-docs": {
             "buildOptions": ["syntaxOnly"],
@@ -142,13 +142,13 @@
             "name": "example-char-rnn",
             "targetName": "grain-example-char-rnn",
             "targetType": "executable",
-            "mainSourceFile": "example/char_rnn.d",
+            "mainSourceFile": "example/char_rnn.d"
         },
         {
             "name": "example-char-rnn-hand",
             "targetName": "grain-example-char-rnn-hand",
             "targetType": "executable",
-            "mainSourceFile": "example/char_rnn_hand.d",
+            "mainSourceFile": "example/char_rnn_hand.d"
         },
         {
             "name": "example-reinforce-random",
@@ -191,7 +191,7 @@
                 "drepl": "~>0.2.1",
                 "linenoise": "~>1.1.0",
                 "zmqd": "~>1.1.1",
-                "asdf": "~>0.2.2",
+                "asdf": "~>0.2.2"
             },
             "sourceFiles": [
                 "example/dub_engine.d",
@@ -205,9 +205,9 @@
             }
         },
         {
-			      "name": "makedeps",
-			      "dflags": ["-deps=deps-lock.txt"]
-		    }
+                  "name": "makedeps",
+                  "dflags": ["-deps=deps-lock.txt"]
+            }
     ],
     "-ddoxTool": "scod",
     "-ddoxFilterArgs": [
