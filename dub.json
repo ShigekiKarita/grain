@@ -1,0 +1,12 @@
+{
+    "authors": [
+        "karita"
+    ],
+    "copyright": "Copyright © 2019, karita",
+    "dependencies": {
+        "mir-random": "~>2.2.6"
+    },
+    "description": "mir/cuda/opencl autograd library",
+    "license": "BSL-1.0",
+    "name": "grain"
+}
