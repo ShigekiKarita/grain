@@ -52,9 +52,9 @@ struct AnyTensor
     RC!(Array!long) strides;
 
     /// DLPack context
-    DLContext dlContext;
+    DLContext context;
     /// DLPack element type
-    DLDataType dlType;
+    DLDataType dataType;
 
     /** Convert AnyTensor to DLManagedTensor
 
@@ -78,8 +78,8 @@ struct AnyTensor
             data = this.buffer.payload.ptr;
             shape = &(*this.shape)[0];
             strides = &(*this.strides)[0];
-            ctx = this.dlContext;
-            dtype = this.dlType;
+            ctx = this.context;
+            dtype = this.dataType;
         }
         ret.manager_ctx = manager;
         ret.deleter = (DLManagedTensor* self) @trusted {
@@ -99,8 +99,8 @@ struct AnyTensor
             this.offset = byte_offset;
             this.shape = RC!(Array!long).create(shape[0 .. ndim]);
             this.strides = RC!(Array!long).create(strides[0 .. ndim]);
-            this.dlContext = ctx;
-            this.dlType = dtype;
+            this.context = ctx;
+            this.dataType = dtype;
         }
     }
 }
@@ -135,8 +135,8 @@ unittest
         assert(a.buffer.payload.ptr == b.buffer.payload.ptr);
         assert((*a.shape) == (*b.shape));
         assert((*a.strides) == (*b.strides));
-        assert(a.dlContext == b.dlContext);
-        assert(a.dlType == b.dlType);
+        assert(a.context == b.context);
+        assert(a.dataType == b.dataType);
 
         assert(a.buffer._counter == 2);  // no increase
     }
@@ -145,13 +145,13 @@ unittest
 
 import grain.dlpack : DLDataType, kDLInt, kDLUInt, kDLFloat;
 import std.traits : isIntegral, isFloatingPoint, isUnsigned, isSIMDVector;
-enum DLDataType dlTypeOf(T) = {
+enum DLDataType dataTypeOf(T) = {
     DLDataType ret;
     ret.bits = T.sizeof * 8;
     ret.lanes = 1;
     static if (is(T : __vector(V[N]), V, size_t N))
     {
-        ret = dlTypeOf!V;
+        ret = dataTypeOf!V;
         ret.bits = V.sizeof * 8;
         ret.lanes = N;
     }
@@ -177,10 +177,10 @@ enum DLDataType dlTypeOf(T) = {
 ///
 @nogc nothrow pure @safe unittest
 {
-    static assert(dlTypeOf!float == DLDataType(kDLFloat, 32, 1));
+    static assert(dataTypeOf!float == DLDataType(kDLFloat, 32, 1));
 
     alias float4 = __vector(float[4]);
-    static assert(dlTypeOf!float4 == DLDataType(kDLFloat, 32, 4));
+    static assert(dataTypeOf!float4 == DLDataType(kDLFloat, 32, 4));
 }
 
 /// typed tensor
@@ -196,27 +196,74 @@ struct Tensor(T, size_t dim, Allocator = CPUAllocator)
     long[dim] shape;
     /// strides of tensor
     long[dim] strides;
+    /// reference for any tensor source
+    AnyTensor source;
 
-    /// type erasure
-    AnyTensor toAny()
+    /// erase type
+    inout(AnyTensor) toAny() inout
     {
-        AnyTensor ret = {
+        alias A = RC!(Array!long);
+        inout(AnyTensor) ret = {
             buffer: this.buffer.castTo!AnyBuffer,
             offset: this.offset,
-            shape: RC!(Array!long).create(this.shape[]),
-            strides: RC!(Array!long).create(this.strides[]),
-            dlContext: allocator.context,
-            dlType: dlTypeOf!T
+            shape: cast(inout A) A.create(cast(long[]) this.shape[]),
+            strides: cast(inout A) A.create(cast(long[]) this.strides[]),
+            context: allocator.context,
+            dataType: dataTypeOf!T
         };
         return ret;
     }
 
+    /// revert type
+    void fromAny(ref AnyTensor src)
+    {
+        // dynamic type check
+        assert(allocator.context == src.context);
+        assert(dataTypeOf!T == src.dataType);
+        assert(dim == src.shape.length);
+        this.buffer = typeof(this.buffer).create();
+        foreach (i; 0 .. dim)
+        {
+            this.shape[i] = (*src.shape)[i];
+            this.strides[i] = (*src.strides)[i];
+        }
+        if (src.buffer)
+        {
+            this.offset = src.offset;
+            src.buffer._incRef();
+            this.buffer.payload = src.buffer.payload;
+            this.buffer._context = src.buffer._context;
+        }
+    }
+
+    inout(T)* dataPtr() inout { return cast(T*) (this.buffer.ptr + offset); }
+
     alias toAny this;
 }
 
-@nogc nothrow @system
+// @nogc nothrow @system
 unittest
 {
     Tensor!(float, 2) matrix;
+    matrix.buffer = matrix.buffer.create(float.sizeof * 6);
+    auto s = (cast(float*) matrix.buffer.ptr)[0 .. 6];
+    s[0] = 123;
+    s[5] = 0.1f;
+    matrix.shape[0] = 2;
+    matrix.shape[1] = 3;
+    matrix.strides[0] = 3;
+    matrix.strides[1] = 1;
+
     auto any = matrix.toAny;
+    assert(matrix.buffer._counter == 2);
+    {
+        Tensor!(float, 2) a;
+        a.buffer = a.buffer.create(float.sizeof * 6);
+        a.fromAny(any);
+        assert(matrix.buffer._counter == 3);
+        assert(a.dataPtr[0] == 123);
+        assert(a.dataPtr[5] == 0.1f);
+    }
+    matrix.fromAny(any);
+    assert(matrix.buffer._counter == 2);
 }
