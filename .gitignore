@@ -5,6 +5,7 @@
 !*.di
 !*.md
 
+!.circleci/*
 !dub.json
 !.gitignore
 
