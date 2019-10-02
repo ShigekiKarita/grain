@@ -143,28 +143,80 @@ unittest
     assert(a.buffer._counter == 1);
 }
 
+import grain.dlpack : DLDataType, kDLInt, kDLUInt, kDLFloat;
+import std.traits : isIntegral, isFloatingPoint, isUnsigned, isSIMDVector;
+enum DLDataType dlTypeOf(T) = {
+    DLDataType ret;
+    ret.bits = T.sizeof * 8;
+    ret.lanes = 1;
+    static if (is(T : __vector(V[N]), V, size_t N))
+    {
+        ret = dlTypeOf!V;
+        ret.bits = V.sizeof * 8;
+        ret.lanes = N;
+    }
+    else static if (isFloatingPoint!T)
+    {
+        ret.code = kDLFloat;
+    }
+    else static if (isUnsigned!T)
+    {
+        ret.code = kDLUInt;
+    }
+    else static if (isIntegral)
+    {
+        ret.code = kDLInt;
+    }
+    else
+    {
+        static assert(false, "cannot convert to DLDataType: " ~ T.stringof);
+    }
+    return ret;
+}();
+
+///
+@nogc nothrow pure @safe unittest
+{
+    static assert(dlTypeOf!float == DLDataType(kDLFloat, 32, 1));
+
+    alias float4 = __vector(float[4]);
+    static assert(dlTypeOf!float4 == DLDataType(kDLFloat, 32, 4));
+}
+
 /// typed tensor
 struct Tensor(T, size_t dim, Allocator = CPUAllocator)
 {
+    ///
+    Allocator allocator;
     /// buffer to store numeric values
     RC!(Buffer!Allocator) buffer;
+    /// offset of the strided tensor on buffer
     ulong offset;
-    ///
+    /// shape of tensor
     long[dim] shape;
-    ///
+    /// strides of tensor
     long[dim] strides;
 
+    /// type erasure
     AnyTensor toAny()
     {
         AnyTensor ret = {
-            buffer: buffer.castTo!AnyBuffer,
+            buffer: this.buffer.castTo!AnyBuffer,
+            offset: this.offset,
+            shape: RC!(Array!long).create(this.shape[]),
+            strides: RC!(Array!long).create(this.strides[]),
+            dlContext: allocator.context,
+            dlType: dlTypeOf!T
         };
         return ret;
     }
+
+    alias toAny this;
 }
 
 @nogc nothrow @system
 unittest
 {
     Tensor!(float, 2) matrix;
+    auto any = matrix.toAny;
 }

@@ -52,11 +52,12 @@ struct RC(T)
     auto _counter() const { return _context ? _context.counter : 0; };
 
     /// manually increase RC (warning)
-    void _incRef()
+    void _incRef() inout
     {
         if (this)
         {
-            mir_rc_increase_counter(*_context);
+            // FIXME(karita): better way to remove const
+            mir_rc_increase_counter(*cast(mir_rc_context*) _context);
         }
     }
 
@@ -67,11 +68,12 @@ struct RC(T)
     }
 
     /// manually decrease RC (warning)
-    void _decRef()
+    void _decRef() inout
     {
         if (this)
         {
-            mir_rc_decrease_counter(*_context);
+            // FIXME(karita): better way to remove const
+            mir_rc_decrease_counter(*cast(mir_rc_context*) _context);
         }
     }
 
@@ -82,21 +84,27 @@ struct RC(T)
     }
 
     /// polymorphism cast
-    RC!Super castTo(Super)()
+    inout(RC!Super) castTo(Super)() inout
     {
         static assert(is(T : Super));
-        typeof(return) ret;
+
+        this._incRef();
+
         static if (is(T == class) || is(T == interface))
         {
-            ret._payload = this._payload;
+            typeof(return) ret = {
+                _payload: cast(inout Super) this._payload,
+                _context: this._context
+            };
         }
         else
         {
             // `alias super this` can be only extracted by ref
-            ret._payload = ((ref Super x) => &x)(*this._payload);
+            typeof(return) ret = {
+                _payload: cast(inout(Super)*) ((ref inout Super x) => &x)(*this._payload),
+                _context: this._context
+            };
         }
-        ret._context = this._context;
-        this._incRef();
         return ret;
     }
 }
@@ -107,13 +115,13 @@ unittest
 {
     import mir.rc.ptr;
 
-    static interface I { ref double bar() @safe pure nothrow @nogc; }
+    static interface I { ref inout(double) bar() inout @safe pure nothrow @nogc; }
     static abstract class D { int index; }
     static class C : D, I
     {
         @nogc nothrow:
         double value;
-        ref double bar() @safe pure nothrow @nogc { return value; }
+        ref inout(double) bar() inout @safe pure nothrow @nogc { return value; }
         this(double d) { value = d; }
         static dtor = 0;
         ~this() {  ++dtor; }
@@ -134,7 +142,7 @@ unittest
             assert(d._counter == 3);
             d.index = 234;
             assert(a.index == 234);
-            auto i = a.castTo!I; //RCPtr!I
+            const i = a.castTo!I; //RCPtr!I
             assert(i.bar == 100);
             assert(i._counter == 4);
         }
@@ -161,8 +169,8 @@ unittest
         alias s this;
     }
 
-    auto a = RC!C.create(10, S(3));
-    auto s = a.castTo!S; // RCPtr!S
+    const a = RC!(immutable C).create(10, S(3));
+    const s = a.castTo!S; // RCPtr!S
     assert(s._counter == 2);
     assert(s.e == 3);
 }
