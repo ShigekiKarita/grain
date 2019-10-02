@@ -20,9 +20,9 @@ jobs:
       - run:
           name: test
           command: .circleci/test.sh dmd
-      - persist_to_workspace:
-          root: generated-docs
-          paths: .
+      # - persist_to_workspace:
+      #     root: generated-docs
+      #     paths: .
   test-ldc:
     docker:
       - image: circleci/buildpack-deps:18.04
