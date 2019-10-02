@@ -8,8 +8,8 @@ import grain.buffer : Buffer;
 /// Reference-counted pointer
 struct RC(T)
 {
-    import core.atomic : atomicOp;
-    import mir.rc.context;
+    import mir.rc.context : mir_rc_context, mir_rc_decrease_counter,
+        mir_rc_increase_counter, mir_rc_create;
 
     /// RC implementation
     mir_rc_context* _context;
@@ -113,8 +113,6 @@ struct RC(T)
 @nogc nothrow @system
 unittest
 {
-    import mir.rc.ptr;
-
     static interface I { ref inout(double) bar() inout @safe pure nothrow @nogc; }
     static abstract class D { int index; }
     static class C : D, I

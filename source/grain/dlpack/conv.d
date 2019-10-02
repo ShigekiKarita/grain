@@ -5,8 +5,7 @@ import std.traits : isIntegral, isFloatingPoint, isUnsigned, isSIMDVector;
 
 import grain.buffer : AnyBuffer;
 import grain.tensor : AnyTensor;
-import grain.dlpack.header;
-import grain.dlpack.header : DLDataType, kDLInt, kDLUInt, kDLFloat;
+import grain.dlpack.header : DLManagedTensor, DLDataType, kDLInt, kDLUInt, kDLFloat;
 
 
 enum DLDataType dataTypeOf(T) = {
@@ -27,7 +26,7 @@ enum DLDataType dataTypeOf(T) = {
     {
         ret.code = kDLUInt;
     }
-    else static if (isIntegral)
+    else static if (isIntegral!T)
     {
         ret.code = kDLInt;
     }
@@ -41,6 +40,8 @@ enum DLDataType dataTypeOf(T) = {
 ///
 @nogc nothrow pure @safe unittest
 {
+    static assert(dataTypeOf!ubyte == DLDataType(kDLUInt, 8, 1));
+    static assert(dataTypeOf!long == DLDataType(kDLInt, 64, 1));
     static assert(dataTypeOf!float == DLDataType(kDLFloat, 32, 1));
 
     alias float4 = __vector(float[4]);
@@ -62,7 +63,6 @@ private struct DLBuffer
 
     AnyBuffer base;
     alias base this;
-
     DLManagedTensor* src;
 
     this(DLManagedTensor* src)
@@ -128,6 +128,7 @@ AnyTensor toAny(DLManagedTensor* src)
     return ret;
 }
 
+///
 @nogc nothrow
 unittest
 {
@@ -137,8 +138,14 @@ unittest
     bs.length = 6;
     bs[] = 123;
     auto br = (&bs[0])[0 .. bs.length];
-    AnyTensor a = { RC!AnyBuffer.create(br), 0, RC!(Array!long).create(2, 3), RC!(Array!long).create(3, 1) };
+    AnyTensor a = {
+        buffer: RC!AnyBuffer.create(br),
+        offset: 0,
+        shape: RC!(Array!long).create(2, 3),
+        strides: RC!(Array!long).create(3, 1)
+    };
     assert(a.buffer._counter == 1);
+
     {
         auto d = a.toDLPack();
         // check contents equal without copy
@@ -164,5 +171,6 @@ unittest
 
         assert(a.buffer._counter == 2);  // no increase
     }
+    // check freed only once
     assert(a.buffer._counter == 1);
 }

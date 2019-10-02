@@ -5,6 +5,7 @@
 !*.di
 !*.md
 
+!Makefile
 !.circleci/*
 !dub.json
 !.gitignore
