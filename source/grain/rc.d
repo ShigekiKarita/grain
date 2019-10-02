@@ -52,7 +52,7 @@ struct RC(T)
     auto _counter() const { return _context ? _context.counter : 0; };
 
     /// manually increase RC (warning)
-    void _increaseCount()
+    void _incRef()
     {
         if (this)
         {
@@ -63,11 +63,11 @@ struct RC(T)
     /// copy ctor
     this(this) scope @trusted pure nothrow @nogc
     {
-        this._increaseCount();
+        this._incRef();
     }
 
     /// manually decrease RC (warning)
-    void _decreaseCount()
+    void _decRef()
     {
         if (this)
         {
@@ -78,36 +78,48 @@ struct RC(T)
     /// dtor
     nothrow ~this()
     {
-        this._decreaseCount();
+        this._decRef();
     }
 
+    /// polymorphism cast
     RC!Super castTo(Super)()
     {
         static assert(is(T : Super));
         typeof(return) ret;
-        ret._payload = cast(Super) this._payload;
+        static if (is(T == class) || is(T == interface))
+        {
+            ret._payload = this._payload;
+        }
+        else
+        {
+            // `alias super this` can be only extracted by ref
+            ret._payload = ((ref Super x) => &x)(*this._payload);
+        }
         ret._context = this._context;
-        this._increaseCount();
+        this._incRef();
         return ret;
     }
 }
 
-/// OOP test
+/// OOP support
+@nogc nothrow @system
 unittest
 {
+    import mir.rc.ptr;
+
     static interface I { ref double bar() @safe pure nothrow @nogc; }
     static abstract class D { int index; }
     static class C : D, I
     {
+        @nogc nothrow:
         double value;
         ref double bar() @safe pure nothrow @nogc { return value; }
         this(double d) { value = d; }
         static dtor = 0;
         ~this() {  ++dtor; }
     }
-    import mir.rc.ptr;
+
     {
-        // auto a = createRC!C(10);
         auto a = RC!C.create(10);
         assert(a._counter == 1);
         {
@@ -131,37 +143,28 @@ unittest
     assert(C.dtor == 1);
 }
 
-/// mutable test
-@system @nogc
+
+/// 'Alias This' support
+@nogc nothrow @system
 unittest
 {
-    struct A
+    struct S
     {
-        nothrow @nogc:
-
-        int i = 123;
-        static size_t dtor = 0;
-
-        this(int i) { this.i = i; }
-        ~this() { ++dtor; }
+        double e;
+    }
+    struct C
+    {
+        int i;
+        S s;
+        // 'alias' should be accesable by reference
+        // or a class/interface
+        alias s this;
     }
 
-    const n = A.dtor;
-    {
-        auto a = RC!A.create;
-        assert(a.i == 123);
-        {
-            auto b = a;
-            assert(a._context.counter == 2);
-            b.i = 1;
-            const c = b;
-            assert(a._context.counter == 3);
-        }
-        assert(a.i == 1);
-        assert(a._context.counter == 1);
-        assert(A.dtor == n);
-    }
-    assert(A.dtor == n + 1);
+    auto a = RC!C.create(10, S(3));
+    auto s = a.castTo!S; // RCPtr!S
+    assert(s._counter == 2);
+    assert(s.e == 3);
 }
 
 /// const test
@@ -193,12 +196,6 @@ unittest
         assert(A.dtor == n);
     }
     assert(A.dtor == n + 1);
-}
-
-/// OOP cast via RC
-nothrow @system @nogc
-unittest
-{
 }
 
 
