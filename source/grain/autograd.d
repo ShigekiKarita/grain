@@ -1,26 +1,45 @@
 module grain.autograd;
 
 import std.stdio;
-import mir.ndslice;
+import mir.rc.ptr : RCPtr;
 
+import grain.dlpack : DLManagedTensor;
+import grain.allocator : CPUAllocator;
+import grain.buffer : Buffer;
 
-struct AnyVar {
-    void[] data;
-    uint[] lengths;
-    uint[] strides;
+/// dynamic tensor
+struct AnyTensor
+{
+    DLManagedTensor data = void;
+    alias data this;
 }
 
-struct Var(T, size_t dim) {
-    AnyVar payload;
-    alias payload this;
+/// typed tensor
+struct Tensor(T, size_t dim, Allocator = CPUAllocator) {
+    RCPtr!(Buffer!T) buffer;
+    long[dim] shape;
+    long[dim] strides;
+
+    auto toDLPack()
+    {
+        import grain.dlpack;
+        DLTensor t = {};
+        t.data = this.buffer.buffer;
+        DLManagedTensor m;
+        m.dl_tensor = t;
+        m.manager_ctx = cast(void*) &this.buffer;
+        // TODO(karita): register deleter
+        m.deleter = (DLManagedTensor* self) {};
+        return AnyTensor(m);
+    }
 }
 
 abstract class AnyOp {
-    abstract AnyVar[] forwardAny(AnyVar[]);
+    abstract AnyTensor[] forwardAny(AnyTensor[]);
 }
 
 abstract class Op(Impl) : AnyOp {
-    override AnyVar[] forwardAny(AnyVar[] xs) {
+    override AnyTensor[] forwardAny(AnyTensor[] xs) {
         return xs;
     }
 }
@@ -30,5 +49,5 @@ class ReLU : Op!ReLU {
 
 unittest
 {
-    writeln("Edit source/app.d to start your project.");
+    Tensor!(float, 2) matrix;
 }

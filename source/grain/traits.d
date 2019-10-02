@@ -2,17 +2,6 @@
 module grain.traits;
 
 
-/// allocator check
-enum bool isAllocator(T) = __traits(
-    compiles,
-    {
-        // based on Mallocator usage
-        // https://dlang.org/phobos/std_experimental_allocator_mallocator.html
-        auto buffer = T.instance.allocate(1024);
-        scope (exit) T.instance.deallocate(buffer);
-    });
-
-
 /// https://github.com/libmir/mir-algorithm/blob/0432da3869cbbffdb7cb3cc97522f30f318673ba/source/mir/type_info.d#L94
 package template hasDestructor(T)
 {

@@ -1,19 +1,16 @@
 /// reference count
+// deprecated("use mir.rc.ptr instead")
 module grain.rc;
 
 import std.experimental.allocator.mallocator : Mallocator;
 
-import grain.array : Array;
+import grain.buffer : Buffer;
 
 
 /// Reference-counted pointer
 struct RC(T, Allocator = Mallocator)
 {
     import core.atomic : atomicOp;
-    import grain.traits : isAllocator, hasDestructor;
-
-    static assert(isAllocator!Allocator,
-                  "Allocator does not satisfy isAllocator concept");
 
     /// storage for T and count
     private struct Payload
@@ -65,6 +62,8 @@ struct RC(T, Allocator = Mallocator)
     /// dtor
     nothrow ~this()
     {
+        import grain.traits : hasDestructor;
+
         if (this.payload is null) return;
 
         this.payload.count.atomicOp!"-="(1);
@@ -137,34 +136,34 @@ unittest
 }
 
 
-/// alias for reference-counted array
-alias RCArray(T, ArrayAllocator = Mallocator, PtrAllocator = Mallocator) =
-        RC!(Array!(T, ArrayAllocator), PtrAllocator);
+/// alias for reference-counted buffer
+alias RCBuffer(T, BufferAllocator = Mallocator, PtrAllocator = Mallocator) =
+        RC!(Buffer!(T, BufferAllocator), PtrAllocator);
 
-/// mutable array test
+/// mutable buffer test
 pure @system @nogc
 unittest
 {
-    auto a = RCArray!int.create(10);
-    a.slice[] = 0;
+    auto a = RCBuffer!int.create(10);
+    a.asSlice[] = 0;
     assert(a.payload.count == 1);
     {
         auto b = a;
         assert(a.payload.count == 2);
         const c = b;
         assert(a.payload.count == 3);
-        b.slice[1] = 1;
+        b.asSlice[1] = 1;
     }
-    assert(a.slice[0] == 0);
-    assert(a.slice[1] == 1);
+    assert(a.asSlice[0] == 0);
+    assert(a.asSlice[1] == 1);
     assert(a.payload.count == 1);
 }
 
-/// const array test
+/// const buffer test
 pure @system @nogc
 unittest
 {
-    const a = RCArray!int.create(10);
+    const a = RCBuffer!int.create(10);
     assert(a.payload.count == 1);
     {
         const b = a;
@@ -175,26 +174,30 @@ unittest
     assert(a.payload.count == 1);
 }
 
-/// mutable array with custom type test
-@nogc
+/// mutable buffer with custom type test
+@system @nogc
 unittest
 {
+    import std.conv : emplace;
+
     const n = A.dtor;
-    A[] s;
     {
-        auto a = RCArray!A.create(10);
-        a.emplace();
+        auto a = RCBuffer!A.create(10);
+        foreach (ref chunk; a.asSlice)
+        {
+            emplace!A(&chunk);
+        }
+
         assert(a.payload.count == 1);
-        s = a.slice;
         {
             auto b = a;
             assert(a.payload.count == 2);
             const c = b;
             assert(a.payload.count == 3);
-            b.slice[1].i = 1;
+            b.asSlice[1].i = 1;
         }
-        assert(a.slice[0].i == 123);
-        assert(a.slice[1].i == 1);
+        assert(a.asSlice[0].i == 123);
+        assert(a.asSlice[1].i == 1);
         assert(a.payload.count == 1);
     }
     assert(A.dtor == n + 10);

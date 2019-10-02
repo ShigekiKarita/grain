@@ -8,6 +8,7 @@
 !dub.json
 !.gitignore
 
+adrdox/
 .dub
 docs.json
 __dummy.html
