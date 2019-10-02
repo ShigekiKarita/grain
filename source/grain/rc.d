@@ -2,114 +2,162 @@
 // deprecated("use mir.rc.ptr instead")
 module grain.rc;
 
-import std.experimental.allocator.mallocator : Mallocator;
-
+import grain.allocator : CPUAllocator;
 import grain.buffer : Buffer;
 
-
 /// Reference-counted pointer
-struct RC(T, Allocator = Mallocator)
+struct RC(T)
 {
     import core.atomic : atomicOp;
+    import mir.rc.context;
 
-    /// storage for T and count
-    private struct Payload
+    /// RC implementation
+    mir_rc_context* _context;
+
+    /// real data
+    static if (is(T == class) || is(T == interface))
     {
-        T data;
-        shared long count;
+        T _payload;
+    }
+    else
+    {
+        T* _payload;
     }
 
-    ///
-    private Payload* payload;
-
-    alias get this;
-
-    /// get raw pointer to payload
-    inout(T)* get() inout
-    {
-        if (this.payload is null) return null;
-        return &this.payload.data;
-    }
+    alias _payload this;
 
     /// static ctor
     static create(Args ...)(auto ref Args args)
     {
-        import std.conv : emplace;
-        import std.functional : forward;
+        import std.experimental.allocator : make;
+        import mir.conv : emplace;
+        import mir.functional : forward;
+        import mir.type_info : mir_get_type_info;
 
         RC ret = void;
-        ret.payload = cast(Payload*) Allocator.instance.allocate(Payload.sizeof);
-        emplace!T(&ret.payload.data, forward!args);
-        ret.payload.count = 1;
+        ret._payload = CPUAllocator.instance.make!T(forward!args);
+        static if (is(T == class) || is(T == interface))
+        {
+            ret._context = mir_rc_create(mir_get_type_info!T, 1, &ret._payload);
+        }
+        else
+        {
+            ret._context = mir_rc_create(mir_get_type_info!T, 1, ret._payload);
+        }
         return ret;
     }
 
-    /// copy ctor
-    this(ref return scope RC a)
+    /// check the number of RC
+    auto _counter() const { return _context ? _context.counter : 0; };
+
+    /// manually increase RC (warning)
+    void _increaseCount()
     {
-        if (a.payload is null) return;
-        a.payload.count.atomicOp!"+="(1);
-        this.payload = a.payload;
+        if (this)
+        {
+            mir_rc_increase_counter(*_context);
+        }
     }
 
-    /// ditto
-    this(ref return scope const RC a) const
+    /// copy ctor
+    this(this) scope @trusted pure nothrow @nogc
     {
-        // NOTE: `this(cast(RC) a)` requires another copy ctor from 2.088.0
-        this(*(cast(RC*) &a));
+        this._increaseCount();
+    }
+
+    /// manually decrease RC (warning)
+    void _decreaseCount()
+    {
+        if (this)
+        {
+            mir_rc_decrease_counter(*_context);
+        }
     }
 
     /// dtor
     nothrow ~this()
     {
-        import grain.traits : hasDestructor;
+        this._decreaseCount();
+    }
 
-        if (this.payload is null) return;
-
-        this.payload.count.atomicOp!"-="(1);
-
-        if (this.payload.count > 0) return;
-
-        static if (hasDestructor!T)
-        {
-            object.destroy(this.payload.data);
-        }
-
-        auto bufferPtr = cast(void*) this.payload;
-        Allocator.instance.deallocate(bufferPtr[0 .. T.sizeof]);
-        this.payload = null;
+    RC!Super castTo(Super)()
+    {
+        static assert(is(T : Super));
+        typeof(return) ret;
+        ret._payload = cast(Super) this._payload;
+        ret._context = this._context;
+        this._increaseCount();
+        return ret;
     }
 }
 
-version (unittest)
-private struct A
+/// OOP test
+unittest
 {
-    int i = 123;
-    double count = 20;
-    static size_t dtor = 0;
-
-    nothrow @nogc ~this() {
-        ++dtor;
+    static interface I { ref double bar() @safe pure nothrow @nogc; }
+    static abstract class D { int index; }
+    static class C : D, I
+    {
+        double value;
+        ref double bar() @safe pure nothrow @nogc { return value; }
+        this(double d) { value = d; }
+        static dtor = 0;
+        // ~this() { ++dtor; }
     }
+    import mir.rc.ptr;
+    {
+        // auto a = createRC!C(10);
+        auto a = RC!C.create(10);
+        assert(a._counter == 1);
+        {
+            auto b = a;
+            assert(a._counter == 2);
+            assert(b.value == 10);
+            b.value = 100; // access via alias this syntax
+            assert(a.value == 100);
+            assert(a._counter == 2);
+
+            auto d = a.castTo!D; //RCPtr!D
+            assert(d._counter == 3);
+            d.index = 234;
+            assert(a.index == 234);
+            auto i = a.castTo!I; //RCPtr!I
+            assert(i.bar == 100);
+            assert(i._counter == 4);
+        }
+        assert(a._counter == 1);
+    }
+    // assert(C.dtor == 1);
 }
 
 /// mutable test
 @system @nogc
 unittest
 {
+    struct A
+    {
+        nothrow @nogc:
+
+        int i = 123;
+        static size_t dtor = 0;
+
+        this(int i) { this.i = i; }
+        ~this() { ++dtor; }
+    }
+
     const n = A.dtor;
     {
         auto a = RC!A.create;
         assert(a.i == 123);
         {
             auto b = a;
-            assert(a.payload.count == 2);
+            assert(a._context.counter == 2);
             b.i = 1;
             const c = b;
-            assert(a.payload.count == 3);
+            assert(a._context.counter == 3);
         }
         assert(a.i == 1);
-        assert(a.payload.count == 1);
+        assert(a._context.counter == 1);
         assert(A.dtor == n);
     }
     assert(A.dtor == n + 1);
@@ -119,86 +167,73 @@ unittest
 @system @nogc
 unittest
 {
+    struct A
+    {
+        nothrow @nogc:
+
+        int i = 123;
+        static size_t dtor = 0;
+
+        this(int i) { this.i = i; }
+        ~this() { ++dtor; }
+    }
+
     const n = A.dtor;
     {
         const a = RC!A.create(3);
         {
             const b = a;
-            assert(a.payload.count == 2);
+            assert(a._context.counter == 2);
             const c = b;
-            assert(a.payload.count == 3);
+            assert(a._context.counter == 3);
         }
         assert(a.i == 3);
-        assert(a.payload.count == 1);
+        assert(a._context.counter == 1);
         assert(A.dtor == n);
     }
     assert(A.dtor == n + 1);
 }
 
+/// OOP cast via RC
+nothrow @system @nogc
+unittest
+{
+}
 
-/// alias for reference-counted buffer
-alias RCBuffer(T, BufferAllocator = Mallocator, PtrAllocator = Mallocator) =
-        RC!(Buffer!(T, BufferAllocator), PtrAllocator);
+
+/// alias for reference-countered buffer
+alias RCBuffer(opts...) = RC!(Buffer!(opts));
 
 /// mutable buffer test
-pure @system @nogc
-unittest
-{
-    auto a = RCBuffer!int.create(10);
-    a.asSlice[] = 0;
-    assert(a.payload.count == 1);
-    {
-        auto b = a;
-        assert(a.payload.count == 2);
-        const c = b;
-        assert(a.payload.count == 3);
-        b.asSlice[1] = 1;
-    }
-    assert(a.asSlice[0] == 0);
-    assert(a.asSlice[1] == 1);
-    assert(a.payload.count == 1);
-}
-
-/// const buffer test
-pure @system @nogc
-unittest
-{
-    const a = RCBuffer!int.create(10);
-    assert(a.payload.count == 1);
-    {
-        const b = a;
-        assert(a.payload.count == 2);
-        const c = b;
-        assert(a.payload.count == 3);
-    }
-    assert(a.payload.count == 1);
-}
-
-/// mutable buffer with custom type test
 @system @nogc
 unittest
 {
-    import std.conv : emplace;
-
-    const n = A.dtor;
+    auto a = RCBuffer!().create(10);
+    a.bytes[] = 0;
+    assert(a._context.counter == 1);
     {
-        auto a = RCBuffer!A.create(10);
-        foreach (ref chunk; a.asSlice)
-        {
-            emplace!A(&chunk);
-        }
-
-        assert(a.payload.count == 1);
-        {
-            auto b = a;
-            assert(a.payload.count == 2);
-            const c = b;
-            assert(a.payload.count == 3);
-            b.asSlice[1].i = 1;
-        }
-        assert(a.asSlice[0].i == 123);
-        assert(a.asSlice[1].i == 1);
-        assert(a.payload.count == 1);
+        auto b = a;
+        assert(a._context.counter == 2);
+        const c = b;
+        assert(a._context.counter == 3);
+        b.bytes[1] = 1;
     }
-    assert(A.dtor == n + 10);
+    assert(a.bytes[0] == 0);
+    assert(a.bytes[1] == 1);
+    assert(a._context.counter == 1);
+}
+
+/// const buffer test
+@system @nogc
+unittest
+{
+    const a = RCBuffer!().create(10);
+    assert(a._context.counter == 1);
+    {
+        const b = a;
+        assert(a._context.counter == 2);
+        const c = b;
+        assert(a._context.counter == 3);
+    }
+    assert(a._context.counter == 1);
 }

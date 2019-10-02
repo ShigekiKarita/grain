@@ -4,7 +4,9 @@ struct CPUAllocator
 {
     import std.experimental.allocator.mallocator : Mallocator;
 
-    alias instance = Mallocator.instance;
+    static shared CPUAllocator instance;
+
+    static this() { instance = typeof(this)(Mallocator.instance); }
 
     Mallocator base;
     alias base this;
