@@ -12,7 +12,8 @@ struct RC(T, Allocator = Mallocator)
     import core.atomic : atomicOp;
     import grain.traits : isAllocator, hasDestructor;
 
-    static assert(isAllocator!Allocator, "Allocator does not satisfy isAllocator concept");
+    static assert(isAllocator!Allocator,
+                  "Allocator does not satisfy isAllocator concept");
 
     /// storage for T and count
     private struct Payload
@@ -37,10 +38,11 @@ struct RC(T, Allocator = Mallocator)
     static create(Args ...)(auto ref Args args)
     {
         import std.conv : emplace;
+        import std.functional : forward;
 
         RC ret = void;
         ret.payload = cast(Payload*) Allocator.instance.allocate(Payload.sizeof);
-        emplace!(T, Args)(&ret.payload.data, args);
+        emplace!T(&ret.payload.data, forward!args);
         ret.payload.count = 1;
         return ret;
     }
@@ -56,11 +58,12 @@ struct RC(T, Allocator = Mallocator)
     /// ditto
     this(ref return scope const RC a) const
     {
-        this(cast(RC) a);
+        // NOTE: `this(cast(RC) a)` requires another copy ctor from 2.088.0
+        this(*(cast(RC*) &a));
     }
 
     /// dtor
-    ~this()
+    nothrow ~this()
     {
         if (this.payload is null) return;
 
@@ -86,7 +89,7 @@ private struct A
     double count = 20;
     static size_t dtor = 0;
 
-    @nogc ~this() {
+    nothrow @nogc ~this() {
         ++dtor;
     }
 }
@@ -173,14 +176,16 @@ unittest
 }
 
 /// mutable array with custom type test
-@system @nogc
+@nogc
 unittest
 {
     const n = A.dtor;
+    A[] s;
     {
-        import std.algorithm : move;
         auto a = RCArray!A.create(10);
+        a.emplace();
         assert(a.payload.count == 1);
+        s = a.slice;
         {
             auto b = a;
             assert(a.payload.count == 2);
