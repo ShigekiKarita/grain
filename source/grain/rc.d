@@ -38,12 +38,13 @@ struct RC(T)
         ret._payload = CPUAllocator.instance.make!T(forward!args);
         static if (is(T == class) || is(T == interface))
         {
-            ret._context = mir_rc_create(mir_get_type_info!T, 1, &ret._payload);
+            auto p = typeid(T).initializer.ptr;
         }
         else
         {
-            ret._context = mir_rc_create(mir_get_type_info!T, 1, ret._payload);
+            auto p = ret._payload;
         }
+        ret._context = mir_rc_create(mir_get_type_info!T, 1, p);
         return ret;
     }
 
@@ -102,7 +103,7 @@ unittest
         ref double bar() @safe pure nothrow @nogc { return value; }
         this(double d) { value = d; }
         static dtor = 0;
-        // ~this() { ++dtor; }
+        ~this() {  ++dtor; }
     }
     import mir.rc.ptr;
     {
@@ -127,7 +128,7 @@ unittest
         }
         assert(a._counter == 1);
     }
-    // assert(C.dtor == 1);
+    assert(C.dtor == 1);
 }
 
 /// mutable test
