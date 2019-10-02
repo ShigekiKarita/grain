@@ -102,5 +102,5 @@ struct DLManagedTensor
      *  to destruct manager_ctx which holds the DLManagedTensor. It can be NULL
      *  if there is no way for the caller to provide a reasonable destructor.
      */
-    void function(DLManagedTensor*) deleter;
+    nothrow @nogc void function(DLManagedTensor*) deleter;
 }
