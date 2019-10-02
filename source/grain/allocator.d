@@ -5,7 +5,7 @@ module grain.allocator;
 struct CPUAllocator
 {
     import std.experimental.allocator.mallocator : Mallocator;
-    import grain.dlpack : DLContext, kDLCPU;
+    import grain.dlpack.header : DLContext, kDLCPU;
 
     static shared CPUAllocator instance;
     enum DLContext context = {device_type: kDLCPU, device_id: -1};

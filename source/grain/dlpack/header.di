@@ -1,7 +1,7 @@
 /**
    header translated from https://github.com/pytorch/pytorch/blob/v1.0.0/aten/src/ATen/dlpack.h
 */
-module grain.dlpack;
+module grain.dlpack.header;
 
 @safe @nogc nothrow extern (C):
 
