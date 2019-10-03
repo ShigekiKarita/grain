@@ -3,7 +3,7 @@
 module grain.rc;
 
 import grain.allocator : CPUAllocator;
-import grain.buffer : Buffer;
+
 
 /// Reference-counted pointer
 struct RC(T)
@@ -174,7 +174,7 @@ unittest
 }
 
 /// const test
-@system @nogc
+@nogc nothrow @system
 unittest
 {
     struct A
@@ -202,42 +202,4 @@ unittest
         assert(A.dtor == n);
     }
     assert(A.dtor == n + 1);
-}
-
-
-/// alias for reference-countered buffer
-alias RCBuffer(opts...) = RC!(Buffer!(opts));
-
-/// mutable buffer test
-@system @nogc
-unittest
-{
-    auto a = RCBuffer!().create(10);
-    a.bytes[] = 0;
-    assert(a._context.counter == 1);
-    {
-        auto b = a;
-        assert(a._context.counter == 2);
-        const c = b;
-        assert(a._context.counter == 3);
-        b.bytes[1] = 1;
-    }
-    assert(a.bytes[0] == 0);
-    assert(a.bytes[1] == 1);
-    assert(a._context.counter == 1);
-}
-
-/// const buffer test
-@system @nogc
-unittest
-{
-    const a = RCBuffer!().create(10);
-    assert(a._context.counter == 1);
-    {
-        const b = a;
-        assert(a._context.counter == 2);
-        const c = b;
-        assert(a._context.counter == 3);
-    }
-    assert(a._context.counter == 1);
 }

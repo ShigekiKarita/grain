@@ -43,8 +43,6 @@ struct Tensor(T, size_t dim, Allocator = CPUAllocator)
     long[dim] shape;
     /// strides of tensor
     long[dim] strides;
-    /// reference for any tensor source
-    AnyTensor source;
 
     /// erase type
     inout(AnyTensor) toAny() inout
@@ -88,7 +86,7 @@ struct Tensor(T, size_t dim, Allocator = CPUAllocator)
     alias toAny this;
 }
 
-// @nogc nothrow @system
+@nogc nothrow @system
 unittest
 {
     Tensor!(float, 2) matrix;

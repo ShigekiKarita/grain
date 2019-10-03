@@ -41,13 +41,13 @@ struct Buffer(Allocator = CPUAllocator)
 }
 
 
-/// combination with mir.rc.ptr.RCPtr
+/// combination with RC
 @nogc nothrow @system
 unittest
 {
-    import mir.rc.ptr : createRC, castTo;
+    import grain.rc : RC;
 
-    auto a = createRC!(Buffer!CPUAllocator)(3);
+    auto a = RC!(Buffer!()).create(3);
     assert(a.length == 3);
     assert(a.ptr !is null);
     {
@@ -60,7 +60,7 @@ unittest
     }
     assert(a.bytes[0] == 1);
 
-    auto z = createRC!(Buffer!CPUAllocator)(0);
+    auto z = RC!(Buffer!()).create(0);
     assert(z.length == 0);
     assert(z.ptr is null);
 }
