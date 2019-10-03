@@ -31,10 +31,9 @@ struct AnyTensor
 /// typed tensor
 struct Tensor(T, size_t dim, Allocator = CPUAllocator)
 {
+    import grain.dlpack.header : DLContext;
     import grain.dlpack.conv : dataTypeOf;
 
-    ///
-    Allocator allocator;
     /// buffer to store numeric values
     RC!(Buffer!Allocator) buffer;
     /// offset of the strided tensor on buffer
@@ -43,6 +42,9 @@ struct Tensor(T, size_t dim, Allocator = CPUAllocator)
     long[dim] shape;
     /// strides of tensor
     long[dim] strides;
+
+    /// device context (device id, device type, data type, etc)
+    DLContext context() const { return this.buffer.allocator.context; }
 
     /// erase type
     inout(AnyTensor) toAny() inout
@@ -53,7 +55,7 @@ struct Tensor(T, size_t dim, Allocator = CPUAllocator)
             offset: this.offset,
             shape: cast(inout A) A.create(cast(long[]) this.shape[]),
             strides: cast(inout A) A.create(cast(long[]) this.strides[]),
-            context: allocator.context,
+            context: this.context,
             dataType: dataTypeOf!T
         };
         return ret;
@@ -63,7 +65,7 @@ struct Tensor(T, size_t dim, Allocator = CPUAllocator)
     void fromAny(ref AnyTensor src)
     {
         // dynamic type check
-        assert(allocator.context == src.context);
+        assert(this.context == src.context);
         assert(dataTypeOf!T == src.dataType);
         assert(dim == src.shape.length);
         this.buffer = typeof(this.buffer).create();
@@ -75,6 +77,7 @@ struct Tensor(T, size_t dim, Allocator = CPUAllocator)
         if (src.buffer)
         {
             this.offset = src.offset;
+            // TODO(karita): provide a way to hijack RC
             src.buffer._incRef();
             this.buffer.payload = src.buffer.payload;
             this.buffer._context = src.buffer._context;
@@ -86,6 +89,7 @@ struct Tensor(T, size_t dim, Allocator = CPUAllocator)
     alias toAny this;
 }
 
+/// Tensor <-> AnyTensor
 @nogc nothrow @system
 unittest
 {
