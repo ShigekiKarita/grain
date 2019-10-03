@@ -14,5 +14,15 @@ abstract class Op(Impl) : AnyOp {
     }
 }
 
-class ReLU : Op!ReLU {
+class ReLU(T, size_t dim, Allocator) : Op!ReLU {
+    // Tensor!(T, dim, CPUAllocator) forward(Tensor!(T, dim, CPUAllocator) x)
+    // {
+    //     return
+    // }
 }
+
+// ///
+// unittest
+// {
+
+// }
