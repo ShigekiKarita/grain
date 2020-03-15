@@ -8,5 +8,17 @@
     },
     "description": "mir/cuda/opencl autograd library",
     "license": "BSL-1.0",
-    "name": "grain"
+    "name": "grain",
+    "subPackages": [
+        {
+            "name": "cl",
+            "targetType": "library",
+            "dependencies": {
+                "grain": "*"
+            },
+            "libs": ["OpenCL"],
+            "sourcePaths": ["backend/cl/source"],
+            "importPaths": ["backend/cl/source", "dpp/generated"],
+        }
+    ]
 }

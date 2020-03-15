@@ -10,6 +10,8 @@
 !dub.json
 !.gitignore
 
+dpp/dpp
+
 adrdox/
 .dub
 docs.json
