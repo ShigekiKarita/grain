@@ -253,7 +253,7 @@ struct Adam(Chain) {
 
         auto g = field.gradVariable;
         auto m1 = this.moment1[name].to!V;
-        auto m2 = this.moment1[name].to!V;
+        auto m2 = this.moment2[name].to!V;
         auto nextM1 = (1.0 - this.beta1) * (g - m1) + m1;
         auto nextM2 = (1.0 - this.beta2) * (g * g - m2) + m2;
         auto diff = nextM1 / pow(nextM2 + this.eps, 0.5); // TODO implement sqrt
